@@ -1,7 +1,14 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0A0118">
+<meta name="theme-color" content="#FFF0C7">
 <title>Blindervenner</title>
-<style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap">
+<style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
+</head>
+<body><style>
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
 
 :root{
@@ -291,10 +298,101 @@ input::placeholder{ color: var(--text-faint); }
 }
 </style>
 
+<style id="redesign-gummi">/* Redesign: Gummi */
+body{font-family:var(--fb);font-size:17px;background:var(--page);background-attachment:fixed;color:var(--text);-webkit-font-smoothing:antialiased}
+body::before,body::after{display:none!important}
+body *{text-shadow:none!important}
+[style*="drop-shadow"]{filter:none!important}
+.brand svg,.hero-icon svg,.state .hero svg,.ring-wrap{filter:none}
+.topbar{background:var(--topbar);border-bottom:var(--rule);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.brand-name{font-family:var(--fd);font-weight:var(--fdw);color:var(--text);font-size:var(--brand-size);letter-spacing:var(--brand-ls);text-transform:var(--brand-tt);line-height:1}
+.brand-sub{font-family:var(--fm);font-size:11px;color:var(--accent);letter-spacing:.12em;margin-left:8px;vertical-align:middle}
+h2{font-family:var(--fd);font-weight:var(--fdw);font-size:var(--h2);line-height:1.05;letter-spacing:var(--h2-ls);text-transform:var(--h-tt);color:var(--text)}
+.sub,.sec-sub{font-family:var(--fb);font-size:16px;color:var(--text-dim)}
+.card{background:var(--surface);border:var(--card-border);border-radius:var(--r);box-shadow:var(--card-shadow)}
+.card::before{display:none}
+.card-flat,.stat-box,.review-row,.chip-edit{background:var(--bg-2);border:var(--line);border-radius:var(--r-sm)}
+.eyebrow,.card-title,.flabel,.compare-lbl,.tbl th,.cmp .hd,.stat-lbl,.kpi .l,.stand .h,.sec-num,#tip .tt{font-family:var(--fm);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--text-dim)}
+.card-title,.eyebrow{color:var(--text)}
+.stat-num,.kpi .n,.stand .big,.lb-score,.hist-item .score,.top10 .sc,.score-big,.rec .big,.live-score .n,.top10 .rk,.lb-rank{font-family:var(--fnum);font-weight:var(--fnumw);color:var(--text);letter-spacing:-0.01em;line-height:1}
+.kpi .n{font-size:40px;margin-top:10px}.stat-num{font-size:34px}.stand .big{font-size:30px}.score-big{font-size:72px;color:var(--accent)}
+.rec .big{font-size:32px;color:var(--accent)}.top10 .sc{font-size:26px;color:var(--accent)}.top10 .sc small{font-family:var(--fm);font-size:11px}
+.lb-score,.hist-item .score{font-size:22px;color:var(--accent)}.live-score .n{font-size:28px;color:var(--accent)}.top10 .rk,.lb-rank{font-size:20px;color:var(--text-faint)}
+.top10 .rk.gold{color:var(--mid)}.stand .lead .big{color:var(--good)}
+.btn{font-family:var(--fb);font-weight:700;font-size:15px;letter-spacing:var(--btn-ls);text-transform:var(--btn-tt);border-radius:var(--r-btn);padding:15px 22px}
+.btn-sm{font-size:13px;padding:10px 16px}
+.btn-primary,.state .btn{background:var(--accent);color:var(--on-accent);border:var(--btn-border);box-shadow:var(--btn-shadow)}
+.btn-primary:hover,.btn:hover{transform:translateY(-1px);box-shadow:var(--btn-shadow)}
+.btn-primary:active{transform:translateY(2px);box-shadow:none}
+.btn-secondary{background:var(--surface);color:var(--text);border:var(--line-strong)}
+.btn-secondary:hover{box-shadow:none;border-color:var(--text)}
+.btn-ghost,.reset{font-family:var(--fb);color:var(--text-dim)}
+.icon-btn{background:var(--surface);border:var(--line);border-radius:var(--r-btn);color:var(--text)}
+.icon-btn:hover{box-shadow:none;color:var(--accent);border-color:var(--accent)}
+.icon-btn.active{background:var(--text);color:var(--surface);border-color:var(--text);box-shadow:none}
+.chip-pick{background:var(--surface);border:var(--line-strong);border-radius:var(--r-btn);color:var(--text);font-family:var(--fb);font-size:16px}
+.chip-pick:hover{border-color:var(--accent);color:var(--accent)}
+.chip-pick.selected{background:var(--accent);color:var(--on-accent);border-color:var(--accent);box-shadow:var(--chip-shadow,none);font-weight:700}
+input[type=text],select.year-select,select.sel,.search,.chip-edit input{background-color:var(--input);color:var(--text);border:var(--line-strong);border-radius:var(--r-sm);font-family:var(--fb);font-size:17px}
+.chip-edit input{border:none;background:transparent}
+input[type=text]:focus,select.year-select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.field-label .txt{font-family:var(--fb);font-weight:600;text-transform:none;letter-spacing:0;font-size:15px}
+.field-label .pts,.review-pts{font-family:var(--fm);font-size:11px;font-weight:600}
+.field-label .pts{background:var(--text);color:var(--surface);border-radius:var(--r-sm)}
+.seg,.mini-seg{border:var(--line-strong);border-radius:var(--r-btn)}
+.seg button,.mini-seg button{font-family:var(--fb);background:var(--surface);color:var(--text-dim);font-size:15px}
+.seg button.on{background:var(--accent);color:var(--on-accent)}.mini-seg button.on{background:var(--text);color:var(--surface)}
+.jbtn{font-family:var(--fb);background:var(--surface);border:var(--line-strong);border-radius:var(--r-sm);text-transform:none;font-weight:600;letter-spacing:0}
+.jbtn.good.on,.jbtn.bad.on,.jbtn.mid.on{box-shadow:none}
+.live-score{background:var(--surface);border:var(--line-accent);box-shadow:var(--card-shadow);border-radius:var(--r)}
+.live-score span:first-child,.review-title,.hist-item .name,.stand .c.lbl,.kpi .l,.rules-toggle,.stat-lbl{text-transform:none;letter-spacing:0;font-family:var(--fb);font-weight:600}
+.phase-dot{background:var(--border-strong);border-radius:99px}.phase-dot.on{background:var(--accent);box-shadow:none}
+.hero-icon,.state .hero{background:var(--surface);border:var(--line-strong);box-shadow:var(--card-shadow);border-radius:var(--r);animation:none}
+.hero-icon.pulse,.state .hero{animation:skinPulse 1.8s ease-in-out infinite}
+@keyframes skinPulse{50%{transform:scale(1.06)}}
+.toast{background:var(--text);color:var(--surface);border:none;box-shadow:var(--card-shadow);font-family:var(--fb);text-transform:none;letter-spacing:0;border-radius:var(--r-btn)}
+.lb-row,.stand .c,.top10 li,.tbl td,.cmp>div{border-bottom:1px solid var(--border)}
+.stand .h,.tbl th,.cmp .hd{border-bottom:var(--line-strong)}
+.identity-pill{border-radius:var(--r-btn);border:var(--line-strong)}
+#tip{background:var(--surface);border:var(--line);box-shadow:0 10px 30px rgba(0,0,0,.18);font-family:var(--fb);border-radius:var(--r-sm)}
+.modal-bg{background:var(--scrim)}
+.modal h3{font-family:var(--fd);font-weight:var(--fdw);font-size:34px;line-height:1.05;text-transform:var(--h-tt)}
+.linkish{color:var(--accent);text-decoration-color:currentColor}
+.axis text,.lbl-t{font-family:var(--fm);font-size:12px;fill:var(--text-faint)}.val-t{font-family:var(--fm);font-size:13px}
+.hbar-row .nm,.top10 .nm,.tbl,.conf,.legend,.card-note,.hint,.rules-panel{font-family:var(--fb)}
+.top10 .nm{font-weight:600}
+.pill{border-radius:var(--r-sm);font-family:var(--fb);font-size:14px}
+
+:root{--page:radial-gradient(600px 420px at 100% 0%,#FFCDB0,transparent 60%),radial-gradient(700px 500px at 0% 100%,#FFE680,transparent 60%),#FFF0C7;
+--bg:#FFF0C7;--bg-2:#FFF7E0;--surface:#FFFFFF;--surface-2:#FFF9EA;--input:#FFF7E0;
+--text:#2B1A0E;--text-dim:#5E4630;--text-faint:#80674F;--accent:#FF6B1A;--accent-2:#1E8C7A;--on-accent:#2B1A0E;--accent-soft:rgba(255,107,26,.18);
+--good:#0E9F63;--good-soft:rgba(14,159,99,.12);--bad:#E23353;--bad-soft:rgba(226,51,83,.10);--mid:#A86F00;--mid-soft:rgba(255,196,0,.2);
+--border:rgba(43,26,14,.10);--border-strong:rgba(43,26,14,.22);--grid:rgba(43,26,14,.08);
+--line:1.5px solid var(--border);--line-strong:1.5px solid var(--border-strong);--line-accent:2px solid var(--accent);
+--card-border:0;--card-shadow:0 2px 0 rgba(43,26,14,.05),0 16px 34px -14px rgba(30,140,122,.28);--r:26px;--r-sm:14px;--r-btn:999px;
+--btn-shadow:0 4px 0 #2B1A0E;--btn-border:2px solid #2B1A0E;--btn-tt:none;--btn-ls:0;--chip-shadow:0 3px 0 #2B1A0E;--topbar:rgba(255,240,199,.8);--rule:1px solid transparent;
+--fd:'Bricolage Grotesque',sans-serif;--fdw:800;--fb:'Bricolage Grotesque',sans-serif;--fm:'Bricolage Grotesque',sans-serif;--fnum:'Bricolage Grotesque',sans-serif;--fnumw:800;
+--h2:36px;--h2-ls:-.03em;--h-tt:none;--brand-size:24px;--brand-ls:-.03em;--brand-tt:none;--scrim:rgba(43,26,14,.4);color-scheme:light}
+.eyebrow,.card-title,.flabel,.compare-lbl,.tbl th,.cmp .hd,.stat-lbl,.stand .h,.sec-num{letter-spacing:.04em;font-weight:700}
+.chip-pick.selected{border-color:#2B1A0E}
+.stat-box{background:#FFF7E0;border:0}
+.icon-btn{border:0;box-shadow:0 2px 0 rgba(43,26,14,.08)}
+.sec-num{background:var(--accent-2);color:#FFFFFF;padding:4px 9px;border-radius:99px}
+.btn-secondary{border:2px solid #2B1A0E;box-shadow:0 4px 0 #2B1A0E}</style>
+<style id="solskin-sticker">/* Solskin · Sticker */
+:root{--card-border:2px solid #2B1A0E;--card-shadow:5px 5px 0 #2B1A0E;--r:18px;--line:2px solid #2B1A0E;--line-strong:2px solid #2B1A0E;--btn-shadow:3px 3px 0 #2B1A0E;--chip-shadow:3px 3px 0 #2B1A0E}
+.icon-btn{border:2px solid #2B1A0E;box-shadow:2px 2px 0 #2B1A0E}
+.btn-secondary{box-shadow:3px 3px 0 #2B1A0E}
+.stat-box{border:2px solid #2B1A0E;background:#FFFFFF}
+.sec-num{transform:rotate(-4deg);display:inline-block;background:#FF6B1A;color:#2B1A0E;border:2px solid #2B1A0E}
+.field-label .pts{background:#FFB020;color:#2B1A0E;border:2px solid #2B1A0E;transform:rotate(3deg)}
+.card:nth-child(odd){background:#FFFDF6}</style>
+
+
 <div class="app">
   <div class="topbar">
     <div class="brand">
-      <svg viewBox="0 0 24 24" fill="none"><path d="M8 3h8l-.7 8.2c-.3 3-2.1 4.7-3.3 5.2v4.1h3v1.5H9v-1.5h3v-4.1c-1.2-.5-3-2.2-3.3-5.2L8 3z" stroke="#FF6B8F" stroke-width="1.4" stroke-linejoin="round"/></svg>
+      <svg viewBox="0 0 24 24" fill="none"><path d="M8 3h8l-.7 8.2c-.3 3-2.1 4.7-3.3 5.2v4.1h3v1.5H9v-1.5h3v-4.1c-1.2-.5-3-2.2-3.3-5.2L8 3z" stroke="#FF6B1A" stroke-width="1.4" stroke-linejoin="round"/></svg>
       <div class="brand-name">Blindervenner</div>
     </div>
     <div class="topbar-actions">
@@ -327,7 +425,7 @@ const CATEGORIES = [
 ];
 const AARGANG_POINTS_FULL = 2, AARGANG_POINTS_NEAR = 1;
 const MAX_SCORE = CATEGORIES.reduce((a,c)=>a+c.points,0) + AARGANG_POINTS_FULL; // 24
-const SERIES_COLORS = ['#00F0FF','#FF2E97','#FFD500','#00FF9C','#B2A3E0'];
+const SERIES_COLORS = ['#1E8C7A','#FF6B1A','#A86F00','#0E9F63','#B2A3E0'];
 
 const RULES_HTML = `
   <div class="ritem"><b>Land — 2p / Region — 3p.</b> Region betyder de store vingeografiske enheder i landet (fx Bourgogne, Bordeaux, Piemonte, Galicien, Niederösterreich, Californien, Mendoza, Victoria, Marlborough, Western Cape, Central Valley).</div>
@@ -512,7 +610,7 @@ async function connectSheet(){
 
 function renderConnect(){
   return `<div class="fade-in">
-    <div class="hero-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="2" stroke="#00F0FF" stroke-width="1.5"/><path d="M4 9h16M4 15h16M10 3v18" stroke="#FF2E97" stroke-width="1.3"/></svg></div>
+    <div class="hero-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="2" stroke="#1E8C7A" stroke-width="1.5"/><path d="M4 9h16M4 15h16M10 3v18" stroke="#FF6B1A" stroke-width="1.3"/></svg></div>
     <h2 class="center-text">Forbind til regnearket</h2>
     <p class="sub center-text">Én gang pr. telefon. Din medsmager slipper for dette — han får et færdigt link fra dig.</p>
     <div class="card">
@@ -1084,7 +1182,7 @@ function renderIdle(){
   const canStart = others.length>0;
   return `
   <div class="fade-in center-text">
-    <div class="hero-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M8 3h8l-.7 8.2c-.3 3-2.1 4.7-3.3 5.2v4.1h3v1.5H9v-1.5h3v-4.1c-1.2-.5-3-2.2-3.3-5.2L8 3z" stroke="#FF6B8F" stroke-width="1.4" stroke-linejoin="round"/></svg></div>
+    <div class="hero-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M8 3h8l-.7 8.2c-.3 3-2.1 4.7-3.3 5.2v4.1h3v1.5H9v-1.5h3v-4.1c-1.2-.5-3-2.2-3.3-5.2L8 3z" stroke="#FF6B1A" stroke-width="1.4" stroke-linejoin="round"/></svg></div>
     ${identityPillHtml()}
     <h2>Klar til blindsmagning?</h2>
     <p class="sub">${canStart ? 'Du indtaster vinen i hemmelighed — din medsmager gætter blindt og scorer point.' : 'Tilføj mindst én medsmager under deltager-ikonet, før I kan starte.'}</p>
@@ -1118,7 +1216,7 @@ function renderWaiting(kind){
   return `
   <div class="fade-in center-text">
     ${renderPhaseTrack(kind)}
-    <div class="hero-icon pulse"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" fill="#00F0FF"/><circle cx="12" cy="12" r="8" stroke="#FF2E97" stroke-width="1.4" stroke-dasharray="3 4"/></svg></div>
+    <div class="hero-icon pulse"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" fill="#1E8C7A"/><circle cx="12" cy="12" r="8" stroke="#FF6B1A" stroke-width="1.4" stroke-dasharray="3 4"/></svg></div>
     <h2>${msg}</h2>
     <p class="sub">${sub}</p>
     <div class="card card-flat" style="text-align:left;">
@@ -1346,7 +1444,7 @@ function renderReviewWaiting(){
   return `
   <div class="fade-in center-text">
     ${renderPhaseTrack('review')}
-    <div class="hero-icon pulse"><svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6" stroke="#00F0FF" stroke-width="1.6"/><path d="M15.5 15.5L20 20" stroke="#FF2E97" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+    <div class="hero-icon pulse"><svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6" stroke="#1E8C7A" stroke-width="1.6"/><path d="M15.5 15.5L20 20" stroke="#FF6B1A" stroke-width="1.8" stroke-linecap="round"/></svg></div>
     <h2>${esc(ACTIVE.ownerName)} gennemgår dit gæt</h2>
     <p class="sub">Resultatet dukker op her, så snart ${esc(ACTIVE.ownerName)} har godkendt.</p>
     ${mine ? `<div class="card card-flat" style="text-align:left;"><div class="eyebrow" style="margin-bottom:10px;">Dine bud</div>${mine}</div>` : ''}
@@ -1375,8 +1473,8 @@ function bottleSvg(){
       <rect id="wine-fill" x="0" y="${BOTTLE.bottom}" width="150" height="0" fill="url(#wine-g)"/>
       <rect id="wine-surface" x="0" y="${BOTTLE.bottom}" width="150" height="3" fill="#F1CFA6" opacity="0.7"/>
     </g>
-    <path d="${body}" fill="none" stroke="#00F0FF" stroke-width="2.2" style="filter:drop-shadow(0 0 6px rgba(0,240,255,.55));"/>
-    <rect x="47" y="6" width="34" height="10" rx="2" fill="#FF2E97" opacity="0.85"/>
+    <path d="${body}" fill="none" stroke="#1E8C7A" stroke-width="2.2" style="filter:drop-shadow(0 0 6px rgba(0,240,255,.55));"/>
+    <rect x="47" y="6" width="34" height="10" rx="2" fill="#FF6B1A" opacity="0.85"/>
     <line x1="30" y1="160" x2="30" y2="270" stroke="rgba(255,255,255,0.12)" stroke-width="4" stroke-linecap="round"/>
     ${ticks}
   </svg>`;
@@ -1416,7 +1514,7 @@ function resultRowsHtml(r){
         <div style="font-size:0.9rem;color:var(--text-dim);">Gæt: ${esc(r.guess[c.id])}</div>
         <div style="font-size:0.85rem;color:var(--text-faint);">Facit: ${esc(r.truth[c.id])||'—'}</div>
       </div>
-      <div style="font-family:'Press Start 2P',sans-serif;font-size:0.65rem;color:var(--text-dim);">${catPoints(c,j)}p</div>
+      <div style="font-family:var(--fnum),sans-serif;font-size:0.65rem;color:var(--text-dim);">${catPoints(c,j)}p</div>
     </div>`;
   }).join('');
   return rows + (skipped.length ? `<div class="hint" style="padding:10px 14px;">Ikke besvaret: ${skipped.map(c=>c.label).join(', ')}</div>` : '');
@@ -1433,7 +1531,7 @@ function renderResult(){
     <div style="display:flex;align-items:center;justify-content:center;gap:18px;margin:6px 0 18px;">
       ${bottleSvg()}
       <div style="text-align:left;min-width:92px;">
-        <div id="score-count" style="font-family:'Press Start 2P',monospace;font-size:2rem;color:var(--text);text-shadow:0 0 12px rgba(255,46,151,.55);">0</div>
+        <div id="score-count" style="font-family:var(--fnum),monospace;font-size:2rem;color:var(--text);text-shadow:0 0 12px rgba(255,46,151,.55);">0</div>
         <div style="color:var(--text-faint);font-size:1.05rem;margin-top:6px;">af ${MAX_SCORE} point</div>
       </div>
     </div>
@@ -1556,7 +1654,7 @@ function renderHistDetail(r){
     return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--border);">
       <div class="check-icon ${cls}" style="width:20px;height:20px;font-size:0.7rem;">${icon}</div>
       <div style="flex:1;font-size:1rem;text-transform:uppercase;letter-spacing:0.02em;color:var(--text);">${c.label}<div style="font-size:0.85rem;color:var(--text-faint);text-transform:none;">facit: ${esc(r.truth[c.id])||'—'} · gæt: ${esc(r.guess[c.id])||'—'}</div></div>
-      <div style="font-family:'Press Start 2P',sans-serif;font-size:0.62rem;color:var(--text-dim);">${pts}p</div>
+      <div style="font-family:var(--fnum),sans-serif;font-size:0.62rem;color:var(--text-dim);">${pts}p</div>
     </div>`;
   }).join('');
   return `
@@ -1718,7 +1816,7 @@ function renderAnalysis(){
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
         <span class="legend-dot" style="background:${SERIES_COLORS[i%SERIES_COLORS.length]};box-shadow:0 0 6px ${SERIES_COLORS[i%SERIES_COLORS.length]};"></span>
         <span style="text-transform:uppercase;letter-spacing:0.03em;">${esc(n)}</span>
-        <span style="margin-left:auto;font-family:'Press Start 2P',sans-serif;font-size:0.6rem;color:var(--text-faint);">${s.rounds} vine</span>
+        <span style="margin-left:auto;font-family:var(--fnum),sans-serif;font-size:0.6rem;color:var(--text-faint);">${s.rounds} vine</span>
       </div>
       <div class="hint">Stærkest til <b style="color:var(--good);">${best?esc(best.label):'—'}</b> · svagest til <b style="color:var(--bad);">${worst?esc(worst.label):'—'}</b></div>
     </div>`;
@@ -1808,7 +1906,7 @@ function chooseGateRole(role){
   // role==='guess': nothing to do — you land on the idle screen, ready and waiting.
 }
 function renderIdentityGate(){
-  const heroIcon = `<div class="hero-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M8 3h8l-.7 8.2c-.3 3-2.1 4.7-3.3 5.2v4.1h3v1.5H9v-1.5h3v-4.1c-1.2-.5-3-2.2-3.3-5.2L8 3z" stroke="#FF6B8F" stroke-width="1.4" stroke-linejoin="round"/></svg></div>`;
+  const heroIcon = `<div class="hero-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M8 3h8l-.7 8.2c-.3 3-2.1 4.7-3.3 5.2v4.1h3v1.5H9v-1.5h3v-4.1c-1.2-.5-3-2.2-3.3-5.2L8 3z" stroke="#FF6B1A" stroke-width="1.4" stroke-linejoin="round"/></svg></div>`;
   if(!PENDING_GATE_NAME || ACTIVE){
     return `<div class="fade-in center-text">
       ${heroIcon}
@@ -1905,3 +2003,5 @@ function render(){
 document.getElementById('content').innerHTML = `<div class="empty">Henter Blindervenner…</div>`;
 initBackend();
 </script>
+</body>
+</html>

@@ -920,44 +920,50 @@ function secGeo(L){
   const both = sp.length > 1;
   const key = UI.geo==='land' ? 'land' : 'drue1';
   const fKey = key==='land' ? 'land' : 'drue';
-  const groups = new Map();
-  L.forEach(w=>{ const t = w.cats[key].t; if(!t) return; const k = norm(t); if(!groups.has(k)) groups.set(k,{name:t, ws:[]}); groups.get(k).ws.push(w); });
-  const rows = [...groups.values()].map(g=>{
-    const h = g.ws.filter(w=>w.cats[key].pts>0).length;
-    return { ...g, h, hit: h/g.ws.length, per: sp.map(p=>{ const ws = g.ws.filter(w=>w.guesser===p); const ph = ws.filter(w=>w.cats[key].pts>0).length; return {p, n:ws.length, h:ph, hit: ws.length ? ph/ws.length : null, avg: ws.length?avg(ws.map(w=>w.score)):null}; }) };
-  }).sort((a,b)=> b.ws.length - a.ws.length || a.name.localeCompare(b.name,'da'));
-  const conf = new Map();
-  L.forEach(w=>{ const c = w.cats.drue1; if(!c.applicable || c.pts>0 || !c.g || norm(c.g)===norm(c.t)) return; const k = norm(c.t)+'→'+norm(c.g); if(!conf.has(k)) conf.set(k,{t:c.t,g:c.g,n:0}); conf.get(k).n++; });
-  const confL = [...conf.values()].sort((a,b)=>b.n-a.n || a.t.localeCompare(b.t,'da')).slice(0,12);
-  const landConf = new Map();
-  L.forEach(w=>{ const c = w.cats.land; if(!c.applicable || c.pts>0 || !c.g || norm(c.g)===norm(c.t)) return; const k = norm(c.t)+'→'+norm(c.g); if(!landConf.has(k)) landConf.set(k,{t:c.t,g:c.g,n:0}); landConf.get(k).n++; });
-  const lc = [...landConf.values()].sort((a,b)=>b.n-a.n).slice(0,6);
-  const splitTip = r => esc(`<div class='tt'>${esc(r.name)} · ${r.h} af ${r.ws.length} ramt</div>` + r.per.map(x=> x.n ? tipRow(colorOf(x.p), pct(x.hit), `${x.p} (${x.h} af ${x.n})`) : tipRow(colorOf(x.p), '–', `${x.p} har ikke gættet denne`)).join(''));
-  const rowHTML = r => {
-    const id = fKey + ':' + norm(r.name);
+  const word = key==='land' ? 'landet' : 'druen';
+  // venstre: set fra facit – hvor ofte blev det ramt
+  const byTruth = new Map(), byGuess = new Map();
+  L.forEach(w=>{ const c = w.cats[key]; if(!c.applicable) return;
+    const k = norm(c.t); if(!byTruth.has(k)) byTruth.set(k,{name:c.t, ws:[]}); byTruth.get(k).ws.push(w);
+    if(c.g){ const g = norm(c.g); if(!byGuess.has(g)) byGuess.set(g,{name:c.g, ws:[]}); byGuess.get(g).ws.push(w); } });
+  const ok = w => w.cats[key].pts > 0;
+  const truthRows = [...byTruth.values()].map(g=>({ ...g, n:g.ws.length, x:g.ws.filter(ok).length,
+      per: sp.map(p=>{ const ws = g.ws.filter(w=>w.guesser===p); return {p, n:ws.length, x:ws.filter(ok).length}; }) }))
+    .sort((a,b)=> b.n-a.n || b.x-a.x || a.name.localeCompare(b.name,'da'));
+  // højre: set fra gættet – hvor ofte var gættet forkert
+  const guessRows = [...byGuess.values()].map(g=>({ ...g, n:g.ws.length, x:g.ws.filter(w=>!ok(w)).length,
+      per: sp.map(p=>{ const ws = g.ws.filter(w=>w.guesser===p); return {p, n:ws.length, x:ws.filter(w=>!ok(w)).length}; }) }))
+    .sort((a,b)=> b.x-a.x || b.n-a.n || a.name.localeCompare(b.name,'da'));
+
+  const tipFor = (r, what) => esc(`<div class='tt'>${esc(r.name)} · ${r.x}/${r.n} ${what}</div>` + r.per.map(x=> x.n ? tipRow(colorOf(x.p), `${x.x}/${x.n}`, x.p) : tipRow(colorOf(x.p), '–', `${x.p}: ingen`)).join(''));
+  const rowHTML = (r, side) => {
+    const isGuess = side === 'g';
+    const barColor = isGuess ? '#E23353' : '#FFB020';
+    const what = isGuess ? 'forkerte' : 'ramt';
+    const frac = r.n ? r.x/r.n : 0;
+    const bar = (f, col, dim) => `<span class="tr"><i style="width:${f*100}%;${f===0?'min-width:2px;':''}background:${col};${dim?'opacity:0.25;':''}${col===barColor?'box-shadow:inset 0 0 0 1.5px #2B1A0E':''}"></i></span>`;
     if(!both){
-      const x = r.per[0];
-      return `<div class="hbar-row clickable ${F[fKey]===norm(r.name)?'sel':''}" tabindex="0" data-${fKey}="${esc(norm(r.name))}" data-tip="${splitTip(r)}"><span class="nm" title="${esc(r.name)}">${esc(r.name)} <span style="color:var(--text-faint)">${r.ws.length}</span></span>
-        <span class="tr"><i style="width:${(x.hit||0)*100}%;${x.hit===0?'min-width:2px;':''}background:${colorOf(x.p)}"></i></span><span class="v">${pct(x.hit)}</span></div>`;
+      const attrs = isGuess ? '' : `class="hbar-row clickable ${F[fKey]===norm(r.name)?'sel':''}" tabindex="0" data-${fKey}="${esc(norm(r.name))}"`;
+      return `<div ${attrs || 'class="hbar-row"'} data-tip="${tipFor(r, what)}"><span class="nm" title="${esc(r.name)}">${esc(r.name)}</span>${bar(frac, isGuess ? barColor : colorOf(sp[0]))}<span class="v"><b style="font-weight:700;color:var(--text)">${r.x}/${r.n}</b></span></div>`;
     }
+    const id = side + ':' + fKey + ':' + norm(r.name);
     const open = UI.geoOpen === id;
-    return `<div class="hbar-row clickable ${open?'open':''} ${F[fKey]===norm(r.name)?'sel':''}" tabindex="0" data-geo-open="${esc(id)}" data-tip="${splitTip(r)}">
-        <span class="nm" title="${esc(r.name)}">${esc(r.name)} <span style="color:var(--text-faint)">${r.ws.length}</span><span class="caret">▸</span></span>
-        <span class="tr"><i style="width:${r.hit*100}%;${r.hit===0?'min-width:2px;':''}background:#FFB020;box-shadow:inset 0 0 0 1.5px #2B1A0E"></i></span><span class="v">${pct(r.hit)}</span></div>
-      ${open?`<div class="geo-detail">${r.per.map(x=>`<div class="hbar-row"><span class="nm">${pnameHTML(x.p)}</span><span class="tr"><i style="width:${(x.hit||0)*100}%;${x.hit===0?'min-width:2px;':''}background:${colorOf(x.p)};${x.n?'':'opacity:0.25'}"></i></span><span class="v">${x.n?`${pct(x.hit)} <span style="color:var(--text-faint)">${x.h}/${x.n}</span>`:'–'}</span></div>`).join('')}
-        <button class="show-only" data-${fKey}="${esc(norm(r.name))}">${F[fKey]===norm(r.name)?'Fjern filter':'Vis kun '+esc(r.name)}</button></div>`:''}`;
+    return `<div class="hbar-row clickable ${open?'open':''} ${!isGuess && F[fKey]===norm(r.name)?'sel':''}" tabindex="0" data-geo-open="${esc(id)}" data-tip="${tipFor(r, what)}">
+        <span class="nm" title="${esc(r.name)}">${esc(r.name)}<span class="caret">▸</span></span>${bar(frac, barColor)}<span class="v"><b style="font-weight:700;color:var(--text)">${r.x}/${r.n}</b></span></div>
+      ${open?`<div class="geo-detail">${r.per.map(x=>`<div class="hbar-row"><span class="nm">${pnameHTML(x.p)}</span>${bar(x.n?x.x/x.n:0, colorOf(x.p), !x.n)}<span class="v">${x.n?`${x.x}/${x.n}`:'–'}</span></div>`).join('')}
+        ${isGuess?'':`<button class="show-only" data-${fKey}="${esc(norm(r.name))}">${F[fKey]===norm(r.name)?'Fjern filter':'Vis kun '+esc(r.name)}</button>`}</div>`:''}`;
   };
-  return `<section class="section"><div class="sec-head"><span class="sec-num">${num()}</span><h2>Geografi og druer</h2></div>
+  const switcher = `<div class="mini-seg"><button data-ui="geo" data-v="land" class="${UI.geo==='land'?'on':''}">Lande</button><button data-ui="geo" data-v="drue" class="${UI.geo==='drue'?'on':''}">Druer</button></div>`;
+  const tap = both ? ' Tryk på en række for at se fordelingen mellem jer.' : '';
+  return `<section class="section"><div class="sec-head"><span class="sec-num">${num()}</span><h2>Geografi og druer</h2>${switcher}</div>
     <div class="grid g2">
-      <div class="card"><div class="card-title"><span>Træfprocent pr. ${key==='land'?'land':'drue'}</span>
-        <div class="mini-seg"><button data-ui="geo" data-v="land" class="${UI.geo==='land'?'on':''}">Lande</button><button data-ui="geo" data-v="drue" class="${UI.geo==='drue'?'on':''}">Druer</button></div></div>
-        ${rows.map(rowHTML).join('')}
-        <div class="card-note">Hvor ofte ${key==='land'?'landet':'den dominerende drue'} blev ramt, set ud fra facit. ${both?'Tallet er for jer begge. Tryk på en række for at se fordelingen mellem jer.':'Tryk for at filtrere.'}</div>
+      <div class="card"><div class="card-title"><span>Når det var facit</span><span class="sec-sub" style="font-family:var(--fb);text-transform:none;letter-spacing:0;color:var(--text-faint)">ramt / serveret</span></div>
+        ${truthRows.length ? truthRows.map(r=>rowHTML(r,'t')).join('') : '<div class="empty">Ingen data.</div>'}
+        <div class="card-note">Hvor mange gange ${word} blev gættet rigtigt ud af de gange, det var facit.${tap}${both?'':' Tryk for at filtrere.'}</div>
       </div>
-      <div class="card"><div class="card-title">Forvekslinger · drue</div>
-        ${confL.length?`<div class="conf">${confL.map(c=>`<span>${esc(c.t)}</span><span class="arrow">→</span><span class="g">${esc(c.g)}</span><span class="x">${c.n}×</span>`).join('')}</div>`:`<div class="empty">Ingen forkerte druegæt i udvalget. Imponerende.</div>`}
-        <div class="card-note">Facit → det, der blev gættet.</div>
-        ${lc.length?`<div class="card-title" style="margin-top:18px">Forvekslinger · land</div><div class="conf">${lc.map(c=>`<span>${esc(c.t)}</span><span class="arrow">→</span><span class="g">${esc(c.g)}</span><span class="x">${c.n}×</span>`).join('')}</div>`:''}
+      <div class="card"><div class="card-title"><span>${both?'Når I gættede det':'Når '+esc(sp[0])+' gættede det'}</span><span class="sec-sub" style="font-family:var(--fb);text-transform:none;letter-spacing:0;color:var(--text-faint)">forkerte / gættet</span></div>
+        ${guessRows.length ? guessRows.map(r=>rowHTML(r,'g')).join('') : '<div class="empty">Ingen gæt endnu.</div>'}
+        <div class="card-note">Hvor mange gange gættet var forkert ud af de gange, ${word} blev gættet. Flest fejlgæt øverst.${tap}</div>
       </div>
     </div></section>`;
 }

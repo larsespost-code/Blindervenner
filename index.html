@@ -1,0 +1,1903 @@
+<title>Vinbogen</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+
+:root{
+  --bg: #0A0118;
+  --bg-2: #120726;
+  --surface: #180C33;
+  --surface-2: #22103F;
+  --border: rgba(0,240,255,0.22);
+  --border-strong: rgba(0,240,255,0.45);
+  --text: #F2ECFF;
+  --text-dim: #B2A3E0;
+  --text-faint: #6E5E9C;
+  --accent: #FF2E97;
+  --accent-2: #00F0FF;
+  --accent-soft: rgba(255,46,151,0.14);
+  --good: #00FF9C;
+  --good-soft: rgba(0,255,156,0.12);
+  --bad: #FF3B5C;
+  --bad-soft: rgba(255,59,92,0.14);
+  --mid: #FFD500;
+  --mid-soft: rgba(255,213,0,0.14);
+  --radius: 4px;
+  --radius-sm: 3px;
+  color-scheme: dark;
+}
+
+*{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+html,body{ margin:0; padding:0; }
+body{
+  background:
+    linear-gradient(rgba(0,240,255,0.05) 1px, transparent 1px) 0 0/100% 3px,
+    radial-gradient(1000px 550px at 50% 110%, rgba(255,46,151,0.20), transparent 60%),
+    radial-gradient(800px 500px at 50% -10%, rgba(0,240,255,0.14), transparent 55%),
+    linear-gradient(180deg, #17022E 0%, #0A0118 45%, #05000C 100%);
+  color: var(--text);
+  font-family: 'VT323', monospace;
+  font-size: 19px;
+  min-height: 100%;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+  overflow-x: hidden;
+}
+html{ height:100%; }
+body::before{
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:100;
+  background: repeating-linear-gradient(0deg, rgba(0,0,0,0.18) 0px, rgba(0,0,0,0.18) 1px, transparent 1px, transparent 3px);
+  mix-blend-mode: overlay;
+}
+body::after{
+  content:''; position:fixed; left:0; right:0; bottom:0; height:42vh; pointer-events:none; z-index:0;
+  background-image:
+    linear-gradient(rgba(255,46,151,0.55) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,46,151,0.55) 1px, transparent 1px);
+  background-size: 48px 48px;
+  transform: perspective(260px) rotateX(62deg);
+  transform-origin: bottom;
+  -webkit-mask-image: linear-gradient(0deg, black 15%, transparent 85%);
+          mask-image: linear-gradient(0deg, black 15%, transparent 85%);
+  opacity:0.55;
+}
+
+.app{ max-width: 500px; margin: 0 auto; min-height:100%; display:flex; flex-direction:column; position:relative; z-index:1; }
+
+/* ---------- Top bar ---------- */
+.topbar{
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 18px 20px 14px; position:sticky; top: env(safe-area-inset-top, 0px); z-index:20;
+  background: linear-gradient(180deg, #0A0118 75%, transparent);
+  border-bottom: 1px solid var(--border);
+}
+.brand{ display:flex; align-items:center; gap:10px; }
+.brand svg{ width:24px; height:24px; filter: drop-shadow(0 0 6px var(--accent-2)); }
+.brand-name{
+  font-family:'Press Start 2P', monospace; font-weight:400; font-size:0.85rem; letter-spacing:0.02em;
+  color: var(--accent-2); text-shadow: 0 0 8px rgba(0,240,255,0.65), 0 0 18px rgba(0,240,255,0.3);
+}
+.icon-btn{
+  width:36px; height:36px; border-radius: var(--radius); display:flex; align-items:center; justify-content:center;
+  background: var(--surface); border:1px solid var(--border); color: var(--text-dim);
+  cursor:pointer; transition: all .15s ease;
+}
+.icon-btn:hover{ color: var(--accent-2); border-color: var(--border-strong); box-shadow: 0 0 10px rgba(0,240,255,0.25); }
+.icon-btn.active{ color: var(--bg); border-color: var(--accent); background: var(--accent); box-shadow: 0 0 14px rgba(255,46,151,0.55); }
+.topbar-actions{ display:flex; gap:7px; }
+
+.main{ flex:1; padding: 4px 20px 40px; }
+
+/* ---------- Buttons ---------- */
+button{ font-family:'VT323', monospace; cursor:pointer; border:none; }
+.btn{
+  border-radius: var(--radius); font-weight:400; padding: 14px 20px;
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  transition: all .1s ease; letter-spacing:0.04em; text-transform:uppercase;
+  font-family:'Press Start 2P', monospace; font-size:0.72rem;
+  border: 2px solid transparent;
+}
+.btn-primary{
+  background: var(--accent); color:#0A0118;
+  box-shadow: 3px 3px 0 var(--accent-2), 0 0 20px rgba(255,46,151,0.4);
+  border: 2px solid var(--bg);
+}
+.btn-primary:hover{ transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--accent-2), 0 0 26px rgba(255,46,151,0.55); }
+.btn-primary:active{ transform: translate(2px,2px); box-shadow: 1px 1px 0 var(--accent-2); }
+.btn-primary:disabled{ opacity:0.3; box-shadow:none; transform:none; cursor:not-allowed; }
+.btn-secondary{ background: var(--surface); color: var(--accent-2); border:2px solid var(--border-strong); }
+.btn-secondary:hover{ border-color: var(--accent-2); box-shadow: 2px 2px 0 rgba(0,240,255,0.3); }
+.btn-ghost{ background: transparent; color: var(--text-dim); font-family:'VT323',monospace; font-size:1.05rem; text-transform:none; letter-spacing:0; border:none; }
+.btn-ghost:hover{ color: var(--accent-2); }
+.btn-danger{ background: var(--bad-soft); color: var(--bad); border:2px solid rgba(255,59,92,0.4); }
+.btn-danger:hover{ background: rgba(255,59,92,0.22); border-color: var(--bad); }
+.btn-block{ width:100%; }
+.btn-sm{ padding:9px 14px; font-size:0.6rem; }
+.btn:focus-visible, .icon-btn:focus-visible, .chip-pick:focus-visible, select:focus-visible, input:focus-visible{
+  outline: 2px solid var(--accent-2); outline-offset: 2px;
+}
+
+/* ---------- Cards ---------- */
+.card{
+  background: linear-gradient(180deg, var(--surface), var(--bg-2));
+  border:1px solid var(--border); border-radius: var(--radius); padding:22px; margin-bottom:14px;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03);
+  position:relative;
+}
+.card::before{
+  content:''; position:absolute; top:-1px; left:-1px; right:-1px; height:2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  border-radius: 2px 2px 0 0;
+}
+.card-flat{ background: var(--bg-2); border:1px solid var(--border); border-radius: var(--radius-sm); padding:16px; }
+
+/* ---------- Typography helpers ---------- */
+.eyebrow{
+  font-family:'Press Start 2P', monospace; font-size:0.62rem; text-transform:uppercase; letter-spacing:0.06em;
+  color: var(--accent-2); margin-bottom:10px; text-shadow: 0 0 6px rgba(0,240,255,0.5);
+}
+h2{
+  font-family:'Press Start 2P', monospace; font-size:1.05rem; font-weight:400; letter-spacing:0.01em; margin:0 0 10px; line-height:1.5;
+  color: var(--text); text-shadow: 2px 2px 0 rgba(255,46,151,0.35); text-wrap: balance;
+}
+.sub{ color: var(--text-dim); font-size:1.05rem; line-height:1.5; margin:0 0 18px; }
+.center-text{ text-align:center; }
+
+/* ---------- Idle screen ---------- */
+.hero-icon{
+  width:72px; height:72px; border-radius: var(--radius); margin: 10px auto 22px;
+  background: var(--surface);
+  display:flex; align-items:center; justify-content:center; border:2px solid var(--accent-2);
+  box-shadow: 0 0 24px rgba(0,240,255,0.35), inset 0 0 14px rgba(255,46,151,0.15);
+}
+.hero-icon svg{ width:34px; height:34px; filter: drop-shadow(0 0 6px var(--accent)); }
+.hero-icon.pulse{ animation: pulseGlow 1.7s ease-in-out infinite; }
+@keyframes pulseGlow{
+  0%,100%{ box-shadow: 0 0 24px rgba(0,240,255,0.35), inset 0 0 14px rgba(255,46,151,0.15); }
+  50%{ box-shadow: 0 0 40px rgba(0,240,255,0.6), inset 0 0 20px rgba(255,46,151,0.3); }
+}
+.stats-row{ display:flex; gap:10px; margin: 18px 0 4px; }
+.stat-box{ flex:1; background: var(--bg-2); border:1px solid var(--border); border-radius: var(--radius-sm); padding:14px 8px; text-align:center; }
+.stat-num{ font-family:'Press Start 2P',sans-serif; font-weight:400; font-size:1.15rem; color: var(--accent-2); text-shadow:0 0 8px rgba(0,240,255,0.5); }
+.stat-lbl{ font-size:0.85rem; color: var(--text-faint); margin-top:6px; text-transform:uppercase; letter-spacing:0.05em; }
+.identity-pill{ display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border:1px solid var(--border-strong); border-radius:var(--radius-sm); color:var(--text-dim); font-size:0.95rem; margin-bottom:16px; }
+.identity-pill b{ color:var(--accent-2); font-weight:400; }
+.identity-pill .switch{ color:var(--accent); cursor:pointer; text-decoration:underline; }
+
+/* ---------- Chips / picker ---------- */
+.chips{ display:flex; flex-wrap:wrap; gap:8px; }
+.chip-pick{
+  padding: 10px 18px; border-radius: var(--radius-sm); background: var(--bg-2); border:2px solid var(--border);
+  color: var(--text-dim); font-size:1.05rem; cursor:pointer; transition: all .12s ease;
+}
+.chip-pick:hover{ border-color: var(--accent-2); color: var(--accent-2); }
+.chip-pick.selected{ background: var(--accent); color:#0A0118; border-color: var(--accent); box-shadow: 2px 2px 0 var(--accent-2); font-weight:700; }
+
+/* ---------- Form fields ---------- */
+.field{ margin-bottom:18px; }
+.field-label{ display:flex; align-items:center; justify-content:space-between; margin-bottom:7px; }
+.field-label .txt{ font-size:1.02rem; color: var(--text); text-transform:uppercase; letter-spacing:0.03em; }
+.field-label .pts{ font-family:'Press Start 2P',sans-serif; font-size:0.62rem; color: var(--bg); background: var(--accent-2); padding:4px 8px; border-radius: var(--radius-sm); }
+input[type=text], select.year-select{
+  width:100%; padding: 12px 14px; border-radius: var(--radius-sm); border:2px solid var(--border-strong);
+  background: #05000F; color: var(--accent-2); font-family:'VT323',monospace; font-size:1.15rem;
+  transition: border-color .15s ease, box-shadow .15s ease; appearance:none; -webkit-appearance:none;
+}
+select.year-select{
+  background-image: linear-gradient(45deg, transparent 50%, var(--accent-2) 50%), linear-gradient(135deg, var(--accent-2) 50%, transparent 50%);
+  background-position: calc(100% - 18px) center, calc(100% - 13px) center; background-size:5px 5px, 5px 5px; background-repeat:no-repeat;
+}
+input[type=text]:focus, select.year-select:focus{ outline:none; border-color: var(--accent); box-shadow: 0 0 10px rgba(255,46,151,0.4); }
+input::placeholder{ color: var(--text-faint); }
+.hint{ font-size:0.9rem; color: var(--text-faint); margin-top:5px; line-height:1.4; }
+.hint b{ font-weight:400; }
+
+/* ---------- Progress dots ---------- */
+.phase-track{ display:flex; align-items:center; justify-content:center; gap:8px; margin: 6px 0 24px; }
+.phase-dot{ width:9px; height:9px; background: var(--border-strong); transition: all .2s ease; border-radius:1px; }
+.phase-dot.on{ background: var(--accent-2); width:26px; box-shadow: 0 0 8px var(--accent-2); }
+
+/* ---------- Review rows ---------- */
+.review-row{ border:1px solid var(--border); border-radius: var(--radius-sm); padding:14px 16px; margin-bottom:10px; background: var(--bg-2); }
+.review-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.review-title{ font-size:1.05rem; text-transform:uppercase; letter-spacing:0.03em; color:var(--text); }
+.review-pts{ font-family:'Press Start 2P',sans-serif; font-size:0.6rem; color: var(--text-faint); }
+.compare{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+.compare-lbl{ font-size:0.78rem; text-transform:uppercase; letter-spacing:0.06em; color: var(--text-faint); margin-bottom:3px; font-family:'Press Start 2P',monospace; }
+.compare-val{ font-size:1.1rem; word-break:break-word; color: var(--text); }
+.compare-val.empty{ color: var(--text-faint); font-style:italic; }
+.judge-btns{ display:flex; gap:8px; }
+.jbtn{
+  flex:1; padding:10px; border-radius: var(--radius-sm); border:2px solid var(--border-strong);
+  background: var(--surface); color: var(--text-dim); font-size:0.95rem;
+  display:flex; align-items:center; justify-content:center; gap:6px; transition: all .12s ease;
+  text-transform:uppercase; letter-spacing:0.02em;
+}
+.jbtn.good.on{ background: var(--good-soft); border-color: var(--good); color: var(--good); box-shadow: 0 0 10px rgba(0,255,156,0.3); }
+.jbtn.bad.on{ background: var(--bad-soft); border-color: var(--bad); color: var(--bad); box-shadow: 0 0 10px rgba(255,59,92,0.3); }
+.jbtn.mid.on{ background: var(--mid-soft); border-color: var(--mid); color: var(--mid); box-shadow: 0 0 10px rgba(255,213,0,0.3); }
+.live-score{
+  position: sticky; top: calc(env(safe-area-inset-top, 0px) + 66px); z-index:10; display:flex; align-items:center; justify-content:space-between;
+  background: var(--surface-2); border:2px solid var(--accent); border-radius: var(--radius-sm);
+  padding:12px 16px; margin-bottom:16px; box-shadow: 0 0 16px rgba(255,46,151,0.3);
+}
+.live-score span:first-child{ text-transform:uppercase; letter-spacing:0.05em; font-size:0.95rem; color:var(--text-dim); }
+.live-score .n{ font-family:'Press Start 2P',sans-serif; font-weight:400; font-size:1.1rem; color: var(--accent-2); text-shadow:0 0 8px rgba(0,240,255,0.5); }
+
+/* ---------- Result screen ---------- */
+.ring-wrap{ display:flex; justify-content:center; margin: 8px 0 20px; filter: drop-shadow(0 0 16px rgba(255,46,151,0.4)); }
+.check-icon{ width:22px; height:22px; border-radius: var(--radius-sm); display:flex; align-items:center; justify-content:center; flex:0 0 auto; font-size:0.85rem; font-weight:700; border:1px solid transparent; }
+.check-icon.good{ background: var(--good-soft); color: var(--good); border-color: var(--good); }
+.check-icon.bad{ background: var(--bad-soft); color: var(--bad); border-color: var(--bad); }
+.check-icon.mid{ background: var(--mid-soft); color: var(--mid); border-color: var(--mid); }
+
+/* ---------- History ---------- */
+.lb-row{ display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px dashed var(--border); }
+.lb-row:last-child{ border-bottom:none; }
+.lb-rank{ font-family:'Press Start 2P',sans-serif; font-weight:400; color: var(--accent); width:24px; font-size:0.75rem; }
+.lb-name{ flex:1; font-size:1.1rem; color:var(--text); }
+.lb-sub{ font-size:0.85rem; color: var(--text-faint); }
+.lb-score{ font-family:'Press Start 2P',sans-serif; font-weight:400; font-size:0.85rem; color: var(--accent-2); text-shadow:0 0 6px rgba(0,240,255,0.5); }
+.hist-item{ padding:16px 18px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; }
+.hist-item:hover{ background: var(--surface-2); }
+.hist-item .name{ font-size:1.1rem; color:var(--text); text-transform:uppercase; letter-spacing:0.02em; }
+.hist-item .sub{ font-size:0.88rem; color: var(--text-faint); margin-top:2px; }
+.hist-item .score{ font-family:'Press Start 2P',sans-serif; font-weight:400; color: var(--accent-2); font-size:0.85rem; text-shadow:0 0 6px rgba(0,240,255,0.5); }
+.hist-card{ padding:0; overflow:hidden; }
+.hist-detail{ padding:0 18px 18px; border-top:1px solid var(--border); margin-top:2px; }
+.toolbar{ display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
+
+/* ---------- Settings ---------- */
+.chip-edit{ display:flex; align-items:center; gap:8px; background: var(--bg-2); border:2px solid var(--border-strong); border-radius: var(--radius-sm); padding:7px 8px 7px 14px; margin-bottom:8px; }
+.chip-edit input{ border:none; background:transparent; padding:2px; font-size:1.1rem; width:auto; flex:1; color:var(--accent-2); }
+.chip-edit .x{ width:26px; height:26px; border-radius: var(--radius-sm); background: var(--bad-soft); color: var(--bad); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:0.9rem; flex:0 0 auto; border:1px solid var(--bad); }
+
+/* ---------- Rules panel ---------- */
+.rules-toggle{ display:flex; align-items:center; gap:6px; color: var(--text-faint); font-size:0.95rem; cursor:pointer; margin: 4px 0 16px; text-transform:uppercase; letter-spacing:0.03em; }
+.rules-toggle:hover{ color: var(--accent-2); }
+.rules-panel{ font-size:0.98rem; color: var(--text-dim); line-height:1.6; }
+.rules-panel b{ color: var(--accent-2); }
+.rules-panel .ritem{ margin-bottom:10px; }
+
+.empty{ text-align:center; padding: 40px 20px; color: var(--text-faint); font-size:1.05rem; }
+
+.confirm-box{ background: var(--bad-soft); border:2px solid rgba(255,59,92,0.4); border-radius: var(--radius-sm); padding:12px 14px; margin-top:10px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+.confirm-box span{ font-size:0.95rem; color: var(--bad); }
+
+.toast{
+  position:fixed; bottom: calc(env(safe-area-inset-bottom, 0px) + 22px); left:50%; transform:translateX(-50%);
+  background: var(--surface-2); color: var(--accent-2); border:2px solid var(--accent-2);
+  padding:11px 20px; border-radius: var(--radius-sm); font-size:0.95rem; text-transform:uppercase; letter-spacing:0.03em;
+  box-shadow:0 0 20px rgba(0,240,255,0.4); opacity:0; pointer-events:none;
+  transition: opacity .25s ease, transform .25s ease; z-index:50; max-width:88vw; text-align:center;
+}
+.toast.show{ opacity:1; transform:translateX(-50%) translateY(-6px); }
+
+.fade-in{ animation: fadeIn .25s ease; }
+@keyframes fadeIn{ from{ opacity:0; transform: translateY(6px);} to{ opacity:1; transform:none; } }
+@media (prefers-reduced-motion: reduce){
+  .fade-in{ animation:none; }
+  .hero-icon.pulse{ animation:none; }
+}
+
+.legend-row{ display:flex; gap:14px; flex-wrap:wrap; margin-top:10px; }
+.legend-item{ display:flex; align-items:center; gap:6px; font-size:0.9rem; color:var(--text-dim); }
+.legend-dot{ width:10px; height:10px; display:inline-block; border-radius:2px; }
+.sync-note{ text-align:center; font-size:0.85rem; color:var(--text-faint); margin-top:6px; }
+
+@media(max-width:380px){
+  .compare{ grid-template-columns:1fr; }
+}
+</style>
+
+<div class="app">
+  <div class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M8 3h8l-.7 8.2c-.3 3-2.1 4.7-3.3 5.2v4.1h3v1.5H9v-1.5h3v-4.1c-1.2-.5-3-2.2-3.3-5.2L8 3z" stroke="#FF6B8F" stroke-width="1.4" stroke-linejoin="round"/></svg>
+      <div class="brand-name">Vinbogen</div>
+    </div>
+    <div class="topbar-actions">
+      <div class="icon-btn" id="btn-history" title="Historik">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      </div>
+      <div class="icon-btn" id="btn-analysis" title="Analyse">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><path d="M12 3.5V7M20.5 12H17M12 20.5V17M3.5 12H7"/></svg>
+      </div>
+      <div class="icon-btn" id="btn-settings" title="Deltagere">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.2"/><path d="M4.5 20c1.4-3.6 4.4-5.5 7.5-5.5s6.1 1.9 7.5 5.5"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="main"><div class="confirm-box" id="syncbar" style="display:none;margin:0 0 14px;"></div><div id="content"></div></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================= CONSTANTS ================= */
+const CATEGORIES = [
+  {id:'land', label:'Land', points:2, ph:'fx Frankrig'},
+  {id:'region', label:'Region', points:3, ph:'fx Bourgogne, Piemonte, Mendoza'},
+  {id:'appellation', label:'Appellation', points:5, ph:'fx Chablis · valgfri hvis ingen'},
+  {id:'drue1', label:'Dominerende druesort', points:8, ph:'fx Chardonnay'},
+  {id:'drue2', label:'Yderligere druesort', points:2, ph:'valgfri, ved blend'},
+  {id:'type', label:'Officiel type-/kvalitetsbetegnelse', points:2, ph:'fx Grand Cru, Brut · valgfri'},
+];
+const AARGANG_POINTS_FULL = 2, AARGANG_POINTS_NEAR = 1;
+const MAX_SCORE = CATEGORIES.reduce((a,c)=>a+c.points,0) + AARGANG_POINTS_FULL; // 24
+const SERIES_COLORS = ['#00F0FF','#FF2E97','#FFD500','#00FF9C','#B2A3E0'];
+
+const RULES_HTML = `
+  <div class="ritem"><b>Land — 2p / Region — 3p.</b> Region betyder de store vingeografiske enheder i landet (fx Bourgogne, Bordeaux, Piemonte, Galicien, Niederösterreich, Californien, Mendoza, Victoria, Marlborough, Western Cape, Central Valley).</div>
+  <div class="ritem"><b>Appellation — 5p.</b> Den officielle appellation nævnt på etiketten (AOC/AOP, DOCG/DOC/DOP, DO, AVA, GI m.fl.). Hvis appellationen også er vinens region, gives der kun point under Region.</div>
+  <div class="ritem"><b>Dominerende druesort — 8p.</b> Eneste eller dominerende druesort i et blend. Almindeligt kendte synonymer godkendes.</div>
+  <div class="ritem"><b>Yderligere druesort — 2p.</b> Ved blend: den primære supplerende druesort. Synonymer godkendes.</div>
+  <div class="ritem"><b>Årgang — 2p (1p ved ±1 år).</b> NV kan også være et korrekt gæt for ikke-vintage vine. For typer med faste aldersangivelser (5-års, Hors d'Age, VVO m.fl.) er aldersangivelsen det korrekte svar.</div>
+  <div class="ritem"><b>Officiel type-/kvalitetsbetegnelse — 2p.</b> En reguleret betegnelse der definerer vinen nærmere inden for appellationen — fx Prädikat, sødmegrad (Brut, Halbtrocken), typebetegnelse (Oloroso, Sercial), lagringsbetegnelse (Gran Riserva), eller Premier/Grand Cru, Grosses Gewächs, Superiore (når ikke del af appellationen). Rene geografiske afgrænsninger (subzoner, "Classico") tæller ikke. Flere gyldige betegnelser på etiketten giver stadig kun 2p i alt.</div>
+`;
+
+/* ================= STATE ================= */
+let CONFIG = { participants: ['Lars','Tore'] };
+let HISTORY = [];
+let ACTIVE = null;
+let MY_IDENTITY = null;
+let VIEW = 'game'; // game | history | settings | analysis
+let OPEN_HIST_ID = null;
+let CONFIRM = null;
+let RULES_OPEN = false;
+
+let DB = null, DOWNLOADS = null, USE_DB = false;
+const SESSION_ID = 's' + Math.random().toString(36).slice(2,10) + Date.now().toString(36);
+let unsubConfig=null, unsubPointer=null, unsubRound=null, unsubRounds=null;
+let saveTimer=null, configSaveTimer=null;
+
+function uid(){ return Math.random().toString(36).slice(2,10)+Date.now().toString(36); }
+function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function formatDate(iso){
+  if(!iso) return '';
+  const [y,m,d]=iso.split('-');
+  const months=['jan','feb','mar','apr','maj','jun','jul','aug','sep','okt','nov','dec'];
+  return `${parseInt(d)}. ${months[parseInt(m)-1]} ${y}`;
+}
+function ownerIndexFor(name){ return HISTORY.filter(r=>r.ownerName===name).length + 1; }
+function otherParticipants(exclude){ return CONFIG.participants.filter(p=>p!==exclude); }
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._timer); t._timer = setTimeout(()=>t.classList.remove('show'), 2400);
+}
+
+/* ================= IDENTITY =================
+   Bound to the signed-in Claude ACCOUNT (via the `user` capability), not
+   to browser localStorage. localStorage turned out not to be reliably
+   isolated per phone inside the artifact sandbox — that's exactly what
+   let Tore's browser silently inherit Lars' saved identity instead of
+   asking him who he was. An account id is genuinely unique per person,
+   so this is the actual fix, not a workaround. A same-browser/no-account
+   localStorage copy is kept only as a last-resort fallback for a viewer
+   with no resolvable account (signed out, or `user`/`db` unavailable). */
+function loadLocalIdentity(){ try{ return localStorage.getItem('vino_identity')||null; }catch(e){ return null; } }
+function saveLocalIdentity(name){ try{ localStorage.setItem('vino_identity', name); }catch(e){} }
+function clearLocalIdentity(){ try{ localStorage.removeItem('vino_identity'); }catch(e){} }
+
+function setIdentity(name){
+  MY_IDENTITY = name;
+  saveLocalIdentity(name);
+  if(USE_DB && MY_ACCOUNT_ID){
+    DB.doc('data/users/'+MY_ACCOUNT_ID+'/identity').set({name, updatedAt:Date.now(), _writer:SESSION_ID}).catch(()=>{});
+  }
+  render();
+}
+
+/* ================= BACKEND ================= */
+async function useCap(name){ try{ return await window.claude.use(name); }catch(e){ return null; } }
+
+/* ================= GOOGLE SHEETS BACKEND (GitHub-udgaven) =================
+   Outside Claude there is no built-in shared database, so the app talks to
+   the Apps Script inside Lars' spreadsheet instead. This adapter offers the
+   exact same interface the rest of the app already uses (doc/collection,
+   get/set/update/delete, onSnapshot), so nothing else in the app changes.
+   Live updates = one combined "sync" request every 2 s while the app is on
+   screen (and immediately when the phone wakes up). */
+let BACKEND = 'none';            // 'claude' | 'sheets' | 'none'
+let NEEDS_SETUP = false;         // outside Claude and not yet connected to a sheet
+const IN_CLAUDE = !!(window.claude && typeof window.claude.use === 'function');
+
+function loadBackendCfg(){
+  // A shared link carries the connection in the #fragment: #s=<webapp-url>&k=<key>
+  try{
+    const h = new URLSearchParams(location.hash.slice(1));
+    if(h.get('s') && h.get('k')){
+      const cfg = { url: h.get('s'), key: h.get('k') };
+      localStorage.setItem('vino_backend', JSON.stringify(cfg));
+      history.replaceState(null, '', location.pathname + location.search); // keep the key out of the address bar
+      return cfg;
+    }
+  }catch(e){}
+  try{ const c = JSON.parse(localStorage.getItem('vino_backend')||'null'); if(c && c.url && c.key) return c; }catch(e){}
+  return null;
+}
+function shareLink(){
+  const c = loadBackendCfg(); if(!c) return '';
+  return location.origin + location.pathname + '#s=' + encodeURIComponent(c.url) + '&k=' + encodeURIComponent(c.key);
+}
+
+function makeSheetsDb(url, key){
+  const docSubs = new Set();   // {path, cb, seen}
+  const histSubs = new Set();  // {cb, seen}
+  let histHash = '', histList = null, busy = false, again = false;
+
+  async function call(body){
+    const res = await fetch(url, { method:'POST', redirect:'follow',
+      headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({k:key}, body)) });
+    let j; try{ j = await res.json(); }catch(e){ const er = new Error('unavailable'); er.code='unavailable'; throw er; }
+    if(!j.ok){ const er = new Error(j.err||'error');
+      er.code = j.err==='denied' ? 'not_granted' : /invalid_argument/.test(j.err||'') ? 'invalid_argument' : 'unavailable'; throw er; }
+    return j;
+  }
+  const snap = (path, d)=>({ id: path.split('/').pop(), exists: d!=null, data: ()=> d==null ? undefined : d,
+    metadata:{ fromCache:false, hasPendingWrites:false } });
+
+  async function tick(){
+    if(busy){ again = true; return; }
+    if(!docSubs.size && !histSubs.size) return;
+    busy = true;
+    try{
+      const paths = [...new Set([...docSubs].map(s=>s.path))];
+      const r = await call({ op:'sync', paths, hist: histSubs.size ? histHash : null });
+      docSubs.forEach(s=>{
+        if(!Object.prototype.hasOwnProperty.call(r.docs, s.path)) return; // subscribed while this request was under way — next tick
+        const d = r.docs[s.path]; const key = JSON.stringify(d==null ? null : d);
+        if(s.seen !== key){ s.seen = key; try{ s.cb(snap(s.path, d==null?null:d)); }catch(e){ console.error(e); } }
+      });
+      if(r.histHash !== undefined){
+        if(r.history){ histHash = r.histHash; histList = r.history; }
+        histSubs.forEach(s=>{
+          if(s.seen !== histHash && histList){ s.seen = histHash;
+            const docs = histList.map(h=>snap('rounds/'+h.id, h));
+            try{ s.cb({ docs, size:docs.length, empty:!docs.length, docChanges:()=>[], metadata:{} }); }catch(e){ console.error(e); } }
+        });
+      }
+    }catch(e){ /* network hiccup — next tick tries again */ }
+    busy = false;
+    if(again){ again = false; setTimeout(tick, 50); }
+  }
+  setInterval(()=>{ if(document.visibilityState==='visible') tick(); }, 2000);
+  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') tick(); });
+  const soon = ()=> setTimeout(tick, 30);
+
+  function doc(path){
+    return {
+      id: path.split('/').pop(), path,
+      async get(){ const r = await call({ op:'sync', paths:[path] }); const d = r.docs[path]; return snap(path, d==null?null:d); },
+      async set(data){ await call({ op:'set', path, data }); soon(); },
+      async update(data){ await call({ op:'update', path, data }); soon(); },
+      async delete(){ await call({ op:'delete', path }); soon(); },
+      onSnapshot(cb){ const s = { path, cb, seen: undefined }; docSubs.add(s); soon(); return ()=>docSubs.delete(s); },
+    };
+  }
+  function historyQuery(){
+    const q = {
+      where(){ return q; }, orderBy(){ return q; }, limit(){ return q; },
+      onSnapshot(cb){ const s = { cb, seen: undefined }; histSubs.add(s); soon(); return ()=>histSubs.delete(s); },
+    };
+    return q;
+  }
+  return {
+    doc,
+    collection: (p)=> Object.assign(historyQuery(), { doc: (id)=>doc(p+'/'+id) }),
+    ping: ()=> call({ op:'ping' }),
+  };
+}
+
+async function connectSheet(){
+  const url = (document.getElementById('cfg-url')||{}).value.trim();
+  const key = (document.getElementById('cfg-key')||{}).value.trim();
+  const msg = document.getElementById('cfg-msg');
+  if(!/^https:\/\/script\.google(usercontent)?\.com\//.test(url) || !key){ msg.textContent = 'Indsæt både webapp-URL (starter med https://script.google.com/) og nøglen.'; return; }
+  msg.textContent = 'Forbinder…';
+  try{
+    await makeSheetsDb(url, key).ping();
+    localStorage.setItem('vino_backend', JSON.stringify({url, key}));
+    location.reload();
+  }catch(e){
+    msg.textContent = e && e.code==='not_granted' ? 'Forkert nøgle — kopiér den fra fanen "Opsætning" i arket.'
+      : 'Kunne ikke nå scriptet. Tjek at URL\'en er webapp-URL\'en, og at adgang er sat til "Alle".';
+  }
+}
+
+function renderConnect(){
+  return `<div class="fade-in">
+    <div class="hero-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="2" stroke="#00F0FF" stroke-width="1.5"/><path d="M4 9h16M4 15h16M10 3v18" stroke="#FF2E97" stroke-width="1.3"/></svg></div>
+    <h2 class="center-text">Forbind til regnearket</h2>
+    <p class="sub center-text">Én gang pr. telefon. Din medsmager slipper for dette — han får et færdigt link fra dig.</p>
+    <div class="card">
+      <div class="field"><div class="field-label"><span class="txt">Webapp-URL</span></div>
+        <input type="text" id="cfg-url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off"></div>
+      <div class="field"><div class="field-label"><span class="txt">Nøgle</span></div>
+        <input type="text" id="cfg-key" placeholder="fra fanen “Opsætning” i arket" autocomplete="off"></div>
+      <button class="btn btn-primary btn-block" onclick="connectSheet()">Forbind →</button>
+      <div class="hint" id="cfg-msg" style="margin-top:10px;"></div>
+    </div>
+  </div>`;
+}
+
+async function copyShareLink(){
+  const link = shareLink();
+  try{ await navigator.clipboard.writeText(link); showToast('Link kopieret — send det til din medsmager'); }
+  catch(e){ prompt('Kopiér linket:', link); }
+}
+
+let USER = null, MY_ACCOUNT_ID = null;
+
+async function initBackend(){
+  DB = await useCap('db');
+  DOWNLOADS = await useCap('downloads');
+  USER = await useCap('user');
+  if(DB) BACKEND = 'claude';
+  else if(!IN_CLAUDE){
+    const cfg = loadBackendCfg();
+    if(cfg){ DB = makeSheetsDb(cfg.url, cfg.key); BACKEND = 'sheets'; }
+    else { NEEDS_SETUP = true; render(); return; }
+  }
+  USE_DB = !!DB;
+  MY_ACCOUNT_ID = null;
+  try{ MY_ACCOUNT_ID = USER ? await USER.id() : null; }catch(e){ MY_ACCOUNT_ID = null; }
+  try{ CAN_WRITE = USER ? await USER.can('data.write') : null; }catch(e){ CAN_WRITE = null; }
+  if(USE_DB && CAN_WRITE === false) setSyncState(true);
+
+  MY_IDENTITY = null;
+  if(USE_DB && MY_ACCOUNT_ID){
+    try{
+      const snap = await DB.doc('data/users/'+MY_ACCOUNT_ID+'/identity').get();
+      const data = snap.exists ? snap.data() : null;
+      if(data && data.name && CONFIG.participants.includes(data.name)) MY_IDENTITY = data.name;
+    }catch(e){ /* fall through to local fallback below */ }
+  }
+  if(!MY_IDENTITY) MY_IDENTITY = loadLocalIdentity(); // only reached with no account id, or db unavailable
+
+  if(USE_DB){
+    subscribeConfig();
+    subscribePointer();
+    subscribeRounds();
+    render();
+  } else {
+    await loadLocalFallback();
+    render();
+  }
+}
+
+async function loadLocalFallback(){
+  try{ const c=localStorage.getItem('vino_config'); if(c) CONFIG=JSON.parse(c); }catch(e){}
+  try{ const h=localStorage.getItem('vino_history'); if(h) HISTORY=JSON.parse(h); }catch(e){}
+  try{ const a=localStorage.getItem('vino_active'); if(a) ACTIVE=JSON.parse(a); }catch(e){}
+}
+
+/* ================= SYNC: READING =================
+   THE ROOT CAUSE of most bugs so far: the database hands out snapshot data
+   as FROZEN objects. The app used to store them directly as ACTIVE, after
+   which every change (ACTIVE.phase='guessing', ACTIVE.truth.aargang=...)
+   was silently ignored by the browser. So a year pick "stuck", typed
+   fields were "not filled in", and "Klar til gæt" sent phase:'entry'.
+   Everything read from the database is now deep-copied first. */
+function clone(o){ return o==null ? o : JSON.parse(JSON.stringify(o)); }
+
+const PHASE_ORDER = { entry:0, guessing:1, review:2, result:3 };
+let lastLocalRoundUpdatedAt = 0;   // kept for compatibility with writers below
+let lastLocalConfigUpdatedAt = 0;
+let INITIAL_LOADED = false; // until the shared state has been read once, don't offer choices that could clash with it
+function markLoaded(){ if(!INITIAL_LOADED){ INITIAL_LOADED = true; render(); } }
+setTimeout(()=>markLoaded(), 10000); // never hang on the loading screen
+const IGNORED_ROUNDS = new Set();  // rounds this device closed (result dismissed) or cancelled
+let PENDING_NEW_ROUND = null;      // {id, at}: a round created here whose pointer hasn't come back yet
+
+// Order-independent comparison: the server returns keys sorted, the app
+// builds them in its own order — a plain JSON.stringify compare said
+// "changed" on every single check, so the screen was redrawn (blink) and
+// the server copy replaced what was being typed.
+function canonical(o){
+  if(Array.isArray(o)) return '['+o.map(canonical).join(',')+']';
+  if(o && typeof o==='object') return '{'+Object.keys(o).sort().map(k=>JSON.stringify(k)+':'+canonical(o[k])).join(',')+'}';
+  return JSON.stringify(o===undefined?null:o);
+}
+function roundContent(r){ const c = Object.assign({}, r); delete c._writer; delete c.updatedAt; return canonical(c); }
+
+// The fields THIS phone is the author of right now. Only this phone edits
+// them in this phase, so an incoming copy can never overwrite them — the
+// local version is always the newest (it may just not have arrived yet).
+function ownedFields(r){
+  if(!r || !MY_IDENTITY) return [];
+  if(r.phase==='entry'    && r.ownerName===MY_IDENTITY)   return ['truth','wineNote','guesserName'];
+  if(r.phase==='guessing' && r.guesserName===MY_IDENTITY) return ['guess'];
+  if(r.phase==='review'   && r.ownerName===MY_IDENTITY)   return ['judged'];
+  return [];
+}
+
+function applyRoundSnapshot(rdata){
+  if(rdata) setTimeout(markLoaded, 0);
+  if(!rdata || IGNORED_ROUNDS.has(rdata.id)) return;
+  const incoming = clone(rdata);
+  const sameRound = !!ACTIVE && ACTIVE.id === incoming.id;
+  if(sameRound){
+    // Never move a round's phase backwards (a late/out-of-order copy).
+    if((PHASE_ORDER[incoming.phase]||0) < (PHASE_ORDER[ACTIVE.phase]||0)) return;
+    if(incoming.phase === ACTIVE.phase) ownedFields(ACTIVE).forEach(f=>{ incoming[f] = clone(ACTIVE[f]); });
+    if(roundContent(incoming) === roundContent(ACTIVE)) return; // nothing new → no redraw at all
+  }
+  const phaseChanged = !sameRound || ACTIVE.phase !== incoming.phase;
+  if(!sameRound && VIEW==='day' && incoming.phase!=='result') VIEW = 'game'; // a new wine started — follow it
+  const visibleChanged = phaseChanged || visibleContent(incoming) !== visibleContent(ACTIVE);
+  ACTIVE = incoming;
+  if(phaseChanged) CONFIRM = null;
+  // Someone started a wine while this person was choosing "servér/blindes": just take them in.
+  if(!MY_IDENTITY && PENDING_GATE_NAME && ACTIVE.phase !== 'result'){
+    const n = PENDING_GATE_NAME; PENDING_GATE_NAME = null; setIdentity(n); return;
+  }
+  // Redraw only when something on THIS person's screen actually changes —
+  // e.g. Lars typing the answer changes nothing on Tore's waiting screen.
+  if(visibleChanged && (phaseChanged || ownedFields(ACTIVE).length === 0)) render();
+}
+// What this phone actually shows of a round (hidden answers/guesses excluded).
+function visibleContent(r){
+  const c = JSON.parse(roundContent(r));
+  const iAmOwner = r.ownerName === MY_IDENTITY;
+  if(!iAmOwner && (r.phase==='entry' || r.phase==='guessing')){ delete c.truth; delete c.wineNote; }
+  if(r.phase==='entry' || (iAmOwner && r.phase==='guessing')) delete c.guess;
+  if(!iAmOwner && r.phase==='review'){ delete c.truth; delete c.wineNote; delete c.judged; } // the guesser only sees "being reviewed"
+  return canonical(c);
+}
+
+function applyPointer(roundId, pdata){
+  // "Det var dagens sidste flaske" pressed on either phone → both show the day summary.
+  if(pdata && pdata.dayEndAt && pdata.dayEndAt !== DAY_END_SEEN && Date.now() - pdata.dayEndAt < 3*3600*1000){
+    DAY_END_SEEN = pdata.dayEndAt;
+    if(ACTIVE && ACTIVE.phase==='result') IGNORED_ROUNDS.add(ACTIVE.id);
+    VIEW = 'day'; ACTIVE = null; render();
+  }
+  // A round was just created on this phone: until the shared pointer shows
+  // it, ignore older pointer values (a read that was already under way).
+  if(PENDING_NEW_ROUND){
+    if(roundId === PENDING_NEW_ROUND.id) PENDING_NEW_ROUND = null;
+    else if(Date.now() - PENDING_NEW_ROUND.at < 15000) return;
+    else PENDING_NEW_ROUND = null;
+  }
+  if(roundId && IGNORED_ROUNDS.has(roundId)) roundId = null;
+  if(!roundId){
+    if(unsubRound){ unsubRound(); unsubRound=null; }
+    if(ACTIVE){ ACTIVE = null; CONFIRM = null; render(); }
+    markLoaded();
+    return;
+  }
+  if(unsubRound && unsubRound._id === roundId) return;
+  if(unsubRound){ unsubRound(); unsubRound=null; }
+  const u = DB.doc('rounds/'+roundId).onSnapshot(rsnap=>{
+    if(rsnap.exists) applyRoundSnapshot(rsnap.data()); else markLoaded();
+  }, ()=>{ if(unsubRound===u) unsubRound=null; markLoaded(); });
+  u._id = roundId;
+  unsubRound = u;
+}
+
+function subscribeConfig(){
+  unsubConfig = DB.doc('config/main').onSnapshot(snap=>{
+    if(snap.exists){
+      const data = snap.data();
+      if(data && data._writer !== SESSION_ID && !configDirty && Array.isArray(data.participants)
+         && canonical(data.participants) !== canonical(CONFIG.participants)){
+        CONFIG = { participants: clone(data.participants) };
+        if(ownedFields(ACTIVE).length === 0) render();
+      }
+    } else {
+      DB.doc('config/main').set({participants:CONFIG.participants,_writer:SESSION_ID,updatedAt:Date.now()}).catch(()=>{});
+    }
+  }, ()=>{ /* keep local config on error */ });
+}
+
+function subscribePointer(){
+  unsubPointer = DB.doc('state/active').onSnapshot(snap=>{
+    const data = snap.exists ? snap.data() : null;
+    applyPointer(data ? data.roundId : null, data);
+  }, ()=>{});
+}
+
+function subscribeRounds(){
+  unsubRounds = DB.collection('rounds').where('phase','==','result').orderBy('createdAt','desc').limit(500).onSnapshot(snap=>{
+    const next = snap.docs.map(d=>clone(d.data()));
+    if(canonical(next.map(r=>roundContent(r))) === canonical(HISTORY.map(r=>roundContent(r)))) return;
+    HISTORY = next;
+    if(ownedFields(ACTIVE).length === 0) render();
+  }, ()=>{});
+}
+
+// Safety net under the live subscription: re-read the shared state every few
+// seconds while the app is on screen, and right away when a phone wakes up.
+// Live updates normally arrive instantly; this guarantees the other phone
+// catches up within seconds even if a live stream dropped silently.
+let pollBusy = false;
+async function pollOnce(){
+  if(!USE_DB || BACKEND==='sheets' || pollBusy || document.visibilityState !== 'visible') return;
+  pollBusy = true;
+  try{
+    const p = await DB.doc('state/active').get();
+    const pdata = p.exists ? p.data() : null;
+    const roundId = pdata ? pdata.roundId : null;
+    applyPointer(roundId, pdata);
+    if(roundId){
+      const r = await DB.doc('rounds/'+roundId).get();
+      if(r.exists) applyRoundSnapshot(r.data());
+    }
+  }catch(e){ /* the next tick tries again */ }
+  pollBusy = false;
+}
+setInterval(pollOnce, 4000);
+
+/* ---- per-field dirty-patch sync ----
+   Root cause of "mine data forsvinder": every text edit used to be sent
+   as a full-document overwrite of the WHOLE round (set()). If this same
+   round is also open in another tab/device (a refreshed page left open,
+   a second phone) that tab's own in-memory copy can be a few seconds
+   stale — and things like the screen-lock/tab-hide handler used to
+   re-push that stale copy unconditionally. Its blank land/region/drue1
+   would then land AFTER your freshly typed ones and blank them out again.
+   Fix: send ONLY the exact field(s) this tab actually changed, as a
+   merge (update()), never the whole truth/guess object. A stale tab
+   that never touched a field can then never blank it. */
+let pendingPatch = {};
+function markDirty(flatKey, val){ pendingPatch[flatKey] = val; }
+function hasPendingChanges(){ return Object.keys(pendingPatch).length > 0; }
+function buildNestedPatch(flat){
+  const out = {};
+  Object.keys(flat).forEach(key=>{
+    const parts = key.split('.');
+    let node = out;
+    for(let i=0;i<parts.length-1;i++){ node[parts[i]] = node[parts[i]] || {}; node = node[parts[i]]; }
+    node[parts[parts.length-1]] = flat[key];
+  });
+  return out;
+}
+async function flushPendingChanges(){
+  clearTimeout(saveTimer);
+  if(!ACTIVE || !hasPendingChanges()) return;
+  const patch = buildNestedPatch(pendingPatch);
+  pendingPatch = {};
+  const now = Date.now();
+  lastLocalRoundUpdatedAt = now;
+  patch.updatedAt = now; patch._writer = SESSION_ID;
+  if(USE_DB){
+    try{
+      await DB.doc('rounds/'+ACTIVE.id).update(patch);
+      setSyncState(false);
+    }
+    catch(e){ setSyncState(true, e); }
+  } else {
+    try{ localStorage.setItem('vino_active', JSON.stringify(ACTIVE)); }catch(e){}
+  }
+}
+function queueSave(){ clearTimeout(saveTimer); saveTimer = setTimeout(flushPendingChanges, 450); }
+
+// Root cause of "mit skift blev ikke sendt til den anden telefon": a
+// phase transition (goToGuessing, sendGuess, ...) updates ACTIVE and
+// calls render() SYNCHRONOUSLY, before this async write has even started
+// — so this device's own screen always shows the new phase instantly,
+// whether or not the write to the shared database actually succeeds.
+// If it fails (or never reaches the network), the two screens silently
+// disagree: this one *looks* done, the other one never moves. SYNC_ERROR
+// makes that failure visible everywhere in the app (not just a toast that
+// can be missed) with a manual retry, instead of letting the UI lie.
+let SYNC_ERROR = false;
+let RETRY_LAST = null;
+let CAN_WRITE = null; // from the user capability: true / false / null (unknown)
+// The warning lives in its own bar ABOVE the screen and is updated directly,
+// so showing or hiding it never redraws the fields someone is typing in.
+function setSyncState(err, e){
+  SYNC_ERROR = !!err;
+  const bar = document.getElementById('syncbar');
+  if(!bar) return;
+  const denied = CAN_WRITE === false || (e && (e.code==='invalid_argument' || e.code==='revoked' || e.code==='not_granted'));
+  if(!err && CAN_WRITE !== false){ bar.style.display='none'; bar.innerHTML=''; return; }
+  bar.style.display='flex';
+  bar.innerHTML = denied
+    ? `<span>⚠ <b>${esc(MY_IDENTITY||'Du')}</b> har kun <b>læseadgang</b> — dine svar kan ikke gemmes, så den anden telefon ser dem ikke. <b>Lars:</b> åbn <b>Del</b> på vinbogen og sæt <b>“Who has access”</b> til kun inviterede personer (<i>ikke</i> “Anyone with the link”) — ellers virker Editor-invitationen ikke. Genindlæs derefter begge telefoner.</span>`
+    : `<span>⚠ Kunne ikke gemme til den delte forbindelse — den anden telefon ser muligvis ikke dine seneste ændringer.</span><button class="btn btn-danger btn-sm" onclick="retrySync()">Prøv igen</button>`;
+}
+function retrySync(){
+  const redo = RETRY_LAST; RETRY_LAST = null;
+  if(redo) redo(); else if(hasPendingChanges()) flushPendingChanges(); else pushActiveNow();
+}
+
+// Every change to a round after it is created is sent as a MERGE of just the
+// fields that changed (plus anything typed but not yet sent) — never a full
+// overwrite, so no phone can ever push an old copy over newer data.
+async function patchRoundNow(fields){
+  if(!ACTIVE) return;
+  clearTimeout(saveTimer);
+  const patch = Object.assign(buildNestedPatch(pendingPatch), clone(fields));
+  pendingPatch = {};
+  const now = Date.now();
+  lastLocalRoundUpdatedAt = now;
+  patch._writer = SESSION_ID; patch.updatedAt = now;
+  if(!USE_DB){ try{ localStorage.setItem('vino_active', JSON.stringify(ACTIVE)); }catch(e){} return; }
+  const id = ACTIVE.id;
+  try{
+    await DB.doc('rounds/'+id).update(patch);
+    setSyncState(false);
+  }catch(e){
+    // A phase change that didn't reach the server must not be shown as done
+    // on this phone (Tore saw "sent" while Lars still saw him typing).
+    if(fields.phase && ACTIVE && ACTIVE.id===id && ACTIVE.phase===fields.phase){
+      const order = Object.keys(PHASE_ORDER);
+      ACTIVE.phase = order[Math.max(0, PHASE_ORDER[fields.phase]-1)];
+      showToast('Ikke sendt — se beskeden øverst');
+      render();
+    }
+    RETRY_LAST = ()=>{ if(ACTIVE && ACTIVE.id===id){ if(fields.phase) ACTIVE.phase = fields.phase; patchRoundNow(fields); render(); } };
+    setSyncState(true, e);
+  }
+}
+
+async function pushActiveNow(){
+  clearTimeout(saveTimer);
+  pendingPatch = {}; // a full structural write below supersedes any pending per-field patch
+  if(USE_DB){
+    try{
+      if(ACTIVE){
+        const now = Date.now();
+        lastLocalRoundUpdatedAt = now;
+        const payload = Object.assign({}, ACTIVE, {_writer:SESSION_ID, updatedAt:now, createdAt: ACTIVE.createdAt||now});
+        await DB.doc('rounds/'+ACTIVE.id).set(payload);
+        await DB.doc('state/active').set({roundId:ACTIVE.id,_writer:SESSION_ID,updatedAt:now});
+      } else {
+        await DB.doc('state/active').set({roundId:null,_writer:SESSION_ID,updatedAt:Date.now()});
+      }
+      setSyncState(false);
+    }catch(e){
+      setSyncState(true, e);
+    }
+  } else {
+    try{ if(ACTIVE) localStorage.setItem('vino_active', JSON.stringify(ACTIVE)); else localStorage.removeItem('vino_active'); }catch(e){}
+    try{ localStorage.setItem('vino_history', JSON.stringify(HISTORY)); }catch(e){}
+  }
+}
+
+let configDirty = false;
+async function flushConfigSave(){
+  clearTimeout(configSaveTimer);
+  if(!configDirty) return;
+  configDirty = false;
+  if(USE_DB){
+    try{
+      const now = Date.now();
+      lastLocalConfigUpdatedAt = now;
+      await DB.doc('config/main').set({participants:CONFIG.participants,_writer:SESSION_ID,updatedAt:now});
+    }
+    catch(e){ showToast('Kunne ikke synkronisere deltagere'); }
+  } else {
+    try{ localStorage.setItem('vino_config', JSON.stringify(CONFIG)); }catch(e){}
+  }
+}
+function queueConfigSave(){ configDirty = true; clearTimeout(configSaveTimer); configSaveTimer=setTimeout(flushConfigSave, 450); }
+
+/* ================= HELPERS ================= */
+function computeScore(round){
+  let s = 0;
+  CATEGORIES.forEach(c=>{ if(round.judged[c.id]==='good') s += c.points; });
+  if(round.judged.aargang==='good') s += AARGANG_POINTS_FULL;
+  else if(round.judged.aargang==='mid') s += AARGANG_POINTS_NEAR;
+  return s;
+}
+function allJudged(round){ return CATEGORIES.every(c=>round.judged[c.id]) && round.judged.aargang; }
+function myRole(){
+  if(!ACTIVE || !MY_IDENTITY) return 'other';
+  if(MY_IDENTITY===ACTIVE.ownerName) return 'owner';
+  if(MY_IDENTITY===ACTIVE.guesserName) return 'guesser';
+  return 'other';
+}
+
+/* ================= ROUND LIFECYCLE ================= */
+// Before starting a wine, re-read the shared state: if the other phone has a
+// wine under way that this phone hasn't heard about yet, join it instead of
+// overwriting it.
+async function newRound(){
+  if(USE_DB){
+    try{
+      const p = await DB.doc('state/active').get();
+      const id = p.exists ? p.data().roundId : null;
+      if(id && !IGNORED_ROUNDS.has(id) && (!ACTIVE || ACTIVE.id !== id)){
+        const r = await DB.doc('rounds/'+id).get();
+        if(r.exists && r.data().phase !== 'result'){
+          VIEW = 'game'; applyPointer(id); applyRoundSnapshot(r.data());
+          showToast('Der er allerede en vin i gang'); return;
+        }
+      }
+    }catch(e){ /* can't check right now — go ahead */ }
+  }
+  createRound();
+}
+function createRound(){
+  const others = otherParticipants(MY_IDENTITY);
+  ACTIVE = { id: uid(), phase:'entry', date: todayISO(), createdAt: Date.now(), ownerName: MY_IDENTITY,
+    guesserName: others.length===1 ? others[0] : null, wineNote:'',
+    truth:{land:'',region:'',appellation:'',drue1:'',drue2:'',aargang:'',type:''},
+    guess:{land:'',region:'',appellation:'',drue1:'',drue2:'',aargang:'',type:''},
+    judged:{} };
+  VIEW='game'; RULES_OPEN=false;
+  PENDING_NEW_ROUND = { id: ACTIVE.id, at: Date.now() };
+  pushActiveNow(); render();
+}
+function setGuesser(name){ ACTIVE.guesserName = name; patchRoundNow({guesserName:name}); render(); }
+function updTruth(id,val){ if(!ACTIVE) return; ACTIVE.truth[id]=val; markDirty('truth.'+id, val); queueSave(); }
+function updGuess(id,val){ if(!ACTIVE) return; ACTIVE.guess[id]=val; markDirty('guess.'+id, val); queueSave(); }
+function updNote(val){ if(!ACTIVE) return; ACTIVE.wineNote = val; markDirty('wineNote', val); queueSave(); }
+
+function entryValid(){
+  return !!(ACTIVE.ownerName && ACTIVE.guesserName &&
+    ACTIVE.truth.land.trim() && ACTIVE.truth.region.trim() && ACTIVE.truth.drue1.trim());
+}
+// What's still missing before entry can be submitted — used to tell the
+// person exactly what to fill in, instead of a silently-disabled button
+// whose state can go stale (it isn't recomputed on every keystroke, since
+// updTruth deliberately skips a full render to protect input focus/cursor).
+function missingEntryFields(){
+  const missing = [];
+  if(!ACTIVE.guesserName) missing.push('vælg blindsmager');
+  if(!ACTIVE.truth.land.trim()) missing.push('Land');
+  if(!ACTIVE.truth.region.trim()) missing.push('Region');
+  if(!ACTIVE.truth.drue1.trim()) missing.push('Dominerende druesort');
+  return missing;
+}
+function goToGuessing(){
+  if(!entryValid()){
+    const missing = missingEntryFields();
+    showToast(missing.length ? 'Udfyld først: ' + missing.join(', ') : 'Udfyld alle påkrævede felter først');
+    return;
+  }
+  ACTIVE.phase='guessing'; RULES_OPEN=false;
+  patchRoundNow({phase:'guessing', truth:ACTIVE.truth, wineNote:ACTIVE.wineNote, guesserName:ACTIVE.guesserName});
+  render();
+}
+function sendGuess(){
+  ACTIVE.phase='review'; RULES_OPEN=false;
+  patchRoundNow({phase:'review', guess:ACTIVE.guess});
+  render();
+}
+function setJudge(catId, val){
+  ACTIVE.judged[catId] = val;
+  patchRoundNow({judged:{[catId]:val}});
+  render();
+}
+function finishRound(){
+  // Lock in the marks as shown (suggestions the owner didn't change count as
+  // accepted); unanswered categories are 0 points.
+  ACTIVE.judged = Object.fromEntries(ALL_CATS.map(c=>[c.id, answered(ACTIVE,c.id) ? effJudge(ACTIVE,c.id) : 'bad']));
+  ACTIVE.ownerIndex = ownerIndexFor(ACTIVE.ownerName);
+  ACTIVE.score = computeScore(ACTIVE);
+  ACTIVE.phase = 'result';
+  if(!USE_DB){ HISTORY.unshift(clone(ACTIVE)); pushActiveNow(); }
+  else patchRoundNow({phase:'result', score:ACTIVE.score, ownerIndex:ACTIVE.ownerIndex, judged:ACTIVE.judged});
+  render();
+}
+// Closing a finished round only closes it on THIS phone — the other person
+// keeps looking at their result until they close it or a new wine starts.
+function dismissResult(){
+  if(ACTIVE) IGNORED_ROUNDS.add(ACTIVE.id);
+  ACTIVE=null; CONFIRM=null;
+  if(!USE_DB) pushActiveNow();
+  render();
+}
+function askDiscard(){ CONFIRM={type:'discard'}; render(); }
+function discardActive(){
+  const id = ACTIVE ? ACTIVE.id : null;
+  if(id) IGNORED_ROUNDS.add(id);
+  ACTIVE=null; CONFIRM=null; pendingPatch={}; clearTimeout(saveTimer);
+  pushActiveNow(); // clears the shared pointer
+  if(USE_DB && id) DB.doc('rounds/'+id).delete().catch(()=>{});
+  render();
+}
+
+/* ================= YEAR PICKER ================= */
+let customAargang = { truth:false, guess:false };
+function isYearOrNV(v){ return v==='NV' || /^\d{4}$/.test(String(v)); }
+function aargangSelectHtml(value, kind){
+  const setter = kind==='truth' ? 'setAargangTruth' : 'setAargangGuess';
+  const updater = kind==='truth' ? 'updTruth' : 'updGuess';
+  const showCustom = customAargang[kind] || (!!value && !isYearOrNV(value));
+  let opts = `<option value=""${!value?' selected':''}>— vælg årgang —</option>`;
+  opts += `<optgroup label="Seneste årgange">` + [2025,2024,2023,2022,2021].map(y=>`<option value="${y}"${String(value)===String(y)?' selected':''}>${y}</option>`).join('') + `</optgroup>`;
+  opts += `<option value="NV"${value==='NV'?' selected':''}>NV (ikke-vintage)</option>`;
+  let older='';
+  for(let y=2020;y>=1970;y--){ older += `<option value="${y}"${String(value)===String(y)?' selected':''}>${y}</option>`; }
+  opts += `<optgroup label="Ældre årgange">${older}</optgroup>`;
+  opts += `<option value="__custom__"${showCustom?' selected':''}>Andet (skriv selv)…</option>`;
+  const customInput = showCustom
+    ? `<input type="text" placeholder="fx 12 år, Hors d'Age, VVO" value="${esc(isYearOrNV(value)?'':value)}" oninput="${updater}('aargang', this.value)" style="margin-top:8px;">`
+    : '';
+  return `<select class="year-select" onchange="${setter}(this.value)">${opts}</select>${customInput}`;
+}
+// Deliberately does NOT re-render for a plain year/NV pick: the native
+// <select> already shows exactly what the person just chose the instant
+// they chose it, and tearing that element down and rebuilding it from our
+// own HTML string in the same tick can race the browser's own commit of
+// its picker UI (this is what caused picks to appear to "stick" on one
+// value on some mobile browsers). We only redraw when the custom-entry
+// field needs to appear or disappear.
+function setAargangTruth(val){
+  if(val==='__custom__'){ customAargang.truth=true; render(); return; }
+  const wasCustom = customAargang.truth;
+  customAargang.truth = false;
+  ACTIVE.truth.aargang = val;
+  markDirty('truth.aargang', val);
+  flushPendingChanges();
+  if(wasCustom) render();
+}
+function setAargangGuess(val){
+  if(val==='__custom__'){ customAargang.guess=true; render(); return; }
+  const wasCustom = customAargang.guess;
+  customAargang.guess = false;
+  ACTIVE.guess.aargang = val;
+  markDirty('guess.aargang', val);
+  flushPendingChanges();
+  if(wasCustom) render();
+}
+
+/* ================= RENDER: GAME ================= */
+function renderGame(){
+  if(!ACTIVE) return renderIdle();
+  const role = myRole();
+  if(ACTIVE.phase==='entry') return role==='owner' ? renderEntry() : renderWaiting('entry');
+  if(ACTIVE.phase==='guessing') return role==='guesser' ? renderGuessing() : renderWaiting('guessing');
+  if(ACTIVE.phase==='review') return renderReview(role==='owner');
+  if(ACTIVE.phase==='result') return renderResult();
+  return renderIdle();
+}
+
+function identityPillHtml(){
+  return `<div class="identity-pill">Du er <b>${esc(MY_IDENTITY)}</b> · <span class="switch" onclick="switchView('settings')">skift</span></div>`;
+}
+
+let TODAY_OPEN = false;
+function last24hRows(){
+  const cutoff = Date.now() - 24*3600*1000;
+  const recent = HISTORY.filter(r=>(r.createdAt||0) >= cutoff);
+  if(recent.length===0) return `<div class="hint" style="text-align:center;">Ingen smagninger de seneste 24 timer.</div>`;
+  const lb = {};
+  recent.forEach(r=>{
+    lb[r.guesserName] = lb[r.guesserName] || {points:0, rounds:0};
+    lb[r.guesserName].points += r.score; lb[r.guesserName].rounds += 1;
+  });
+  return Object.entries(lb).sort((a,b)=>b[1].points-a[1].points).map(([n,d],i)=>`
+    <div class="lb-row">
+      <div class="lb-rank">${i+1}</div>
+      <div class="lb-name">${esc(n)}<div class="lb-sub">${d.rounds} vin${d.rounds===1?'':'e'}</div></div>
+      <div class="lb-score">${d.points}p</div>
+    </div>`).join('');
+}
+
+function renderIdle(){
+  const rounds = HISTORY.length;
+  const today = HISTORY.filter(r=>r.date===todayISO()).length;
+  const avg = rounds ? Math.round(HISTORY.reduce((a,r)=>a+r.score,0)/rounds/MAX_SCORE*100) : 0;
+  const others = otherParticipants(MY_IDENTITY);
+  const canStart = others.length>0;
+  return `
+  <div class="fade-in center-text">
+    <div class="hero-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M8 3h8l-.7 8.2c-.3 3-2.1 4.7-3.3 5.2v4.1h3v1.5H9v-1.5h3v-4.1c-1.2-.5-3-2.2-3.3-5.2L8 3z" stroke="#FF6B8F" stroke-width="1.4" stroke-linejoin="round"/></svg></div>
+    ${identityPillHtml()}
+    <h2>Klar til blindsmagning?</h2>
+    <p class="sub">${canStart ? 'Du indtaster vinen i hemmelighed — din medsmager gætter blindt og scorer point.' : 'Tilføj mindst én medsmager under deltager-ikonet, før I kan starte.'}</p>
+    <button class="btn btn-primary btn-block" ${canStart?'':'disabled'} onclick="newRound()">Start ny vin →</button>
+    ${rounds>0 ? `
+    <div class="stats-row">
+      <div class="stat-box"><div class="stat-num">${rounds}</div><div class="stat-lbl">Vine i alt</div></div>
+      <div class="stat-box"><div class="stat-num">${today}</div><div class="stat-lbl">I dag</div></div>
+      <div class="stat-box"><div class="stat-num">${avg}%</div><div class="stat-lbl">Snit-score</div></div>
+    </div>
+    <button class="btn btn-secondary btn-block" style="margin-top:10px;" onclick="switchView('day')">📅 Dagens resultat</button>
+    <button class="btn btn-ghost btn-block" onclick="switchView('history')" style="margin-top:6px;">Se historik →</button>
+    <button class="btn btn-ghost btn-block" onclick="switchView('analysis')">Se analyse →</button>
+    ` : ''}
+    ${USE_DB ? '' : `<div class="sync-note">⚠ Kører kun lokalt på denne telefon — ingen delt forbindelse fundet.</div>`}
+  </div>`;
+}
+
+function renderPhaseTrack(active){
+  const phases=['entry','guessing','review','result'];
+  return `<div class="phase-track">${phases.map(p=>`<div class="phase-dot ${p===active?'on':''}"></div>`).join('')}</div>`;
+}
+function gen(n){ n=String(n||''); return /[sxzSXZ]$/.test(n) ? n+'’' : n+'s'; }
+function wineTag(){ return `${esc(gen(ACTIVE.ownerName))} ${ACTIVE.ownerIndex || ownerIndexFor(ACTIVE.ownerName)}. vin`; }
+
+function renderWaiting(kind){
+  const msg = kind==='entry' ? `${esc(ACTIVE.ownerName)} indtaster vinen i hemmelighed` : `${esc(ACTIVE.guesserName||'Din medsmager')} gætter blindt lige nu`;
+  const sub = kind==='entry' ? 'Skærmen skifter automatisk til dig, når det er din tur til at gætte.' : 'Følg med — I ser resultatet sammen, så snart buddet er sendt.';
+  const rows = CATEGORIES.map(c=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed var(--border);"><span>${c.label}</span><span style="color:var(--text-faint);">${c.points}p</span></div>`).join('');
+  return `
+  <div class="fade-in center-text">
+    ${renderPhaseTrack(kind)}
+    <div class="hero-icon pulse"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" fill="#00F0FF"/><circle cx="12" cy="12" r="8" stroke="#FF2E97" stroke-width="1.4" stroke-dasharray="3 4"/></svg></div>
+    <h2>${msg}</h2>
+    <p class="sub">${sub}</p>
+    <div class="card card-flat" style="text-align:left;">
+      <div class="eyebrow" style="margin-bottom:12px;">Kategorier i spil</div>
+      ${rows}
+      <div style="display:flex;justify-content:space-between;padding:7px 0;"><span>Årgang</span><span style="color:var(--text-faint);">2p</span></div>
+    </div>
+  </div>`;
+}
+
+function renderEntry(){
+  const others = otherParticipants(ACTIVE.ownerName);
+  const pickGuesser = others.length>1 ? `
+    <div class="field">
+      <div class="field-label"><span class="txt">Hvem gætter blindt?</span></div>
+      <div class="chips">${others.map(p=>`<div class="chip-pick ${ACTIVE.guesserName===p?'selected':''}" onclick="setGuesser('${esc(p)}')">${esc(p)}</div>`).join('')}</div>
+    </div>` : '';
+  const truthFields = CATEGORIES.map(c=>`
+    <div class="field">
+      <div class="field-label"><span class="txt">${c.label}</span><span class="pts">${c.points}p</span></div>
+      <input type="text" placeholder="${c.ph}" value="${esc(ACTIVE.truth[c.id])}" oninput="updTruth('${c.id}', this.value)">
+    </div>`).join('');
+
+  return `
+  <div class="fade-in">
+    ${renderPhaseTrack('entry')}
+    <div class="eyebrow">Trin 1 · Din tur, ${esc(ACTIVE.ownerName)}</div>
+    <h2>${wineTag()}</h2>
+    <p class="sub">Udfyld felterne. Når du klikker ”Send”, bliver det ${esc(gen(ACTIVE.guesserName||'din medsmager'))} tur til at gætte.</p>
+    <div class="card">
+      ${pickGuesser}
+      <div class="field">
+        <div class="field-label"><span class="txt">Vinens navn <span style="color:var(--text-faint);font-weight:400;text-transform:none;">(egne noter, tæller ikke)</span></span></div>
+        <input type="text" placeholder="fx Domaine X, Cuvée Y" value="${esc(ACTIVE.wineNote)}" oninput="updNote(this.value)">
+      </div>
+      ${truthFields}
+      <div class="field">
+        <div class="field-label"><span class="txt">Årgang</span><span class="pts">2p</span></div>
+        ${aargangSelectHtml(ACTIVE.truth.aargang,'truth')}
+      </div>
+    </div>
+    ${rulesToggleHtml()}
+    <div class="toolbar">
+      <button class="btn btn-primary btn-block" onclick="goToGuessing()">Send →</button>
+    </div>
+    <button class="btn btn-ghost btn-block" onclick="askDiscard()" style="margin-top:6px;">Annullér</button>
+    ${CONFIRM && CONFIRM.type==='discard' ? confirmDiscardHtml() : ''}
+  </div>`;
+}
+
+function rulesToggleHtml(){
+  return `
+  <div class="rules-toggle" onclick="RULES_OPEN=!RULES_OPEN; render();">
+    <span>${RULES_OPEN?'▾':'▸'}</span> ${RULES_OPEN?'Skjul':'Se'} pointregler &amp; definitioner
+  </div>
+  ${RULES_OPEN ? `<div class="card card-flat rules-panel">${RULES_HTML}</div>` : ''}`;
+}
+function confirmDiscardHtml(){
+  return `<div class="confirm-box"><span>Annullér denne vin? Alt indtastet forsvinder.</span>
+    <div style="display:flex;gap:8px;"><button class="btn btn-danger btn-sm" onclick="discardActive()">Annullér vin</button><button class="btn btn-secondary btn-sm" onclick="CONFIRM=null;render()">Fortryd</button></div></div>`;
+}
+
+function renderGuessing(){
+  const fields = CATEGORIES.map(c=>`
+    <div class="field">
+      <div class="field-label"><span class="txt">${c.label}</span><span class="pts">${c.points}p</span></div>
+      <input type="text" placeholder="${c.ph}" value="${esc(ACTIVE.guess[c.id])}" oninput="updGuess('${c.id}', this.value)">
+    </div>`).join('');
+
+  return `
+  <div class="fade-in">
+    ${renderPhaseTrack('guessing')}
+    <div class="eyebrow">Trin 2 · Blindsmager: ${esc(ACTIVE.guesserName)}</div>
+    <h2>${wineTag()}</h2>
+    <p class="sub">Gæt løs — ingen ved siden af er forkert at prøve. Tryk "Send bud" når du er klar.</p>
+    <div class="card">
+      ${fields}
+      <div class="field">
+        <div class="field-label"><span class="txt">Årgang</span><span class="pts">2p</span></div>
+        ${aargangSelectHtml(ACTIVE.guess.aargang,'guess')}
+      </div>
+    </div>
+    ${rulesToggleHtml()}
+    <button class="btn btn-primary btn-block" onclick="sendGuess()">Send bud →</button>
+  </div>`;
+}
+
+/* ================= AUTO-JUDGING (suggestions) =================
+   The review screen starts with each answer pre-marked from a tolerant
+   comparison of guess vs. facit; the owner only has to check and can
+   override any mark. Tolerates case, accents, typos and well-known
+   synonyms (the rules accept common synonyms). */
+const ALL_CATS = [...CATEGORIES, {id:'aargang', label:'Årgang', points:AARGANG_POINTS_FULL}];
+
+const SYNONYM_GROUPS = [
+  // countries
+  ['frankrig','france','frankreich'],['italien','italy','italia'],['spanien','spain','espana'],
+  ['tyskland','germany','deutschland'],['ostrig','osterreich','austria','oesterreich'],['portugal'],
+  ['usa','us','united states','amerika','america'],['australien','australia'],['new zealand','newzealand','ny zealand','nz'],
+  ['sydafrika','south africa'],['argentina','argentinien'],['ungarn','hungary','magyarorszag'],['graekenland','greece','hellas'],
+  ['schweiz','switzerland','suisse','svejts'],['slovenien','slovenia'],['kroatien','croatia'],['libanon','lebanon'],
+  ['georgien','georgia'],['england','uk','storbritannien','great britain'],
+  // regions
+  ['bourgogne','burgundy','burgund'],['rhone','rhonedalen','rhone valley','cotes du rhone'],['loire','loiredalen','loire valley'],
+  ['alsace','elsass'],['piemonte','piedmont','piemont'],['toscana','tuscany','toskana'],['sicilien','sicily','sicilia'],
+  ['mosel','moselle','mosel saar ruwer'],['pfalz','palatinate'],['californien','california','kalifornien'],
+  ['cataluna','catalunya','catalonia','katalonien'],['galicien','galicia'],['niederosterreich','lower austria','nedre ostrig'],
+  ['sardinien','sardinia','sardegna'],['champagne'],['bordeaux'],['jura'],['douro'],
+  // grapes
+  ['syrah','shiraz'],['grenache','garnacha','garnatxa','cannonau'],['pinot gris','pinot grigio','grauburgunder','rulander'],
+  ['pinot noir','pinot nero','spatburgunder','blauburgunder'],['pinot blanc','pinot bianco','weissburgunder'],
+  ['mourvedre','monastrell','mataro'],['tempranillo','tinta roriz','aragonez','tinto fino','tinta del pais','cencibel','ull de llebre'],
+  ['carignan','carinena','mazuelo','carignano'],['zinfandel','primitivo','tribidrag'],['chenin blanc','chenin','steen'],
+  ['savagnin','traminer','savagnin blanc','naturé'],['malbec','cot','côt'],['trebbiano','ugni blanc'],['vermentino','rolle'],
+  ['blaufrankisch','lemberger','kekfrankos'],['muscat','moscato','moscatel','muskateller','muskat'],['albarino','alvarinho'],
+  ['nebbiolo','spanna','chiavennasca'],['sangiovese','brunello','prugnolo gentile','morellino','sangioveto','nielluccio'],
+  ['gewurztraminer','gewurz','gewuerztraminer'],['gruner veltliner','gruner','gruener veltliner','veltliner'],
+  ['chardonnay','morillon'],['sauvignon blanc','fume blanc','sauvignon blanc'],['mencia','jaen'],['cinsault','cinsaut'],
+  ['cabernet sauvignon','cab sav','cabsav'],['cabernet franc','bouchet','breton'],['melon de bourgogne','melon'],
+  ['riesling','rheinriesling','white riesling'],['semillon'],['touriga nacional'],['aglianico'],['gamay','gamay noir'],
+];
+function norm(s){
+  return String(s||'').toLowerCase()
+    .replace(/æ/g,'ae').replace(/ø/g,'o').replace(/ß/g,'ss')
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[^a-z0-9]+/g,' ')
+    .replace(/\b(aoc|aop|doc|docg|do|doca|igt|igp|ava|gi|dop|dac|vdp|qba|wine|vin|vino|wein)\b/g,' ')
+    .replace(/\b1er\b/g,'premier').replace(/\bgg\b/g,'grosses gewachs').replace(/\bst\b/g,'saint').replace(/\bste\b/g,'sainte')
+    .replace(/\s+/g,' ').trim();
+}
+const SYN = new Map();
+SYNONYM_GROUPS.forEach(g=>{ const key = norm(g[0]); g.forEach(w=>{ SYN.set(norm(w), key); SYN.set(norm(w).replace(/ /g,''), key); }); });
+function canonTerm(n){ return SYN.get(n) || SYN.get(n.replace(/ /g,'')) || n; }
+function lev(a,b){
+  if(a===b) return 0; const m=a.length, n=b.length; if(!m) return n; if(!n) return m;
+  let prev = Array.from({length:n+1},(_,j)=>j);
+  for(let i=1;i<=m;i++){ const cur=[i];
+    for(let j=1;j<=n;j++) cur[j] = Math.min(prev[j]+1, cur[j-1]+1, prev[j-1]+(a[i-1]===b[j-1]?0:1));
+    prev = cur; }
+  return prev[n];
+}
+function typoTolerance(len){ return len<=3 ? 0 : len<=6 ? 1 : 2; }
+function closeEnough(x,y){
+  if(x===y) return true;
+  const xs=x.replace(/ /g,''), ys=y.replace(/ /g,'');
+  if(xs===ys) return true;
+  return lev(xs,ys) <= typoTolerance(Math.min(xs.length,ys.length));
+}
+function textMatch(truth, guess){
+  const t = norm(truth), g = norm(guess);
+  if(!t || !g) return false;
+  const tc = canonTerm(t), gc = canonTerm(g);
+  if(closeEnough(tc, gc)) return true;
+  // each word typo-corrected through the synonym list (e.g. "pinot grigo")
+  for(const [k,v] of SYN){ if(closeEnough(k, g) && v===tc) return true; }
+  // same words in another order / with a typo in one of them ("Rotie Cote")
+  const tw = t.split(' ').sort(), gw = g.split(' ').sort();
+  if(tw.length>1 && tw.length===gw.length && tw.every((w,i)=>closeEnough(w,gw[i]))) return true;
+  return false;
+}
+function yearVerdict(truth, guess){
+  const t=String(truth||'').trim(), g=String(guess||'').trim();
+  if(!g || !t) return 'bad';
+  if(/^\d{4}$/.test(t) && /^\d{4}$/.test(g)){ const d=Math.abs(+t - +g); return d===0?'good':d===1?'mid':'bad'; }
+  if(t.toUpperCase()==='NV' || g.toUpperCase()==='NV') return t.toUpperCase()===g.toUpperCase() ? 'good' : 'bad';
+  const tn=t.match(/\d+/), gn=g.match(/\d+/);
+  if(tn && gn) return tn[0]===gn[0] ? 'good' : 'bad';     // "10 år" vs "10 years"
+  return textMatch(t,g) ? 'good' : 'bad';                  // "Hors d'Age", "VVO"
+}
+function answered(r, id){ return !!String((r.guess||{})[id]||'').trim(); }
+function suggestVerdict(r, id){
+  if(!answered(r,id)) return 'bad';
+  if(id==='aargang') return yearVerdict(r.truth.aargang, r.guess.aargang);
+  if(!String(r.truth[id]||'').trim()) return 'bad';
+  return textMatch(r.truth[id], r.guess[id]) ? 'good' : 'bad';
+}
+function effJudge(r, id){ return (r.judged && r.judged[id]) || suggestVerdict(r, id); }
+function catPoints(c, j){ return j==='good' ? c.points : (j==='mid' ? AARGANG_POINTS_NEAR : 0); }
+function effectiveScore(r){ return ALL_CATS.reduce((a,c)=>a + (answered(r,c.id) ? catPoints(c, effJudge(r,c.id)) : 0), 0); }
+
+/* ================= RENDER: REVIEW ================= */
+function renderJudgeButtons(catId, opts){
+  const cur = effJudge(ACTIVE, catId);
+  return `<div class="judge-btns">${opts.map(o=>
+    `<div class="jbtn ${o.val} ${cur===o.val?'on':''}" onclick="setJudge('${catId}','${o.val}')">${o.label}</div>`).join('')}</div>`;
+}
+
+function renderReview(isOwner){
+  if(!isOwner) return renderReviewWaiting();
+  const shown = ALL_CATS.filter(c=>answered(ACTIVE, c.id));
+  const skipped = ALL_CATS.filter(c=>!answered(ACTIVE, c.id));
+  const rows = shown.map(c=>{
+    const opts = c.id==='aargang'
+      ? [{val:'bad',label:'✕ Forkert'},{val:'mid',label:'±1 år'},{val:'good',label:'✓ Korrekt'}]
+      : [{val:'bad',label:'✕ Forkert'},{val:'good',label:'✓ Korrekt'}];
+    return `
+    <div class="review-row">
+      <div class="review-head"><span class="review-title">${c.label}</span><span class="review-pts">${c.points}p</span></div>
+      <div class="compare">
+        <div><div class="compare-lbl">Facit</div><div class="compare-val ${!ACTIVE.truth[c.id]?'empty':''}">${ACTIVE.truth[c.id]?esc(ACTIVE.truth[c.id]):'—'}</div></div>
+        <div><div class="compare-lbl">Gæt</div><div class="compare-val">${esc(ACTIVE.guess[c.id])}</div></div>
+      </div>
+      ${c.id==='appellation'?'<div class="hint">Kun point her hvis appellationen adskiller sig fra regionen.</div>':''}
+      ${renderJudgeButtons(c.id, opts)}
+    </div>`;
+  }).join('');
+  return `
+  <div class="fade-in">
+    ${renderPhaseTrack('review')}
+    <div class="eyebrow">Trin 3 · Din gennemgang</div>
+    <h2>${wineTag()}</h2>
+    <p class="sub">Bedømmelsen er foreslået ud fra ${esc(gen(ACTIVE.guesserName))} bud — tjek den igennem, og ret hvis noget er forkert.</p>
+    <div class="live-score"><span>Score</span><span class="n" id="live-score-n">${effectiveScore(ACTIVE)} / ${MAX_SCORE}</span></div>
+    ${rows || '<div class="empty">Ingen kategorier besvaret.</div>'}
+    ${skipped.length ? `<div class="hint" style="margin:4px 0 14px;">Ikke besvaret (0 point): ${skipped.map(c=>c.label).join(', ')}</div>` : ''}
+    ${rulesToggleHtml()}
+    <button class="btn btn-primary btn-block" onclick="finishRound()">Godkend &amp; vis resultat →</button>
+  </div>`;
+}
+
+function renderReviewWaiting(){
+  const mine = ALL_CATS.filter(c=>answered(ACTIVE,c.id)).map(c=>`
+    <div style="display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px dashed var(--border);">
+      <span style="color:var(--text-dim);">${c.label}</span><span style="text-align:right;">${esc(ACTIVE.guess[c.id])}</span></div>`).join('');
+  return `
+  <div class="fade-in center-text">
+    ${renderPhaseTrack('review')}
+    <div class="hero-icon pulse"><svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6" stroke="#00F0FF" stroke-width="1.6"/><path d="M15.5 15.5L20 20" stroke="#FF2E97" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+    <h2>${esc(ACTIVE.ownerName)} gennemgår dit gæt</h2>
+    <p class="sub">Resultatet dukker op her, så snart ${esc(ACTIVE.ownerName)} har godkendt.</p>
+    ${mine ? `<div class="card card-flat" style="text-align:left;"><div class="eyebrow" style="margin-bottom:10px;">Dine bud</div>${mine}</div>` : ''}
+  </div>`;
+}
+
+/* ================= RENDER: RESULT (bottle) ================= */
+// Liquid rises from the bottom of the bottle (0 p) to the base of the neck
+// (24 p) — height proportional to the score.
+const BOTTLE = { bottom: 292, neckBase: 104 };
+function bottleLevelY(score){ return BOTTLE.bottom - (BOTTLE.bottom - BOTTLE.neckBase) * Math.max(0, Math.min(1, score/MAX_SCORE)); }
+
+function bottleSvg(){
+  const body = 'M50 12 H78 V92 C78 108 108 118 108 150 V282 Q108 296 94 296 H34 Q20 296 20 282 V150 C20 118 50 108 50 92 Z';
+  const ticks = [6,12,18,24].map(p=>{ const y=bottleLevelY(p).toFixed(1);
+    return `<line x1="112" y1="${y}" x2="120" y2="${y}" stroke="rgba(0,240,255,0.35)" stroke-width="1"/><text x="124" y="${(+y+4).toFixed(1)}" fill="#6E5E9C" font-family="VT323" font-size="13">${p}</text>`; }).join('');
+  return `
+  <svg viewBox="0 0 150 304" style="width:170px;height:auto;display:block;margin:0 auto;overflow:visible;" aria-label="Flaske fyldt til pointtallet">
+    <defs>
+      <clipPath id="bottle-clip"><path d="${body}"/></clipPath>
+      <linearGradient id="wine-g" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#D8A677"/><stop offset="100%" stop-color="#9C6B4A"/>
+      </linearGradient>
+    </defs>
+    <g clip-path="url(#bottle-clip)">
+      <rect id="wine-fill" x="0" y="${BOTTLE.bottom}" width="150" height="0" fill="url(#wine-g)"/>
+      <rect id="wine-surface" x="0" y="${BOTTLE.bottom}" width="150" height="3" fill="#F1CFA6" opacity="0.7"/>
+    </g>
+    <path d="${body}" fill="none" stroke="#00F0FF" stroke-width="2.2" style="filter:drop-shadow(0 0 6px rgba(0,240,255,.55));"/>
+    <rect x="47" y="6" width="34" height="10" rx="2" fill="#FF2E97" opacity="0.85"/>
+    <line x1="30" y1="160" x2="30" y2="270" stroke="rgba(255,255,255,0.12)" stroke-width="4" stroke-linecap="round"/>
+    ${ticks}
+  </svg>`;
+}
+
+// One animation per round per phone. If the screen is redrawn mid-way (e.g.
+// the round just landed in the history), it carries on from where it was.
+let BOTTLE_ANIM = null; // {id, t0, dur}
+function animateBottle(round){
+  const fill = document.getElementById('wine-fill'), surf = document.getElementById('wine-surface'), num = document.getElementById('score-count');
+  if(!fill || !num) return;
+  const target = round.score||0, endY = bottleLevelY(target);
+  const set = (y, n)=>{ fill.setAttribute('y', y.toFixed(1)); fill.setAttribute('height', (BOTTLE.bottom - y + 10).toFixed(1));
+    surf.setAttribute('y', (y-1).toFixed(1)); surf.style.opacity = (y < BOTTLE.bottom-1 ? 0.7 : 0); num.textContent = n; };
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduce){ set(endY, target); return; }
+  if(!BOTTLE_ANIM || BOTTLE_ANIM.id !== round.id) BOTTLE_ANIM = { id: round.id, t0: performance.now(), dur: 900 + 1500*(target/MAX_SCORE) };
+  const a = BOTTLE_ANIM;
+  (function step(now){
+    if(!fill.isConnected) return; // this copy of the screen was replaced; the new one animates itself
+    const t = Math.min(1, (now-a.t0)/a.dur), e = 1-Math.pow(1-t,3);
+    set(BOTTLE.bottom - (BOTTLE.bottom-endY)*e, Math.round(target*e));
+    if(t<1) requestAnimationFrame(step);
+  })(performance.now());
+}
+
+function resultRowsHtml(r){
+  const shown = ALL_CATS.filter(c=>answered(r,c.id));
+  const skipped = ALL_CATS.filter(c=>!answered(r,c.id));
+  const rows = shown.map(c=>{
+    const j = r.judged[c.id] || 'bad';
+    const icon = j==='good'?'✓':j==='mid'?'½':'✕', cls = j==='good'?'good':j==='mid'?'mid':'bad';
+    return `<div style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px dashed var(--border);">
+      <div class="check-icon ${cls}">${icon}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:1.05rem;text-transform:uppercase;letter-spacing:0.02em;color:var(--text);">${c.label}</div>
+        <div style="font-size:0.9rem;color:var(--text-dim);">Gæt: ${esc(r.guess[c.id])}</div>
+        <div style="font-size:0.85rem;color:var(--text-faint);">Facit: ${esc(r.truth[c.id])||'—'}</div>
+      </div>
+      <div style="font-family:'Press Start 2P',sans-serif;font-size:0.65rem;color:var(--text-dim);">${catPoints(c,j)}p</div>
+    </div>`;
+  }).join('');
+  return rows + (skipped.length ? `<div class="hint" style="padding:10px 14px;">Ikke besvaret: ${skipped.map(c=>c.label).join(', ')}</div>` : '');
+}
+
+function renderResult(){
+  const r = ACTIVE;
+  return `
+  <div class="fade-in">
+    ${renderPhaseTrack('result')}
+    <div class="eyebrow center-text" style="display:block;">Resultat</div>
+    <h2 class="center-text">${wineTag()}${r.wineNote?` — ${esc(r.wineNote)}`:''}</h2>
+    <p class="sub center-text">${esc(r.guesserName)} gættede blindt.</p>
+    <div style="display:flex;align-items:center;justify-content:center;gap:18px;margin:6px 0 18px;">
+      ${bottleSvg()}
+      <div style="text-align:left;min-width:92px;">
+        <div id="score-count" style="font-family:'Press Start 2P',monospace;font-size:2rem;color:var(--text);text-shadow:0 0 12px rgba(255,46,151,.55);">0</div>
+        <div style="color:var(--text-faint);font-size:1.05rem;margin-top:6px;">af ${MAX_SCORE} point</div>
+      </div>
+    </div>
+    <div class="card" style="padding:6px;">${resultRowsHtml(r)}</div>
+    <div class="toolbar">
+      <button class="btn btn-primary btn-block" onclick="dismissResult(); newRound();">Servér næste vin →</button>
+      <button class="btn btn-secondary btn-block" onclick="endDay()">🍾 Det var dagens sidste flaske</button>
+    </div>
+    <button class="btn btn-ghost btn-block" onclick="dismissResult(); switchView('history');" style="margin-top:6px;">Se historik</button>
+  </div>`;
+}
+
+/* ================= DAY SUMMARY ================= */
+// "The day" = the latest tasting session: the most recent finished wines
+// with no gap longer than 6 hours between them (an evening that runs past
+// midnight still counts as one day).
+function sessionRounds(){
+  const list = HISTORY.slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  if(!list.length || Date.now() - (list[0].createdAt||0) > 24*3600*1000) return [];
+  const out = [list[0]];
+  for(let i=1;i<list.length;i++){
+    if((list[i-1].createdAt||0) - (list[i].createdAt||0) > 6*3600*1000) break;
+    out.push(list[i]);
+  }
+  return out;
+}
+let DAY_END_SEEN = null;
+function endDay(){
+  const now = Date.now();
+  DAY_END_SEEN = now;
+  if(ACTIVE) IGNORED_ROUNDS.add(ACTIVE.id);
+  ACTIVE = null; CONFIRM = null; VIEW = 'day';
+  if(USE_DB) DB.doc('state/active').set({roundId:null, dayEndAt:now, _writer:SESSION_ID, updatedAt:now}).catch(e=>setSyncState(true,e));
+  render();
+}
+function renderDay(){
+  const rounds = sessionRounds();
+  if(!rounds.length) return `<div class="fade-in"><h2>Dagens resultat</h2><div class="empty">Ingen færdige vine i dag endnu.</div>
+    <button class="btn btn-primary btn-block" onclick="switchView('game')">Tilbage</button></div>`;
+  const people = {};
+  CONFIG.participants.forEach(p=>people[p]={points:0, bottles:0});
+  rounds.forEach(r=>{ const g=r.guesserName; if(!g) return; people[g]=people[g]||{points:0,bottles:0}; people[g].points+=r.score||0; people[g].bottles++; });
+  const ranked = Object.entries(people).sort((a,b)=>b[1].points-a[1].points || b[1].bottles-a[1].bottles);
+  const top = ranked.length ? ranked[0][1].points : 0;
+  const winners = ranked.filter(([,d])=>d.points===top && d.bottles>0).map(([n])=>n);
+  const winnerLine = winners.length===1 ? `🏆 ${esc(winners[0])} vinder dagen` : `🤝 Uafgjort mellem ${winners.map(esc).join(' og ')}`;
+  const scoreRows = ranked.map(([n,d])=>`
+    <div class="lb-row"><div class="lb-name">${esc(n)}<div class="lb-sub">${d.bottles} flaske${d.bottles===1?'':'r'} gættet</div></div><div class="lb-score">${d.points}p</div></div>`).join('');
+  const avgRows = ranked.map(([n,d])=>`
+    <div class="lb-row"><div class="lb-name">${esc(n)}</div><div class="lb-score" style="color:var(--text-dim);text-shadow:none;">${d.bottles ? (d.points/d.bottles).toFixed(1).replace('.',',')+'p' : '—'}</div></div>`).join('');
+  const wines = rounds.slice().reverse().map(r=>`
+    <div class="lb-row"><div class="lb-name" style="font-size:1rem;">${esc(gen(r.ownerName))} ${r.ownerIndex||''}. vin${r.wineNote?` — ${esc(r.wineNote)}`:''}<div class="lb-sub">gættet af ${esc(r.guesserName)}</div></div><div class="lb-score" style="font-size:0.7rem;">${r.score}p</div></div>`).join('');
+  return `
+  <div class="fade-in">
+    <div class="eyebrow center-text" style="display:block;">Dagens resultat</div>
+    <h2 class="center-text" style="font-size:1.2rem;">${winnerLine}</h2>
+    <div class="card"><div class="eyebrow">Samlet score</div>${scoreRows}</div>
+    <div class="card"><div class="eyebrow">Pointgennemsnit pr. flaske</div>${avgRows}
+      <div class="hint">Til sammenligning, når I ikke har gættet lige mange flasker — tæller ikke med i dagens vinder.</div></div>
+    <div class="card"><div class="eyebrow">Dagens flasker</div>${wines}</div>
+    <button class="btn btn-primary btn-block" onclick="switchView('game')">Tilbage til start</button>
+  </div>`;
+}
+
+/* ================= RENDER: HISTORY ================= */
+function renderHistory(){
+  if(HISTORY.length===0){
+    return `<div class="fade-in"><h2>Historik</h2><div class="empty">Ingen vine bedømt endnu — start en runde for at se resultater og leaderboard her.</div></div>`;
+  }
+  const leaderboard = {};
+  HISTORY.forEach(r=>{
+    leaderboard[r.guesserName] = leaderboard[r.guesserName] || {points:0, rounds:0};
+    leaderboard[r.guesserName].points += r.score;
+    leaderboard[r.guesserName].rounds += 1;
+  });
+  const lbRows = Object.entries(leaderboard).sort((a,b)=>b[1].points-a[1].points).map(([name,d],i)=>`
+    <div class="lb-row">
+      <div class="lb-rank">${i+1}</div>
+      <div class="lb-name">${esc(name)}<div class="lb-sub">${d.rounds} vin${d.rounds===1?'':'e'} gættet · snit ${Math.round(d.points/d.rounds)}p</div></div>
+      <div class="lb-score">${d.points}p</div>
+    </div>`).join('');
+
+  const items = HISTORY.map(r=>{
+    const open = OPEN_HIST_ID===r.id;
+    return `
+    <div class="card hist-card">
+      <div class="hist-item" onclick="toggleHist('${r.id}')">
+        <div>
+          <div class="name">${esc(gen(r.ownerName))} ${r.ownerIndex||''}. vin${r.wineNote?` — ${esc(r.wineNote)}`:''}</div>
+          <div class="sub">${formatDate(r.date)} · gættet af ${esc(r.guesserName)}</div>
+        </div>
+        <div class="score">${r.score}/${MAX_SCORE}</div>
+      </div>
+      ${open?renderHistDetail(r):''}
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="fade-in">
+    <h2>Historik</h2>
+    <p class="sub">Alle jeres blindsmagninger, samlet${USE_DB?' — synkroniseret live':''}.</p>
+    <div class="card">
+      <div class="eyebrow">Leaderboard</div>
+      ${lbRows}
+    </div>
+    <div class="toolbar" style="margin-bottom:16px;">
+      <button class="btn btn-secondary btn-sm" onclick="exportCSV(HISTORY)">↓ Gem som CSV</button>
+      <button class="btn btn-secondary btn-sm" onclick="copyTSV(HISTORY)">⧉ Kopiér som tabel</button>
+    </div>
+    ${items}
+  </div>`;
+}
+
+function renderHistDetail(r){
+  const rows = [...CATEGORIES, {id:'aargang', label:'Årgang', points:2}].map(c=>{
+    const j = r.judged[c.id];
+    const pts = j==='good'?(c.id==='aargang'?AARGANG_POINTS_FULL:c.points):(j==='mid'?AARGANG_POINTS_NEAR:0);
+    const icon = j==='good'?'✓':j==='mid'?'½':'✕';
+    const cls = j==='good'?'good':j==='mid'?'mid':'bad';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--border);">
+      <div class="check-icon ${cls}" style="width:20px;height:20px;font-size:0.7rem;">${icon}</div>
+      <div style="flex:1;font-size:1rem;text-transform:uppercase;letter-spacing:0.02em;color:var(--text);">${c.label}<div style="font-size:0.85rem;color:var(--text-faint);text-transform:none;">facit: ${esc(r.truth[c.id])||'—'} · gæt: ${esc(r.guess[c.id])||'—'}</div></div>
+      <div style="font-family:'Press Start 2P',sans-serif;font-size:0.62rem;color:var(--text-dim);">${pts}p</div>
+    </div>`;
+  }).join('');
+  return `
+  <div class="hist-detail">
+    <div style="padding-top:10px;">${rows}</div>
+    <div class="toolbar">
+      <button class="btn btn-secondary btn-sm" onclick="exportCSV([findHist('${r.id}')])">↓ CSV</button>
+      <button class="btn btn-danger btn-sm" onclick="askDeleteHist('${r.id}')">Slet</button>
+    </div>
+    ${CONFIRM && CONFIRM.type==='history' && CONFIRM.id===r.id ? `
+    <div class="confirm-box"><span>Slet denne runde permanent?</span>
+      <div style="display:flex;gap:8px;"><button class="btn btn-danger btn-sm" onclick="deleteHist('${r.id}')">Slet</button><button class="btn btn-secondary btn-sm" onclick="CONFIRM=null;render()">Fortryd</button></div>
+    </div>` : ''}
+  </div>`;
+}
+function findHist(id){ return HISTORY.find(r=>r.id===id); }
+function toggleHist(id){ OPEN_HIST_ID = OPEN_HIST_ID===id?null:id; CONFIRM=null; render(); }
+function askDeleteHist(id){ CONFIRM={type:'history', id}; render(); }
+async function deleteHist(id){
+  HISTORY = HISTORY.filter(r=>r.id!==id);
+  OPEN_HIST_ID=null; CONFIRM=null; render();
+  if(USE_DB){ try{ await DB.doc('rounds/'+id).delete(); }catch(e){ showToast('Kunne ikke slette på tværs af telefoner'); } }
+  else { try{ localStorage.setItem('vino_history', JSON.stringify(HISTORY)); }catch(e){} }
+  showToast('Runde slettet');
+}
+
+/* ================= EXPORT ================= */
+function buildRows(list){
+  const allCats = [...CATEGORIES, {id:'aargang', label:'Årgang', points:2}];
+  const header = ['Dato','Vinholder','Vin nr.','Vinnavn','Blindsmager', ...allCats.flatMap(c=>[c.label+' facit', c.label+' gæt', c.label+' point']), 'Total','Maks'];
+  const rows=[header];
+  list.forEach(r=>{
+    const cells = allCats.flatMap(c=>{
+      const j=r.judged[c.id];
+      const pts = j==='good'?(c.id==='aargang'?AARGANG_POINTS_FULL:c.points):(j==='mid'?AARGANG_POINTS_NEAR:0);
+      return [r.truth[c.id]||'', r.guess[c.id]||'', pts];
+    });
+    rows.push([r.date||'', r.ownerName||'', r.ownerIndex||'', r.wineNote||'', r.guesserName||'', ...cells, r.score, MAX_SCORE]);
+  });
+  return rows;
+}
+function csvEscape(v){ v=String(v??''); if(/[",;\n]/.test(v)) return '"'+v.replace(/"/g,'""')+'"'; return v; }
+async function exportCSV(list){
+  const rows = buildRows(list);
+  const csv = rows.map(r=>r.map(csvEscape).join(';')).join('\r\n');
+  if(!DOWNLOADS){
+    try{
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob(['\ufeff'+csv], {type:'text/csv;charset=utf-8'}));
+      a.download = 'vinbogen_'+todayISO()+'.csv'; document.body.appendChild(a); a.click(); a.remove();
+      showToast('CSV gemt');
+    }catch(e){ showToast('Download er ikke tilgængelig her'); }
+    return;
+  }
+  try{
+    await DOWNLOADS.save({ filename: 'vinbogen_'+todayISO()+'.csv', data: '﻿'+csv });
+    showToast('CSV gemt — importér i Google Sheets via Filer → Importer');
+  }catch(e){
+    if(e && e.code==='declined'){ /* cancelled, no toast */ }
+    else showToast('Kunne ikke gemme filen');
+  }
+}
+async function copyTSV(list){
+  const rows = buildRows(list);
+  const tsv = rows.map(r=>r.join('\t')).join('\n');
+  try{ await navigator.clipboard.writeText(tsv); showToast('Kopieret — indsæt direkte i et Google Sheet'); }
+  catch(e){ showToast('Kunne ikke kopiere — brug CSV-download i stedet'); }
+}
+
+/* ================= RENDER: ANALYSIS ================= */
+function computeParticipantStats(){
+  const stats = {};
+  const axes = [...CATEGORIES, {id:'aargang', points:2}];
+  HISTORY.forEach(r=>{
+    const g = r.guesserName; if(!g) return;
+    stats[g] = stats[g] || {rounds:0, totalScore:0, byCat:{}, timeline:[]};
+    const s = stats[g];
+    s.rounds++; s.totalScore += r.score;
+    axes.forEach(c=>{
+      s.byCat[c.id] = s.byCat[c.id] || {earned:0, possible:0};
+      const j = r.judged[c.id];
+      const pts = j==='good'?(c.id==='aargang'?AARGANG_POINTS_FULL:c.points):(j==='mid'?AARGANG_POINTS_NEAR:0);
+      s.byCat[c.id].earned += pts;
+      s.byCat[c.id].possible += (c.id==='aargang'?AARGANG_POINTS_FULL:c.points);
+    });
+    s.timeline.push({date:r.date, createdAt:r.createdAt||0, pct: Math.round(r.score/MAX_SCORE*100)});
+  });
+  Object.values(stats).forEach(s=> s.timeline.sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)));
+  return stats;
+}
+
+function renderLegend(names){
+  return `<div class="legend-row">${names.map((n,i)=>`<div class="legend-item"><span class="legend-dot" style="background:${SERIES_COLORS[i%SERIES_COLORS.length]};"></span>${esc(n)}</div>`).join('')}</div>`;
+}
+
+function renderRadarChart(stats, names){
+  const axes = [...CATEGORIES, {id:'aargang', label:'Årgang'}];
+  const n = axes.length;
+  const cx=150, cy=140, R=100;
+  const angleFor=(i)=> -Math.PI/2 + i*(2*Math.PI/n);
+  const ringPts=(r)=> axes.map((a,i)=>{ const ang=angleFor(i); return `${(cx+r*Math.cos(ang)).toFixed(1)},${(cy+r*Math.sin(ang)).toFixed(1)}`; }).join(' ');
+  const grid = [0.25,0.5,0.75,1].map(f=>`<polygon points="${ringPts(R*f)}" fill="none" stroke="rgba(0,240,255,0.14)" stroke-width="1"/>`).join('');
+  const spokes = axes.map((a,i)=>{ const ang=angleFor(i); const x2=cx+R*Math.cos(ang), y2=cy+R*Math.sin(ang); return `<line x1="${cx}" y1="${cy}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="rgba(0,240,255,0.14)" stroke-width="1"/>`; }).join('');
+  const labels = axes.map((a,i)=>{
+    const ang=angleFor(i); const lx=cx+(R+26)*Math.cos(ang), ly=cy+(R+26)*Math.sin(ang);
+    const short = a.label.split(' ')[0].replace('Dominerende','Drue').replace('Yderligere','+Drue').replace('Officiel','Type');
+    return `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" fill="#B2A3E0" font-family="VT323" font-size="13">${esc(short)}</text>`;
+  }).join('');
+  const series = names.map((name,si)=>{
+    const s = stats[name]; const color = SERIES_COLORS[si%SERIES_COLORS.length];
+    const pts = axes.map((a,i)=>{
+      const b = s.byCat[a.id]; const pct = (b && b.possible) ? b.earned/b.possible : 0;
+      const ang=angleFor(i); const r=R*pct;
+      return {x:cx+r*Math.cos(ang), y:cy+r*Math.sin(ang), pct};
+    });
+    const poly = pts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+    const dots = pts.map(p=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.5" fill="${color}"><title>${esc(name)}: ${Math.round(p.pct*100)}%</title></circle>`).join('');
+    return `<polygon points="${poly}" fill="${color}" fill-opacity="0.16" stroke="${color}" stroke-width="2"/>${dots}`;
+  }).join('');
+  return `<svg viewBox="0 0 300 280" style="width:100%;max-width:340px;display:block;margin:0 auto;">${grid}${spokes}${series}${labels}</svg>`;
+}
+
+function renderTrendChart(stats, names){
+  const w=300, h=170, padL=30, padR=10, padT=10, padB=10;
+  const maxLen = Math.max(1, ...names.map(n=>stats[n].timeline.length));
+  const xFor=(idx,len)=> len<=1 ? padL : padL + idx*((w-padL-padR)/(len-1));
+  const yFor=(pct)=> padT + (1-pct/100)*(h-padT-padB);
+  const gridlines = [0,50,100].map(p=>`<line x1="${padL}" y1="${yFor(p).toFixed(1)}" x2="${w-padR}" y2="${yFor(p).toFixed(1)}" stroke="rgba(0,240,255,0.12)" stroke-width="1"/><text x="${padL-6}" y="${(yFor(p)+4).toFixed(1)}" text-anchor="end" fill="#6E5E9C" font-family="VT323" font-size="11">${p}%</text>`).join('');
+  const series = names.map((name,si)=>{
+    const s = stats[name]; const color = SERIES_COLORS[si%SERIES_COLORS.length];
+    const tl = s.timeline; if(tl.length===0) return '';
+    const pts = tl.map((t,i)=>({x:xFor(i,tl.length), y:yFor(t.pct), t}));
+    const line = pts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+    const dots = pts.map(p=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="${color}"><title>${esc(name)} · ${formatDate(p.t.date)}: ${p.t.pct}%</title></circle>`).join('');
+    return tl.length>1 ? `<polyline points="${line}" fill="none" stroke="${color}" stroke-width="2"/>${dots}` : dots;
+  }).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;display:block;">${gridlines}${series}</svg>`;
+}
+
+function renderAnalysis(){
+  const stats = computeParticipantStats();
+  const names = Object.keys(stats);
+  if(names.length===0){
+    return `<div class="fade-in"><h2>Analyse</h2><div class="empty">Ingen data endnu — gæt et par vine, så dukker jeres styrker og udvikling op her.</div></div>`;
+  }
+  const radar = renderRadarChart(stats, names);
+  const trend = renderTrendChart(stats, names);
+  const axes = [...CATEGORIES, {id:'aargang', label:'Årgang', points:2}];
+  const insights = names.map((n,i)=>{
+    const s = stats[n];
+    let best=null, worst=null;
+    axes.forEach(c=>{
+      const b=s.byCat[c.id]; if(!b||b.possible===0) return;
+      const pct=b.earned/b.possible;
+      if(!best||pct>best.pct) best={label:c.label,pct};
+      if(!worst||pct<worst.pct) worst={label:c.label,pct};
+    });
+    return `<div class="card card-flat" style="margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span class="legend-dot" style="background:${SERIES_COLORS[i%SERIES_COLORS.length]};box-shadow:0 0 6px ${SERIES_COLORS[i%SERIES_COLORS.length]};"></span>
+        <span style="text-transform:uppercase;letter-spacing:0.03em;">${esc(n)}</span>
+        <span style="margin-left:auto;font-family:'Press Start 2P',sans-serif;font-size:0.6rem;color:var(--text-faint);">${s.rounds} vine</span>
+      </div>
+      <div class="hint">Stærkest til <b style="color:var(--good);">${best?esc(best.label):'—'}</b> · svagest til <b style="color:var(--bad);">${worst?esc(worst.label):'—'}</b></div>
+    </div>`;
+  }).join('');
+
+  return `<div class="fade-in">
+    <h2>Analyse</h2>
+    <p class="sub">Jeres styrker pr. kategori og udvikling over tid.</p>
+    <div class="card">
+      <div class="eyebrow">Kategori-radar</div>
+      ${radar}
+      ${renderLegend(names)}
+    </div>
+    <div class="card">
+      <div class="eyebrow">Score over tid</div>
+      ${trend}
+      ${renderLegend(names)}
+    </div>
+    ${insights}
+  </div>`;
+}
+
+/* ================= RENDER: SETTINGS ================= */
+function renderSettings(){
+  const idChips = CONFIG.participants.map(p=>`<div class="chip-pick ${MY_IDENTITY===p?'selected':''}" onclick="setIdentity('${esc(p)}')">${esc(p)}</div>`).join('');
+  const chips = CONFIG.participants.map((p,i)=>`
+    <div class="chip-edit">
+      <input type="text" value="${esc(p)}" oninput="renameParticipant(${i}, this.value)">
+      ${CONFIG.participants.length>2?`<div class="x" onclick="removeParticipant(${i})">✕</div>`:''}
+    </div>`).join('');
+  return `
+  <div class="fade-in">
+    <h2>Deltagere</h2>
+    <p class="sub">Navnene bruges til at mærke vinene og til analysen.</p>
+    <div class="card">
+      <div class="eyebrow">Denne telefon</div>
+      <div class="chips">${idChips}</div>
+      <p class="hint">Bestemmer om du ser indtastnings- eller gætteskærmen — gemmes kun på denne enhed.</p>
+    </div>
+    <div class="card">
+      <div class="eyebrow">Alle deltagere</div>
+      ${chips}
+      <button class="btn btn-secondary btn-sm" onclick="addParticipant()">+ Tilføj deltager</button>
+    </div>
+    <div class="card">
+      <div class="eyebrow">Pointregler</div>
+      <div class="rules-panel">${RULES_HTML}</div>
+    </div>
+    ${BACKEND==='sheets' ? `<div class="card">
+      <div class="eyebrow">Del med din medsmager</div>
+      <p class="hint" style="margin-top:0;">Send dette link — det åbner appen færdigforbundet til regnearket. Ingen konto nødvendig.</p>
+      <button class="btn btn-secondary btn-block" onclick="copyShareLink()">⧉ Kopiér link</button>
+    </div>` : ''}
+    <div class="sync-note">${BACKEND==='sheets' ? '🔗 Forbundet til Google-regnearket' : USE_DB ? '🔗 Synkroniseret live mellem telefoner' : '⚠ Kører kun lokalt på denne telefon'}</div>
+  </div>`;
+}
+function renameParticipant(i,val){ CONFIG.participants[i]=val; queueConfigSave(); }
+function addParticipant(){ CONFIG.participants.push('Deltager '+(CONFIG.participants.length+1)); queueConfigSave(); render(); }
+function removeParticipant(i){
+  const removed = CONFIG.participants[i];
+  CONFIG.participants.splice(i,1);
+  if(MY_IDENTITY===removed){
+    MY_IDENTITY=null;
+    clearLocalIdentity();
+    if(USE_DB && MY_ACCOUNT_ID){ DB.doc('data/users/'+MY_ACCOUNT_ID+'/identity').delete().catch(()=>{}); }
+  }
+  queueConfigSave(); render();
+}
+
+/* ================= NAV / ROOT RENDER ================= */
+function switchView(v){ VIEW=v; CONFIRM=null; render(); }
+document.getElementById('btn-history').addEventListener('click', ()=>switchView(VIEW==='history'?'game':'history'));
+document.getElementById('btn-analysis').addEventListener('click', ()=>switchView(VIEW==='analysis'?'game':'analysis'));
+document.getElementById('btn-settings').addEventListener('click', ()=>switchView(VIEW==='settings'?'game':'settings'));
+
+// The name step and (when no round is under way yet) the role step both
+// live on this one gate, so both are settled before anything else shows.
+let PENDING_GATE_NAME = null;
+function pickGateName(name){
+  if(ACTIVE){ setIdentity(name); return; } // a round is already under way — its own phase already decides what you see, nothing to ask
+  PENDING_GATE_NAME = name; render();
+}
+function chooseGateRole(role){
+  const name = PENDING_GATE_NAME; PENDING_GATE_NAME = null;
+  setIdentity(name);
+  if(role==='serve' && (!ACTIVE || ACTIVE.phase==='result')) newRound(); // never take over a wine that is under way
+  // role==='guess': nothing to do — you land on the idle screen, ready and waiting.
+}
+function renderIdentityGate(){
+  const heroIcon = `<div class="hero-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M8 3h8l-.7 8.2c-.3 3-2.1 4.7-3.3 5.2v4.1h3v1.5H9v-1.5h3v-4.1c-1.2-.5-3-2.2-3.3-5.2L8 3z" stroke="#FF6B8F" stroke-width="1.4" stroke-linejoin="round"/></svg></div>`;
+  if(!PENDING_GATE_NAME || ACTIVE){
+    return `<div class="fade-in center-text">
+      ${heroIcon}
+      <h2>Hvem er du?</h2>
+      <p class="sub">Vælg dit navn — det er koblet til din konto, så appen ved hvornår det er dig der skal indtaste eller gætte.</p>
+      <div class="chips" style="justify-content:center;">${CONFIG.participants.map(p=>`<div class="chip-pick" onclick="pickGateName('${esc(p)}')">${esc(p)}</div>`).join('')}</div>
+      <p class="hint" style="margin-top:16px;">Mangler en deltager? Tilføj under <span style="color:var(--accent-2);cursor:pointer;text-decoration:underline;" onclick="switchView('settings')">deltager-ikonet</span> foroven.</p>
+    </div>`;
+  }
+  return `<div class="fade-in center-text">
+    ${heroIcon}
+    <h2>Hej ${esc(PENDING_GATE_NAME)}!</h2>
+    <p class="sub">Vil du servere en vin nu, eller blindes i en?</p>
+    <button class="btn btn-primary btn-block" onclick="chooseGateRole('serve')">🍷 Jeg servérer en vin</button>
+    <button class="btn btn-secondary btn-block" style="margin-top:10px;" onclick="chooseGateRole('guess')">🕶️ Jeg skal blindes</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:10px;" onclick="PENDING_GATE_NAME=null; render();">← Skift navn</button>
+  </div>`;
+}
+
+function animateScoreCount(target){
+  const el = document.getElementById('score-count');
+  if(!el) return;
+  const start = performance.now(); const dur = 1000;
+  function step(now){
+    const t = Math.min(1, (now-start)/dur);
+    const eased = 1-Math.pow(1-t,3);
+    el.textContent = Math.round(eased*target);
+    if(t<1) requestAnimationFrame(step);
+    else el.textContent = target;
+  }
+  requestAnimationFrame(step);
+}
+
+/* ---- keep the game running through a locked screen ---- */
+let wakeLock = null;
+async function acquireWakeLock(){
+  try{
+    if('wakeLock' in navigator){ wakeLock = await navigator.wakeLock.request('screen'); }
+  }catch(e){ /* not fatal — flush-on-hide below is the real safety net */ }
+}
+function releaseWakeLock(){ try{ wakeLock && wakeLock.release(); }catch(e){} wakeLock=null; }
+function syncWakeLock(){
+  if(ACTIVE && (ACTIVE.phase==='entry'||ACTIVE.phase==='guessing'||ACTIVE.phase==='review')) acquireWakeLock();
+  else releaseWakeLock();
+}
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState==='hidden'){
+    // Flush pending typed edits before the screen sleeps — but ONLY if
+    // this tab actually has an unsaved edit. Blasting a write on every
+    // lock/tab-switch even with nothing pending was the actual cause of
+    // "mine data forsvinder": a second, less current tab of the same
+    // round would flush ITS older snapshot the moment you switched away
+    // from it, quietly reverting fields you'd just typed elsewhere.
+    if(hasPendingChanges()) flushPendingChanges();
+    if(configDirty) flushConfigSave();
+  } else {
+    syncWakeLock();
+    pollOnce(); // phone woke up / tab came back: catch up with the other phone right away
+  }
+});
+window.addEventListener('pagehide', ()=>{ if(hasPendingChanges()) flushPendingChanges(); });
+
+let LAST_SCREEN_KEY = null;
+function render(){
+  document.getElementById('btn-history').classList.toggle('active', VIEW==='history');
+  document.getElementById('btn-analysis').classList.toggle('active', VIEW==='analysis');
+  document.getElementById('btn-settings').classList.toggle('active', VIEW==='settings');
+  const c = document.getElementById('content');
+  // Identity must be picked before ANYTHING else is shown, on every view —
+  // otherwise one person could flip to History/Analysis/Settings on a
+  // shared/borrowed phone before choosing who they are, and momentarily
+  // see synced state that isn't meant for them yet.
+  const needsIdentity = !MY_IDENTITY || !CONFIG.participants.includes(MY_IDENTITY);
+  let html;
+  if(NEEDS_SETUP) html = renderConnect();
+  else if(USE_DB && !INITIAL_LOADED && (needsIdentity || VIEW==='game')) html = `<div class="empty">Henter vinbogen…</div>`;
+  else if(needsIdentity) html = renderIdentityGate();
+  else if(VIEW==='history') html = renderHistory();
+  else if(VIEW==='settings') html = renderSettings();
+  else if(VIEW==='analysis') html = renderAnalysis();
+  else if(VIEW==='day') html = renderDay();
+  else html = renderGame();
+  // Only animate in when the screen actually changes — redrawing the same
+  // screen must never flash.
+  const screenKey = needsIdentity ? 'gate|'+(PENDING_GATE_NAME||'')
+    : VIEW+'|'+(ACTIVE ? ACTIVE.id+'|'+ACTIVE.phase : 'idle')+'|'+myRole();
+  if(screenKey === LAST_SCREEN_KEY) html = html.replace(/\bfade-in\b/g, '');
+  LAST_SCREEN_KEY = screenKey;
+  c.innerHTML = html;
+  if(!needsIdentity && VIEW==='game' && ACTIVE && ACTIVE.phase==='result') animateBottle(ACTIVE);
+  syncWakeLock();
+}
+
+document.getElementById('content').innerHTML = `<div class="empty">Henter din vinbog…</div>`;
+initBackend();
+</script>

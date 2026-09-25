@@ -3,11 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0A0118">
+<meta name="theme-color" content="#FFF0C7">
 <title>Blindervenner · Stats</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#0A0118; --bg-2:#120726; --surface:#180C33; --surface-2:#22103F;
@@ -228,12 +227,103 @@ table.tbl{width:100%;border-collapse:collapse;font-size:1.05rem}
   .hbar-row{grid-template-columns:minmax(80px,110px) 1fr minmax(48px,auto)}
 }
 </style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap">
+<style id="redesign-gummi">/* Redesign: Gummi */
+body{font-family:var(--fb);font-size:17px;background:var(--page);background-attachment:fixed;color:var(--text);-webkit-font-smoothing:antialiased}
+body::before,body::after{display:none!important}
+body *{text-shadow:none!important}
+[style*="drop-shadow"]{filter:none!important}
+.brand svg,.hero-icon svg,.state .hero svg,.ring-wrap{filter:none}
+.topbar{background:var(--topbar);border-bottom:var(--rule);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.brand-name{font-family:var(--fd);font-weight:var(--fdw);color:var(--text);font-size:var(--brand-size);letter-spacing:var(--brand-ls);text-transform:var(--brand-tt);line-height:1}
+.brand-sub{font-family:var(--fm);font-size:11px;color:var(--accent);letter-spacing:.12em;margin-left:8px;vertical-align:middle}
+h2{font-family:var(--fd);font-weight:var(--fdw);font-size:var(--h2);line-height:1.05;letter-spacing:var(--h2-ls);text-transform:var(--h-tt);color:var(--text)}
+.sub,.sec-sub{font-family:var(--fb);font-size:16px;color:var(--text-dim)}
+.card{background:var(--surface);border:var(--card-border);border-radius:var(--r);box-shadow:var(--card-shadow)}
+.card::before{display:none}
+.card-flat,.stat-box,.review-row,.chip-edit{background:var(--bg-2);border:var(--line);border-radius:var(--r-sm)}
+.eyebrow,.card-title,.flabel,.compare-lbl,.tbl th,.cmp .hd,.stat-lbl,.kpi .l,.stand .h,.sec-num,#tip .tt{font-family:var(--fm);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--text-dim)}
+.card-title,.eyebrow{color:var(--text)}
+.stat-num,.kpi .n,.stand .big,.lb-score,.hist-item .score,.top10 .sc,.score-big,.rec .big,.live-score .n,.top10 .rk,.lb-rank{font-family:var(--fnum);font-weight:var(--fnumw);color:var(--text);letter-spacing:-0.01em;line-height:1}
+.kpi .n{font-size:40px;margin-top:10px}.stat-num{font-size:34px}.stand .big{font-size:30px}.score-big{font-size:72px;color:var(--accent)}
+.rec .big{font-size:32px;color:var(--accent)}.top10 .sc{font-size:26px;color:var(--accent)}.top10 .sc small{font-family:var(--fm);font-size:11px}
+.lb-score,.hist-item .score{font-size:22px;color:var(--accent)}.live-score .n{font-size:28px;color:var(--accent)}.top10 .rk,.lb-rank{font-size:20px;color:var(--text-faint)}
+.top10 .rk.gold{color:var(--mid)}.stand .lead .big{color:var(--good)}
+.btn{font-family:var(--fb);font-weight:700;font-size:15px;letter-spacing:var(--btn-ls);text-transform:var(--btn-tt);border-radius:var(--r-btn);padding:15px 22px}
+.btn-sm{font-size:13px;padding:10px 16px}
+.btn-primary,.state .btn{background:var(--accent);color:var(--on-accent);border:var(--btn-border);box-shadow:var(--btn-shadow)}
+.btn-primary:hover,.btn:hover{transform:translateY(-1px);box-shadow:var(--btn-shadow)}
+.btn-primary:active{transform:translateY(2px);box-shadow:none}
+.btn-secondary{background:var(--surface);color:var(--text);border:var(--line-strong)}
+.btn-secondary:hover{box-shadow:none;border-color:var(--text)}
+.btn-ghost,.reset{font-family:var(--fb);color:var(--text-dim)}
+.icon-btn{background:var(--surface);border:var(--line);border-radius:var(--r-btn);color:var(--text)}
+.icon-btn:hover{box-shadow:none;color:var(--accent);border-color:var(--accent)}
+.icon-btn.active{background:var(--text);color:var(--surface);border-color:var(--text);box-shadow:none}
+.chip-pick{background:var(--surface);border:var(--line-strong);border-radius:var(--r-btn);color:var(--text);font-family:var(--fb);font-size:16px}
+.chip-pick:hover{border-color:var(--accent);color:var(--accent)}
+.chip-pick.selected{background:var(--accent);color:var(--on-accent);border-color:var(--accent);box-shadow:var(--chip-shadow,none);font-weight:700}
+input[type=text],select.year-select,select.sel,.search,.chip-edit input{background-color:var(--input);color:var(--text);border:var(--line-strong);border-radius:var(--r-sm);font-family:var(--fb);font-size:17px}
+.chip-edit input{border:none;background:transparent}
+input[type=text]:focus,select.year-select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.field-label .txt{font-family:var(--fb);font-weight:600;text-transform:none;letter-spacing:0;font-size:15px}
+.field-label .pts,.review-pts{font-family:var(--fm);font-size:11px;font-weight:600}
+.field-label .pts{background:var(--text);color:var(--surface);border-radius:var(--r-sm)}
+.seg,.mini-seg{border:var(--line-strong);border-radius:var(--r-btn)}
+.seg button,.mini-seg button{font-family:var(--fb);background:var(--surface);color:var(--text-dim);font-size:15px}
+.seg button.on{background:var(--accent);color:var(--on-accent)}.mini-seg button.on{background:var(--text);color:var(--surface)}
+.jbtn{font-family:var(--fb);background:var(--surface);border:var(--line-strong);border-radius:var(--r-sm);text-transform:none;font-weight:600;letter-spacing:0}
+.jbtn.good.on,.jbtn.bad.on,.jbtn.mid.on{box-shadow:none}
+.live-score{background:var(--surface);border:var(--line-accent);box-shadow:var(--card-shadow);border-radius:var(--r)}
+.live-score span:first-child,.review-title,.hist-item .name,.stand .c.lbl,.kpi .l,.rules-toggle,.stat-lbl{text-transform:none;letter-spacing:0;font-family:var(--fb);font-weight:600}
+.phase-dot{background:var(--border-strong);border-radius:99px}.phase-dot.on{background:var(--accent);box-shadow:none}
+.hero-icon,.state .hero{background:var(--surface);border:var(--line-strong);box-shadow:var(--card-shadow);border-radius:var(--r);animation:none}
+.hero-icon.pulse,.state .hero{animation:skinPulse 1.8s ease-in-out infinite}
+@keyframes skinPulse{50%{transform:scale(1.06)}}
+.toast{background:var(--text);color:var(--surface);border:none;box-shadow:var(--card-shadow);font-family:var(--fb);text-transform:none;letter-spacing:0;border-radius:var(--r-btn)}
+.lb-row,.stand .c,.top10 li,.tbl td,.cmp>div{border-bottom:1px solid var(--border)}
+.stand .h,.tbl th,.cmp .hd{border-bottom:var(--line-strong)}
+.identity-pill{border-radius:var(--r-btn);border:var(--line-strong)}
+#tip{background:var(--surface);border:var(--line);box-shadow:0 10px 30px rgba(0,0,0,.18);font-family:var(--fb);border-radius:var(--r-sm)}
+.modal-bg{background:var(--scrim)}
+.modal h3{font-family:var(--fd);font-weight:var(--fdw);font-size:34px;line-height:1.05;text-transform:var(--h-tt)}
+.linkish{color:var(--accent);text-decoration-color:currentColor}
+.axis text,.lbl-t{font-family:var(--fm);font-size:12px;fill:var(--text-faint)}.val-t{font-family:var(--fm);font-size:13px}
+.hbar-row .nm,.top10 .nm,.tbl,.conf,.legend,.card-note,.hint,.rules-panel{font-family:var(--fb)}
+.top10 .nm{font-weight:600}
+.pill{border-radius:var(--r-sm);font-family:var(--fb);font-size:14px}
+
+:root{--page:radial-gradient(600px 420px at 100% 0%,#FFCDB0,transparent 60%),radial-gradient(700px 500px at 0% 100%,#FFE680,transparent 60%),#FFF0C7;
+--bg:#FFF0C7;--bg-2:#FFF7E0;--surface:#FFFFFF;--surface-2:#FFF9EA;--input:#FFF7E0;
+--text:#2B1A0E;--text-dim:#5E4630;--text-faint:#80674F;--accent:#FF6B1A;--accent-2:#1E8C7A;--on-accent:#2B1A0E;--accent-soft:rgba(255,107,26,.18);
+--good:#0E9F63;--good-soft:rgba(14,159,99,.12);--bad:#E23353;--bad-soft:rgba(226,51,83,.10);--mid:#A86F00;--mid-soft:rgba(255,196,0,.2);
+--border:rgba(43,26,14,.10);--border-strong:rgba(43,26,14,.22);--grid:rgba(43,26,14,.08);
+--line:1.5px solid var(--border);--line-strong:1.5px solid var(--border-strong);--line-accent:2px solid var(--accent);
+--card-border:0;--card-shadow:0 2px 0 rgba(43,26,14,.05),0 16px 34px -14px rgba(30,140,122,.28);--r:26px;--r-sm:14px;--r-btn:999px;
+--btn-shadow:0 4px 0 #2B1A0E;--btn-border:2px solid #2B1A0E;--btn-tt:none;--btn-ls:0;--chip-shadow:0 3px 0 #2B1A0E;--topbar:rgba(255,240,199,.8);--rule:1px solid transparent;
+--fd:'Bricolage Grotesque',sans-serif;--fdw:800;--fb:'Bricolage Grotesque',sans-serif;--fm:'Bricolage Grotesque',sans-serif;--fnum:'Bricolage Grotesque',sans-serif;--fnumw:800;
+--h2:36px;--h2-ls:-.03em;--h-tt:none;--brand-size:24px;--brand-ls:-.03em;--brand-tt:none;--scrim:rgba(43,26,14,.4);color-scheme:light}
+.eyebrow,.card-title,.flabel,.compare-lbl,.tbl th,.cmp .hd,.stat-lbl,.stand .h,.sec-num{letter-spacing:.04em;font-weight:700}
+.chip-pick.selected{border-color:#2B1A0E}
+.stat-box{background:#FFF7E0;border:0}
+.icon-btn{border:0;box-shadow:0 2px 0 rgba(43,26,14,.08)}
+.sec-num{background:var(--accent-2);color:#FFFFFF;padding:4px 9px;border-radius:99px}
+.btn-secondary{border:2px solid #2B1A0E;box-shadow:0 4px 0 #2B1A0E}</style>
+<style id="solskin-sticker">/* Solskin · Sticker */
+:root{--card-border:2px solid #2B1A0E;--card-shadow:5px 5px 0 #2B1A0E;--r:18px;--line:2px solid #2B1A0E;--line-strong:2px solid #2B1A0E;--btn-shadow:3px 3px 0 #2B1A0E;--chip-shadow:3px 3px 0 #2B1A0E}
+.icon-btn{border:2px solid #2B1A0E;box-shadow:2px 2px 0 #2B1A0E}
+.btn-secondary{box-shadow:3px 3px 0 #2B1A0E}
+.stat-box{border:2px solid #2B1A0E;background:#FFFFFF}
+.sec-num{transform:rotate(-4deg);display:inline-block;background:#FF6B1A;color:#2B1A0E;border:2px solid #2B1A0E}
+.field-label .pts{background:#FFB020;color:#2B1A0E;border:2px solid #2B1A0E;transform:rotate(3deg)}
+.card:nth-child(odd){background:#FFFDF6}</style>
+
 </head>
 <body>
 <div class="app">
   <div class="topbar">
     <div class="brand">
-      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 3h8l-.7 8.2c-.3 3-2.1 4.7-3.3 5.2v4.1h3v1.5H9v-1.5h3v-4.1c-1.2-.5-3-2.2-3.3-5.2L8 3z" stroke="#FF6B8F" stroke-width="1.4" stroke-linejoin="round"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 3h8l-.7 8.2c-.3 3-2.1 4.7-3.3 5.2v4.1h3v1.5H9v-1.5h3v-4.1c-1.2-.5-3-2.2-3.3-5.2L8 3z" stroke="#FF6B1A" stroke-width="1.4" stroke-linejoin="round"/></svg>
       <div class="brand-name">Blindervenner<span class="brand-sub">STATS</span></div>
     </div>
     <div class="top-actions">
@@ -272,8 +362,8 @@ const CATS = [
   {id:'aargang',     label:'Årgang',        short:'Årgang', max:2},
 ];
 const MAX = 24;
-const PLAYER_COLORS = { 'lars':'#00F0FF', 'tore':'#FF2E97' };
-const FALLBACK_COLORS = ['#00F0FF','#FF2E97','#FFD500','#00FF9C'];
+const PLAYER_COLORS = { 'lars':'#1E8C7A', 'tore':'#FF6B1A' };
+const FALLBACK_COLORS = ['#1E8C7A','#FF6B1A','#A86F00','#0E9F63'];
 const MONTHS = ['jan','feb','mar','apr','maj','jun','jul','aug','sep','okt','nov','dec'];
 
 /* ============================================================ state */
@@ -435,7 +525,7 @@ document.addEventListener('focusout', hideTip);
 const root = document.getElementById('root');
 
 function renderLoading(){
-  root.innerHTML = `<div class="state"><div class="hero"><svg viewBox="0 0 24 24" fill="none"><path d="M8 3h8l-.7 8.2c-.3 3-2.1 4.7-3.3 5.2v4.1h3v1.5H9v-1.5h3v-4.1c-1.2-.5-3-2.2-3.3-5.2L8 3z" stroke="#FF2E97" stroke-width="1.4" stroke-linejoin="round"/></svg></div>Henter vine fra regnearket…</div>`;
+  root.innerHTML = `<div class="state"><div class="hero"><svg viewBox="0 0 24 24" fill="none"><path d="M8 3h8l-.7 8.2c-.3 3-2.1 4.7-3.3 5.2v4.1h3v1.5H9v-1.5h3v-4.1c-1.2-.5-3-2.2-3.3-5.2L8 3z" stroke="#FF6B1A" stroke-width="1.4" stroke-linejoin="round"/></svg></div>Henter vine fra regnearket…</div>`;
 }
 function renderError(msg){
   root.innerHTML = `<div class="state"><div class="hero" style="border-color:var(--bad);animation:none"><svg viewBox="0 0 24 24" fill="none" stroke="#FF3B5C" stroke-width="2"><path d="M12 8v5M12 16.5v.5"/><circle cx="12" cy="12" r="9"/></svg></div>
@@ -513,8 +603,8 @@ function secOverview(L){
   return `<section class="section fade-in"><div class="sec-head"><span class="sec-num">01</span><h2>Oversigt</h2></div>
     <div class="grid g-kpi">${kpis.map(k=>`<div class="card kpi"><div class="l">${k.c?`<span class="dot" style="background:${k.c}"></span>`:''}${k.l}</div><div class="n">${k.n}</div><div class="s">${k.s}</div></div>`).join('')}</div>
     <div class="grid g2" style="margin-top:14px">
-      <div class="card"><div class="card-title">Fordeling på lande <span class="sec-sub" style="font-family:'VT323',monospace;text-transform:none;letter-spacing:0;color:var(--text-faint);text-shadow:none">klik for at filtrere</span></div>
-        ${lands.map(([l,n])=>`<div class="hbar-row clickable ${F.land===norm(l)?'sel':''}" tabindex="0" data-land="${esc(norm(l))}" data-tip="${esc(`<div class='tt'>${esc(l)}</div>`+tipRow('#FFD500', n+' vine', `· ${pct(n/L.length)} af alle`))}">
+      <div class="card"><div class="card-title">Fordeling på lande <span class="sec-sub" style="font-family:var(--fb);text-transform:none;letter-spacing:0;color:var(--text-faint);text-shadow:none">klik for at filtrere</span></div>
+        ${lands.map(([l,n])=>`<div class="hbar-row clickable ${F.land===norm(l)?'sel':''}" tabindex="0" data-land="${esc(norm(l))}" data-tip="${esc(`<div class='tt'>${esc(l)}</div>`+tipRow('#A86F00', n+' vine', `· ${pct(n/L.length)} af alle`))}">
           <span class="nm">${esc(l)}</span><span class="tr"><i style="width:${n/mx*100}%;background:linear-gradient(90deg,var(--accent),#FF6BB5)"></i></span><span class="v">${n}</span></div>`).join('')}
       </div>
       <div class="card"><div class="card-title">Hvem har gættet hvor meget</div>${whoGuessedChart(L)}</div>
@@ -605,7 +695,7 @@ function lineChart(xs, series){
     const c = colorOf(s.p);
     let path = '', pen = false;
     s.pts.forEach((pt,i)=>{ if(pt.v==null){ pen=false; return; } path += (pen?'L':'M') + X(i).toFixed(1)+','+Y(pt.v).toFixed(1); pen = true; });
-    const dots = s.pts.map((pt,i)=> pt.v==null ? '' : `<circle cx="${X(i)}" cy="${Y(pt.v)}" r="4.5" fill="${c}" stroke="#120726" stroke-width="2"/>`).join('');
+    const dots = s.pts.map((pt,i)=> pt.v==null ? '' : `<circle cx="${X(i)}" cy="${Y(pt.v)}" r="4.5" fill="${c}" stroke="#FFFFFF" stroke-width="2"/>`).join('');
     const lastI = s.pts.map(p=>p.v!=null).lastIndexOf(true);
     const lbl = lastI>=0 ? `<text class="val-t end-lbl" data-y="${Y(s.pts[lastI].v)+5}" x="${X(lastI)+10}" y="${Y(s.pts[lastI].v)+5}" style="fill:${c}">${narrow()?'':esc(s.p)+' '}${fmt1(s.pts[lastI].v)}</text>` : '';
     return `<path d="${path}" fill="none" stroke="${c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" style="filter:drop-shadow(0 0 4px ${c}88)"/>${dots}${lbl}`;
@@ -676,7 +766,7 @@ function secCategories(L){
     </div>
     <div class="grid g2" style="margin-top:14px">
       <div class="card"><div class="card-title">Top 5 · hvor vi oftest scorer</div>
-        ${top.map((x,i)=>`<div class="hbar-row" style="grid-template-columns:28px minmax(90px,140px) 1fr 54px"><span style="font-family:'Press Start 2P';font-size:0.6rem;color:var(--accent)">${i+1}.</span><span class="nm">${x.c.label}</span><span class="tr"><i class="hit" style="width:${x.v*100}%;background:linear-gradient(90deg,var(--accent-2),#7FF8FF)" data-tip="${esc(`<div class='tt'>${x.c.label}</div>`+tipRow('#00F0FF', pct(x.v), `af ${x.n} vine med facit`))}"></i></span><span class="v">${pct(x.v)}</span></div>`).join('')}
+        ${top.map((x,i)=>`<div class="hbar-row" style="grid-template-columns:28px minmax(90px,140px) 1fr 54px"><span style="font-family:var(--fnum);font-size:0.6rem;color:var(--accent)">${i+1}.</span><span class="nm">${x.c.label}</span><span class="tr"><i class="hit" style="width:${x.v*100}%;background:linear-gradient(90deg,var(--accent-2),#7FF8FF)" data-tip="${esc(`<div class='tt'>${x.c.label}</div>`+tipRow('#1E8C7A', pct(x.v), `af ${x.n} vine med facit`))}"></i></span><span class="v">${pct(x.v)}</span></div>`).join('')}
         <div class="card-note">${sp.length>1?'Begge gættere samlet.':'Kun '+esc(sp[0])+'.'} Andel af vinene, hvor kategorien gav point.</div>
       </div>
       <div class="card"><div class="card-title">Hvor taber vi point</div>
@@ -697,7 +787,7 @@ function radar(series){
   const polys = series.map(s=>{ const c = colorOf(s.p);
     const pts = s.v.map((v,i)=>P(i, R*(v||0)));
     return `<polygon points="${pts.map(p=>p.join(',')).join(' ')}" fill="${c}" fill-opacity="0.16" stroke="${c}" stroke-width="2" stroke-linejoin="round" style="filter:drop-shadow(0 0 4px ${c}77)"/>`
-      + pts.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="${c}" stroke="#120726" stroke-width="2"/><circle class="hit" cx="${p[0]}" cy="${p[1]}" r="13" fill="transparent" data-tip="${esc(`<div class='tt'>${CATS[i].label}</div>`+tipRow(c, s.v[i]==null?'–':pct(s.v[i]), s.p))}"/>`).join('');
+      + pts.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="${c}" stroke="#FFFFFF" stroke-width="2"/><circle class="hit" cx="${p[0]}" cy="${p[1]}" r="13" fill="transparent" data-tip="${esc(`<div class='tt'>${CATS[i].label}</div>`+tipRow(c, s.v[i]==null?'–':pct(s.v[i]), s.p))}"/>`).join('');
   }).join('');
   return `<div class="chart" style="max-width:420px;margin:0 auto"><svg viewBox="-40 -6 ${S+80} ${S+10}" role="img" aria-label="Radar over kategorier">${g}${polys}</svg></div>`;
 }
@@ -853,7 +943,7 @@ function archiveTable(L){
   return `<div class="tbl-wrap"><table class="tbl"><thead><tr>${th('date','Dato')}${th('name','Vin')}${th('land','Land')}${th('drue','Drue')}${th('aargang','Årgang')}${th('owner','Medbragt')}${th('guesser','Gætter')}${th('score','Point','num')}</tr></thead>
     <tbody>${rows.map(w=>`<tr tabindex="0" data-wine="${esc(w.id)}"><td class="dim" style="white-space:nowrap">${fmtDate(w.date)}</td><td>${esc(w.name)}</td>
       <td>${catCell(w,'land')}</td><td>${catCell(w,'drue1')}</td><td>${catCell(w,'aargang')}</td><td class="dim">${esc(w.owner)}</td><td>${pnameHTML(w.guesser)}</td>
-      <td class="num" style="font-family:'Press Start 2P';font-size:0.62rem;color:var(--accent-2)">${w.score}</td></tr>`).join('')}</tbody></table></div>
+      <td class="num" style="font-family:var(--fnum);font-size:0.62rem;color:var(--accent-2)">${w.score}</td></tr>`).join('')}</tbody></table></div>
     <div class="card-note">Grøn = ramt, gul = delvist (årgang ±1), rød = forkert. Klik på en vin for facit og gæt.</div>`;
 }
 function catCell(w, cid){ const c = w.cats[cid]; if(!c.applicable) return '<span class="dim">–</span>'; return `<span class="pill ${c.j==='good'?'good':c.j==='mid'?'mid':'bad'}" title="Gæt: ${esc(c.g||'(tomt)')}">${esc(c.t)}</span>`; }

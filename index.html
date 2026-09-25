@@ -1,3 +1,5 @@
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0A0118">
 <title>Blindervenner</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
@@ -526,6 +528,7 @@ function renderConnect(){
 
 async function copyShareLink(){
   const link = shareLink();
+  if(navigator.share){ try{ await navigator.share({ title:'Blindervenner', text:'Blindsmagning i aften? Åbn her:', url: link }); return; }catch(e){ if(e && e.name==='AbortError') return; } }
   try{ await navigator.clipboard.writeText(link); showToast('Link kopieret — send det til din medsmager'); }
   catch(e){ prompt('Kopiér linket:', link); }
 }
@@ -1096,6 +1099,7 @@ function renderIdle(){
     <button class="btn btn-ghost btn-block" onclick="switchView('history')" style="margin-top:6px;">Se historik →</button>
     <button class="btn btn-ghost btn-block" onclick="switchView('analysis')">Se analyse →</button>
     ` : ''}
+    ${BACKEND==='sheets' ? `<button class="btn btn-ghost btn-block" onclick="copyShareLink()" style="margin-top:6px;">📨 Send link til din medsmager</button>` : ''}
     ${USE_DB ? '' : `<div class="sync-note">⚠ Kører kun lokalt på denne telefon — ingen delt forbindelse fundet.</div>`}
   </div>`;
 }

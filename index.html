@@ -391,7 +391,7 @@ input[type=text]:focus,select.year-select:focus{border-color:var(--accent);box-s
 
 <div class="app">
   <div class="topbar">
-    <div class="brand">
+    <div class="brand" onclick="goHome()" role="button" title="Til forsiden" style="cursor:pointer;">
       <svg viewBox="0 0 24 24" fill="none"><path d="M8 3h8l-.7 8.2c-.3 3-2.1 4.7-3.3 5.2v4.1h3v1.5H9v-1.5h3v-4.1c-1.2-.5-3-2.2-3.3-5.2L8 3z" stroke="#FF6B1A" stroke-width="1.4" stroke-linejoin="round"/></svg>
       <div class="brand-name">Blindervenner</div>
     </div>
@@ -1073,9 +1073,10 @@ function finishRound(){
   ACTIVE.judged = Object.fromEntries(ALL_CATS.map(c=>[c.id, answered(ACTIVE,c.id) ? effJudge(ACTIVE,c.id) : 'bad']));
   ACTIVE.ownerIndex = ownerIndexFor(ACTIVE.ownerName);
   ACTIVE.score = computeScore(ACTIVE);
+  ACTIVE.finishedAt = Date.now();
   ACTIVE.phase = 'result';
   if(!USE_DB){ HISTORY.unshift(clone(ACTIVE)); pushActiveNow(); }
-  else patchRoundNow({phase:'result', score:ACTIVE.score, ownerIndex:ACTIVE.ownerIndex, judged:ACTIVE.judged});
+  else patchRoundNow({phase:'result', score:ACTIVE.score, ownerIndex:ACTIVE.ownerIndex, judged:ACTIVE.judged, finishedAt:ACTIVE.finishedAt});
   render();
 }
 // Closing a finished round only closes it on THIS phone — the other person
@@ -1177,7 +1178,7 @@ function last24hRows(){
 function renderIdle(){
   const rounds = HISTORY.length;
   const today = HISTORY.filter(r=>r.date===todayISO()).length;
-  const avg = rounds ? Math.round(HISTORY.reduce((a,r)=>a+r.score,0)/rounds/MAX_SCORE*100) : 0;
+  const avg = rounds ? (HISTORY.reduce((a,r)=>a+(Number(r.score)||0),0)/rounds).toFixed(1).replace('.',',') : '0';
   const others = otherParticipants(MY_IDENTITY);
   const canStart = others.length>0;
   return `
@@ -1191,11 +1192,11 @@ function renderIdle(){
     <div class="stats-row">
       <div class="stat-box"><div class="stat-num">${rounds}</div><div class="stat-lbl">Vine i alt</div></div>
       <div class="stat-box"><div class="stat-num">${today}</div><div class="stat-lbl">I dag</div></div>
-      <div class="stat-box"><div class="stat-num">${avg}%</div><div class="stat-lbl">Snit-score</div></div>
+      <div class="stat-box"><div class="stat-num">${avg}p</div><div class="stat-lbl">Snit-score</div></div>
     </div>
     <button class="btn btn-secondary btn-block" style="margin-top:10px;" onclick="switchView('day')">📅 Dagens resultat</button>
     <button class="btn btn-ghost btn-block" onclick="switchView('history')" style="margin-top:6px;">Se historik →</button>
-    <button class="btn btn-ghost btn-block" onclick="switchView('analysis')">Se analyse →</button>
+    <a class="btn btn-ghost btn-block" href="https://larsespost-code.github.io/Blindervenner/dashboard.html" target="_blank" rel="noopener" style="text-decoration:none;">Se analyse ↗</a>
     ` : ''}
     ${BACKEND==='sheets' ? `<button class="btn btn-ghost btn-block" onclick="copyShareLink()" style="margin-top:6px;">📨 Send link til din medsmager</button>` : ''}
     ${USE_DB ? '' : `<div class="sync-note">⚠ Kører kun lokalt på denne telefon — ingen delt forbindelse fundet.</div>`}
@@ -1597,6 +1598,13 @@ function renderDay(){
 }
 
 /* ================= RENDER: HISTORY ================= */
+// Newest blinded wine first: by when it was finished (or started), then by
+// position in the sheet for rows added by hand without a time.
+function historyNewestFirst(){
+  const t = r => Number(r.finishedAt) || Number(r.createdAt) || Date.parse(r.date) || 0;
+  const rowNo = r => { const m = /^row(\d+)$/.exec(r.id||''); return m ? +m[1] : 0; };
+  return HISTORY.slice().sort((a,b)=> (t(b)-t(a)) || (rowNo(b)-rowNo(a)));
+}
 function renderHistory(){
   if(HISTORY.length===0){
     return `<div class="fade-in"><h2>Historik</h2><div class="empty">Ingen vine bedømt endnu — start en runde for at se resultater og leaderboard her.</div></div>`;
@@ -1614,7 +1622,7 @@ function renderHistory(){
       <div class="lb-score">${d.points}p</div>
     </div>`).join('');
 
-  const items = HISTORY.map(r=>{
+  const items = historyNewestFirst().map(r=>{
     const open = OPEN_HIST_ID===r.id;
     return `
     <div class="card hist-card">
@@ -1887,6 +1895,7 @@ function removeParticipant(i){
 }
 
 /* ================= NAV / ROOT RENDER ================= */
+function goHome(){ OPEN_HIST_ID=null; CONFIRM=null; switchView('game'); window.scrollTo(0,0); }
 function switchView(v){ VIEW=v; CONFIRM=null; render(); }
 document.getElementById('btn-history').addEventListener('click', ()=>switchView(VIEW==='history'?'game':'history'));
 document.getElementById('btn-analysis').addEventListener('click', ()=>switchView(VIEW==='analysis'?'game':'analysis'));

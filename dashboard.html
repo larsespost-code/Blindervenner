@@ -1,0 +1,936 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0A0118">
+<title>Blindervenner · Stats</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0A0118; --bg-2:#120726; --surface:#180C33; --surface-2:#22103F;
+  --border:rgba(0,240,255,0.22); --border-strong:rgba(0,240,255,0.45);
+  --text:#F2ECFF; --text-dim:#B2A3E0; --text-faint:#8374B3;
+  --accent:#FF2E97; --accent-2:#00F0FF;
+  --good:#00FF9C; --good-soft:rgba(0,255,156,0.12);
+  --bad:#FF3B5C; --bad-soft:rgba(255,59,92,0.14);
+  --mid:#FFD500; --mid-soft:rgba(255,213,0,0.14);
+  --grid:rgba(178,163,224,0.13);
+  --radius:4px; --radius-sm:3px;
+  --p1:#00F0FF; --p2:#FF2E97; --p3:#FFD500;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+html{height:100%}
+body{
+  background:
+    linear-gradient(rgba(0,240,255,0.05) 1px,transparent 1px) 0 0/100% 3px,
+    radial-gradient(1000px 550px at 50% 110%,rgba(255,46,151,0.20),transparent 60%),
+    radial-gradient(800px 500px at 50% -10%,rgba(0,240,255,0.14),transparent 55%),
+    linear-gradient(180deg,#17022E 0%,#0A0118 45%,#05000C 100%);
+  background-attachment:fixed;
+  background-color:#0A0118;
+  color:var(--text); font-family:'VT323',monospace; font-size:19px; min-height:100%;
+  -webkit-font-smoothing:antialiased; position:relative; overflow-x:hidden;
+}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:100;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,0.18) 0px,rgba(0,0,0,0.18) 1px,transparent 1px,transparent 3px);mix-blend-mode:overlay}
+body::after{content:'';position:fixed;left:0;right:0;bottom:0;height:42vh;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(255,46,151,0.55) 1px,transparent 1px),linear-gradient(90deg,rgba(255,46,151,0.55) 1px,transparent 1px);
+  background-size:48px 48px;transform:perspective(260px) rotateX(62deg);transform-origin:bottom;
+  -webkit-mask-image:linear-gradient(0deg,black 15%,transparent 85%);mask-image:linear-gradient(0deg,black 15%,transparent 85%);opacity:0.4}
+
+.app{max-width:1240px;margin:0 auto;position:relative;z-index:1;padding:0 16px 60px}
+
+/* top bar */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 0 14px;position:sticky;top:0;z-index:30;
+  background:linear-gradient(180deg,#0A0118 78%,rgba(10,1,24,0));border-bottom:1px solid var(--border)}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand svg{width:24px;height:24px;flex:0 0 auto;filter:drop-shadow(0 0 6px var(--accent-2))}
+.brand-name{font-family:'Press Start 2P',monospace;font-size:clamp(0.58rem,2.6vw,0.85rem);color:var(--accent-2);white-space:nowrap;
+  text-shadow:0 0 8px rgba(0,240,255,0.65),0 0 18px rgba(0,240,255,0.3)}
+.brand-sub{font-family:'Press Start 2P',monospace;font-size:0.55rem;color:var(--accent);margin-left:4px;text-shadow:0 0 8px rgba(255,46,151,0.6)}
+.top-actions{display:flex;gap:8px;align-items:center}
+.updated{font-size:0.9rem;color:var(--text-faint);white-space:nowrap}
+.icon-btn{width:36px;height:36px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;background:var(--surface);
+  border:1px solid var(--border);color:var(--text-dim);cursor:pointer;transition:all .15s ease;text-decoration:none;flex:0 0 auto}
+.icon-btn:hover{color:var(--accent-2);border-color:var(--border-strong);box-shadow:0 0 10px rgba(0,240,255,0.25)}
+.icon-btn.spin svg{animation:spin 0.9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* filters */
+.filters{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;padding:16px 0 6px}
+.fgroup{display:flex;flex-direction:column;gap:5px}
+.flabel{font-family:'Press Start 2P',monospace;font-size:0.5rem;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.06em}
+.seg{display:flex;border:2px solid var(--border-strong);border-radius:var(--radius-sm);overflow:hidden}
+.seg button{background:var(--bg-2);color:var(--text-dim);border:none;padding:7px 13px;font-family:'VT323',monospace;font-size:1.05rem;cursor:pointer}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button:hover{color:var(--accent-2)}
+.seg button.on{background:var(--accent);color:#0A0118}
+select.sel{padding:7px 32px 7px 11px;border-radius:var(--radius-sm);border:2px solid var(--border-strong);background:#05000F;color:var(--accent-2);
+  font-family:'VT323',monospace;font-size:1.05rem;appearance:none;-webkit-appearance:none;cursor:pointer;max-width:220px;
+  background-image:linear-gradient(45deg,transparent 50%,var(--accent-2) 50%),linear-gradient(135deg,var(--accent-2) 50%,transparent 50%);
+  background-position:calc(100% - 16px) center,calc(100% - 11px) center;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+.reset{background:none;border:none;color:var(--accent);font-family:'VT323',monospace;font-size:1.05rem;cursor:pointer;text-decoration:underline;padding:8px 2px}
+.scope-note{font-size:0.95rem;color:var(--text-faint);padding:4px 0 10px}
+.scope-note b{color:var(--mid);font-weight:400}
+button:focus-visible,select:focus-visible,input:focus-visible,.clickable:focus-visible,a:focus-visible{outline:2px solid var(--accent-2);outline-offset:2px}
+
+/* sections & cards */
+.section{margin-top:26px}
+.sec-head{display:flex;align-items:baseline;gap:12px;margin:0 0 12px;flex-wrap:wrap}
+.sec-num{font-family:'Press Start 2P',monospace;font-size:0.6rem;color:var(--accent)}
+h2{font-family:'Press Start 2P',monospace;font-size:0.95rem;font-weight:400;margin:0;line-height:1.5;color:var(--text);text-shadow:2px 2px 0 rgba(255,46,151,0.35)}
+.sec-sub{color:var(--text-dim);font-size:1.02rem}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g-kpi{grid-template-columns:repeat(6,minmax(0,1fr))}
+@media(max-width:1000px){.g-kpi{grid-template-columns:repeat(3,minmax(0,1fr))}.g3{grid-template-columns:1fr 1fr}}
+@media(max-width:760px){.g2,.g3{grid-template-columns:1fr}.g-kpi{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.card{background:linear-gradient(180deg,var(--surface),var(--bg-2));border:1px solid var(--border);border-radius:var(--radius);padding:18px;position:relative;min-width:0;
+  box-shadow:0 0 0 1px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.03)}
+.card::before{content:'';position:absolute;top:-1px;left:-1px;right:-1px;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:2px 2px 0 0}
+.card-title{font-family:'Press Start 2P',monospace;font-size:0.58rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent-2);margin-bottom:12px;
+  text-shadow:0 0 6px rgba(0,240,255,0.5);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.card-note{font-size:0.92rem;color:var(--text-faint);margin-top:8px;line-height:1.35}
+.kpi{padding:16px 14px}
+.kpi .n{font-family:'Press Start 2P',monospace;font-size:clamp(1rem,2.2vw,1.35rem);color:var(--text);margin-top:6px;line-height:1.3}
+.kpi .l{font-size:0.95rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.04em}
+.kpi .s{font-size:0.9rem;color:var(--text-faint);margin-top:4px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:1px}
+.pname{white-space:nowrap}
+
+/* standings */
+.stand{display:grid;grid-template-columns:minmax(140px,1.3fr) repeat(var(--np),minmax(0,1fr));gap:0}
+.stand .h{font-family:'Press Start 2P',monospace;font-size:0.62rem;padding:10px 8px 12px;border-bottom:2px solid var(--border-strong);text-align:right}
+.stand .h:first-child{text-align:left}
+.stand .c{padding:12px 8px;border-bottom:1px dashed var(--border);text-align:right;font-size:1.15rem;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;min-width:0}
+.stand .c.lbl{text-align:left;align-items:flex-start;color:var(--text-dim);text-transform:uppercase;font-size:1rem;letter-spacing:0.03em}
+.stand .big{font-family:'Press Start 2P',monospace;font-size:clamp(0.75rem,1.7vw,1rem);color:var(--text)}
+.stand .lead .big{color:var(--good);text-shadow:0 0 8px rgba(0,255,156,0.45)}
+.stand .small{font-size:0.9rem;color:var(--text-faint);text-align:right;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.bar-mini{height:6px;background:var(--grid);border-radius:3px;width:100%;max-width:160px;margin-top:6px;overflow:hidden}
+.bar-mini i{display:block;height:100%;border-radius:3px}
+
+/* charts */
+.chart{width:100%;position:relative}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.axis text,.lbl-t{fill:var(--text-faint);font-family:'VT323',monospace;font-size:15px}
+.val-t{fill:var(--text);font-family:'VT323',monospace;font-size:16px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:1rem;color:var(--text-dim)}
+.legend .k{display:inline-block;width:16px;height:3px;border-radius:2px;margin-right:6px;vertical-align:5px}
+.legend .kb{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:0}
+.hit{cursor:pointer}
+.hbar-row{display:grid;grid-template-columns:minmax(90px,150px) 1fr minmax(56px,auto);gap:10px;align-items:center;padding:5px 0;border-radius:3px}
+.hbar-row.clickable{cursor:pointer}
+.hbar-row.clickable:hover{background:rgba(0,240,255,0.06)}
+.hbar-row .nm{font-size:1.05rem;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hbar-row .tr{height:14px;position:relative}
+.hbar-row .tr i{position:absolute;left:0;top:0;bottom:0;border-radius:0 4px 4px 0;min-width:2px}
+.hbar-row .v{white-space:nowrap;text-align:right;font-size:1.05rem;color:var(--text-dim)}
+.hbar-row.sel .nm{color:var(--mid)}
+.pairbars{display:flex;flex-direction:column;gap:3px}
+.pairbars i{position:relative!important;display:block;height:7px}
+
+/* toggles inside cards */
+.mini-seg{display:flex;border:1px solid var(--border-strong);border-radius:var(--radius-sm);overflow:hidden}
+.mini-seg button{background:transparent;color:var(--text-dim);border:none;padding:3px 9px;font-family:'VT323',monospace;font-size:0.98rem;cursor:pointer;letter-spacing:0;text-transform:none}
+.mini-seg button.on{background:var(--accent-2);color:#0A0118}
+
+/* top 10 & tables */
+.top10{list-style:none;margin:0;padding:0}
+.top10 li{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:11px 8px;border-bottom:1px dashed var(--border);cursor:pointer;border-radius:3px}
+.top10 li:hover{background:rgba(0,240,255,0.06)}
+.top10 .rk{font-family:'Press Start 2P',monospace;font-size:0.8rem;color:var(--accent);text-align:center}
+.top10 .rk.gold{color:var(--mid);text-shadow:0 0 8px rgba(255,213,0,0.6)}
+.top10 .nm{font-size:1.15rem;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.top10 .sub{font-size:0.92rem;color:var(--text-faint)}
+.top10 .sc{font-family:'Press Start 2P',monospace;font-size:0.8rem;color:var(--accent-2);text-shadow:0 0 6px rgba(0,240,255,0.5);white-space:nowrap}
+.top10 .sc small{font-size:0.55rem;color:var(--text-faint);text-shadow:none}
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.tbl{width:100%;border-collapse:collapse;font-size:1.05rem}
+.tbl th{font-family:'Press Start 2P',monospace;font-size:0.5rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-faint);text-align:left;padding:10px 8px;border-bottom:2px solid var(--border-strong);white-space:nowrap;font-weight:400}
+.tbl th.sortable{cursor:pointer;user-select:none}
+.tbl th.sortable:hover{color:var(--accent-2)}
+.tbl th.sorted{color:var(--accent-2)}
+.tbl td{padding:9px 8px;border-bottom:1px dashed var(--border);vertical-align:middle}
+.tbl tbody tr{cursor:pointer}
+.tbl tbody tr:hover{background:rgba(0,240,255,0.06)}
+.tbl .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tbl .dim{color:var(--text-faint)}
+.search{width:100%;max-width:320px;padding:8px 12px;border-radius:var(--radius-sm);border:2px solid var(--border-strong);background:#05000F;color:var(--accent-2);font-family:'VT323',monospace;font-size:1.1rem}
+.search::placeholder{color:var(--text-faint)}
+.pill{display:inline-block;padding:1px 7px;border-radius:3px;font-size:0.95rem;border:1px solid}
+.pill.good{color:var(--good);border-color:rgba(0,255,156,0.5);background:var(--good-soft)}
+.pill.bad{color:var(--bad);border-color:rgba(255,59,92,0.5);background:var(--bad-soft)}
+.pill.mid{color:var(--mid);border-color:rgba(255,213,0,0.5);background:var(--mid-soft)}
+.pill.na{color:var(--text-faint);border-color:var(--border)}
+
+/* records */
+.rec{display:flex;flex-direction:column;gap:4px}
+.rec .big{font-family:'Press Start 2P',monospace;font-size:0.95rem;color:var(--mid);line-height:1.4;text-shadow:0 0 8px rgba(255,213,0,0.35)}
+.rec .t{font-size:1.05rem;color:var(--text)}
+.rec .s{font-size:0.92rem;color:var(--text-faint)}
+.linkish{color:var(--accent-2);cursor:pointer;text-decoration:underline;text-decoration-color:rgba(0,240,255,0.4)}
+
+/* confusion list */
+.conf{display:grid;grid-template-columns:1fr 24px 1fr 40px;gap:6px 8px;align-items:center;font-size:1.05rem}
+.conf .arrow{color:var(--accent);text-align:center}
+.conf .x{text-align:right;color:var(--text-dim)}
+.conf .g{color:var(--bad)}
+
+/* tooltip */
+#tip{position:fixed;z-index:200;pointer-events:none;background:#0D0320;border:1px solid var(--border-strong);border-radius:var(--radius-sm);padding:8px 11px;
+  box-shadow:0 0 16px rgba(0,240,255,0.25);font-size:1rem;color:var(--text-dim);opacity:0;transition:opacity .1s;max-width:280px}
+#tip.show{opacity:1}
+#tip .tt{color:var(--text-faint);font-size:0.92rem;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.03em}
+#tip .tr{display:flex;align-items:center;gap:8px;white-space:nowrap}
+#tip .tr b{color:var(--text);font-weight:400;font-size:1.1rem}
+#tip .k{display:inline-block;width:12px;height:3px;border-radius:2px}
+
+/* modal */
+.modal-bg{position:fixed;inset:0;background:rgba(5,0,12,0.78);z-index:150;display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto}
+.modal-bg.show{display:flex}
+.modal{width:100%;max-width:620px;animation:fadeIn .2s ease}
+.modal .close{position:absolute;right:12px;top:12px}
+.modal h3{font-family:'Press Start 2P',monospace;font-size:0.8rem;line-height:1.6;margin:0 40px 6px 0;color:var(--text);font-weight:400}
+.cmp{display:grid;grid-template-columns:minmax(90px,1fr) 1fr 1fr 56px;gap:0;margin-top:14px}
+.cmp>div{padding:9px 6px;border-bottom:1px dashed var(--border);font-size:1.05rem;min-width:0;overflow-wrap:anywhere}
+.cmp .hd{font-family:'Press Start 2P',monospace;font-size:0.48rem;color:var(--text-faint);text-transform:uppercase;border-bottom:2px solid var(--border-strong)}
+.cmp .cat{color:var(--text-dim);text-transform:uppercase;font-size:0.95rem}
+.cmp .pt{text-align:right}
+.score-big{font-family:'Press Start 2P',monospace;font-size:1.6rem;color:var(--accent-2);text-shadow:0 0 12px rgba(0,240,255,0.6);margin:10px 0 2px}
+.score-big small{font-size:0.7rem;color:var(--text-faint);text-shadow:none}
+
+/* state screens */
+.state{text-align:center;padding:80px 20px;color:var(--text-dim);font-size:1.2rem}
+.state .hero{width:72px;height:72px;margin:0 auto 22px;border:2px solid var(--accent-2);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;
+  background:var(--surface);box-shadow:0 0 24px rgba(0,240,255,0.35);animation:pulseGlow 1.7s ease-in-out infinite}
+.state .hero svg{width:34px;height:34px;filter:drop-shadow(0 0 6px var(--accent))}
+@keyframes pulseGlow{0%,100%{box-shadow:0 0 24px rgba(0,240,255,0.35)}50%{box-shadow:0 0 42px rgba(0,240,255,0.6)}}
+.btn{font-family:'Press Start 2P',monospace;font-size:0.65rem;text-transform:uppercase;padding:13px 18px;border-radius:var(--radius);cursor:pointer;
+  background:var(--accent);color:#0A0118;border:2px solid var(--bg);box-shadow:3px 3px 0 var(--accent-2),0 0 20px rgba(255,46,151,0.4);margin-top:18px}
+.btn:hover{transform:translate(-1px,-1px)}
+.empty{color:var(--text-faint);font-size:1.05rem;padding:14px 0}
+.fade-in{animation:fadeIn .25s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.loading-dim{opacity:0.5;transition:opacity .2s}
+@media (prefers-reduced-motion:reduce){.fade-in,.modal,.state .hero{animation:none}.icon-btn.spin svg{animation:none}}
+@media(max-width:560px){
+  body{font-size:18px}
+  .updated{display:none}
+  .stand{grid-template-columns:minmax(100px,1.1fr) repeat(var(--np),minmax(0,1fr))}
+  .cmp{grid-template-columns:78px 1fr 1fr 44px}
+  .hbar-row{grid-template-columns:minmax(80px,110px) 1fr minmax(48px,auto)}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 3h8l-.7 8.2c-.3 3-2.1 4.7-3.3 5.2v4.1h3v1.5H9v-1.5h3v-4.1c-1.2-.5-3-2.2-3.3-5.2L8 3z" stroke="#FF6B8F" stroke-width="1.4" stroke-linejoin="round"/></svg>
+      <div class="brand-name">Blindervenner<span class="brand-sub">STATS</span></div>
+    </div>
+    <div class="top-actions">
+      <span class="updated" id="updated"></span>
+      <button class="icon-btn" id="btn-reload" title="Hent data igen" aria-label="Hent data igen">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
+      </button>
+      <a class="icon-btn" href="./" title="Til appen" aria-label="Til appen">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3h8l-.7 8.2c-.3 3-2.1 4.7-3.3 5.2V21M9 21h6"/></svg>
+      </a>
+    </div>
+  </div>
+  <div id="root"></div>
+</div>
+
+<div id="tip" role="tooltip"></div>
+<div class="modal-bg" id="modal" aria-hidden="true"><div class="modal card" role="dialog" aria-modal="true" id="modal-body"></div></div>
+
+<script>
+/* ============================================================
+   KONFIGURATION
+   Data hentes direkte fra regnearket "Blindervenner" (fanen Vine)
+   via Apps Script-webappen – samme kald som appen bruger ("sync").
+   Kaldet læser kun; det ændrer intet i arket.
+   ============================================================ */
+const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbyla01AQW2iYGt4-uJ7kI4QTu1mkJDnVvpElWs4Lof2MdstBK-nE4RuCeB2o00xzMPe-g/exec';
+const DEFAULT_KEY = '5144ab14747841ad8e946ae2';
+
+const CATS = [
+  {id:'land',        label:'Land',          short:'Land',   max:2},
+  {id:'region',      label:'Region',        short:'Region', max:3},
+  {id:'appellation', label:'Appellation',   short:'Appel.', max:5},
+  {id:'drue1',       label:'Dom. drue',     short:'Drue',   max:8},
+  {id:'drue2',       label:'Ekstra drue',   short:'Drue 2', max:2},
+  {id:'type',        label:'Type/kvalitet', short:'Type',   max:2},
+  {id:'aargang',     label:'Årgang',        short:'Årgang', max:2},
+];
+const MAX = 24;
+const PLAYER_COLORS = { 'lars':'#00F0FF', 'tore':'#FF2E97' };
+const FALLBACK_COLORS = ['#00F0FF','#FF2E97','#FFD500','#00FF9C'];
+const MONTHS = ['jan','feb','mar','apr','maj','jun','jul','aug','sep','okt','nov','dec'];
+
+/* ============================================================ state */
+let ALL = [];            // alle vine (normaliseret)
+let PLAYERS = [];        // navne på gættere
+let F = { player:'all', period:'all', land:'all', drue:'all' };
+let UI = { trend:'evening', catMode:'hit', geo:'land', archiveSort:{key:'date',dir:-1}, archiveQ:'' };
+let LOADED_AT = null;
+
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function norm(s){ return String(s ?? '').trim().toLowerCase(); }
+function fmt1(n){ return (Math.round(n*10)/10).toLocaleString('da-DK',{minimumFractionDigits:1,maximumFractionDigits:1}); }
+function pct(n){ return Math.round(n*100) + '%'; }
+function avg(a){ return a.length ? a.reduce((s,x)=>s+x,0)/a.length : 0; }
+function colorOf(name){
+  const k = norm(name);
+  if(PLAYER_COLORS[k]) return PLAYER_COLORS[k];
+  const i = PLAYERS.indexOf(name);
+  return FALLBACK_COLORS[(i<0?0:i) % FALLBACK_COLORS.length];
+}
+function fmtDate(iso, withYear=true){
+  if(!iso) return '–';
+  const [y,m,d] = iso.split('-');
+  return `${parseInt(d,10)}. ${MONTHS[parseInt(m,10)-1]}` + (withYear ? ` ${y}` : '');
+}
+function pnameHTML(n){ return `<span class="pname"><span class="dot" style="background:${colorOf(n)}"></span>${esc(n)}</span>`; }
+
+/* ============================================================ data */
+function cfg(){
+  // Genbrug appens forbindelse, hvis den findes i samme browser – ellers standarden ovenfor.
+  try{ const c = JSON.parse(localStorage.getItem('vino_backend')||'null'); if(c && c.url && c.key) return c; }catch(e){}
+  return { url: DEFAULT_URL, key: DEFAULT_KEY };
+}
+
+async function fetchWines(){
+  const c = cfg();
+  const res = await fetch(c.url, { method:'POST', redirect:'follow',
+    headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+    body: JSON.stringify({ k:c.key, op:'sync', paths:[], hist:'' }) });
+  let j;
+  try{ j = await res.json(); }catch(e){ throw new Error('Svaret fra regnearket kunne ikke læses.'); }
+  if(!j.ok) throw new Error(j.err === 'denied' ? 'Nøglen blev afvist af regnearket.' : ('Fejl fra regnearket: ' + (j.err||'ukendt')));
+  return j.history || [];
+}
+
+function parseDate(s){
+  s = String(s||'').trim();
+  let m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s);
+  if(m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  m = /^(\d{1,2})[-./](\d{1,2})[-./](\d{4})/.exec(s);
+  if(m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  return '';
+}
+
+function normalize(list){
+  // Arket sender nyeste først; rækkefølgen i arket bruges som tiebreak.
+  const n = list.length;
+  return list.map((r,i)=>{
+    const truth = r.truth||{}, guess = r.guess||{}, judged = r.judged||{};
+    const cats = {};
+    let score = 0, possible = 0;
+    CATS.forEach(c=>{
+      const t = String(truth[c.id]??'').trim(), g = String(guess[c.id]??'').trim();
+      const j = judged[c.id];
+      const applicable = t !== '';
+      const pts = !applicable ? 0 : (j==='good' ? c.max : j==='mid' ? 1 : 0);
+      cats[c.id] = { t, g, applicable, pts, j: !applicable ? 'na' : (j||'bad') };
+      if(applicable){ score += pts; possible += c.max; }
+    });
+    const date = parseDate(r.date) || (r.createdAt ? new Date(r.createdAt).toISOString().slice(0,10) : '');
+    return {
+      id: r.id || ('w'+i), date,
+      owner: String(r.ownerName||'').trim(), guesser: String(r.guesserName||'').trim(),
+      nr: r.ownerIndex || '', name: String(r.wineNote||'').trim() || 'Unavngiven vin',
+      cats, score: (typeof r.score === 'number' && !isNaN(r.score)) ? r.score : score, possible,
+      createdAt: r.createdAt || 0, seq: n - i,
+    };
+  }).filter(w => w.guesser && w.date)
+    .sort((a,b)=> a.date.localeCompare(b.date) || (a.createdAt - b.createdAt) || (a.seq - b.seq));
+}
+
+/* ============================================================ filters */
+function evenings(list){ return [...new Set(list.map(w=>w.date))].sort(); }
+function baseFiltered(){
+  // alle filtre undtagen spiller
+  let L = ALL;
+  const ev = evenings(ALL);
+  if(F.period === 'last3'){ const keep = new Set(ev.slice(-3)); L = L.filter(w=>keep.has(w.date)); }
+  else if(/^y\d{4}$/.test(F.period)){ const y = F.period.slice(1); L = L.filter(w=>w.date.startsWith(y)); }
+  else if(/^d/.test(F.period)){ const d = F.period.slice(1); L = L.filter(w=>w.date===d); }
+  if(F.land !== 'all') L = L.filter(w=>norm(w.cats.land.t)===F.land);
+  if(F.drue !== 'all') L = L.filter(w=>norm(w.cats.drue1.t)===F.drue);
+  return L;
+}
+function filtered(){ const L = baseFiltered(); return F.player==='all' ? L : L.filter(w=>w.guesser===F.player); }
+function scopePlayers(){ return F.player==='all' ? PLAYERS : [F.player]; }
+function isFiltered(){ return F.player!=='all' || F.period!=='all' || F.land!=='all' || F.drue!=='all'; }
+
+/* ============================================================ stats helpers */
+function byPlayer(L){ const o = {}; PLAYERS.forEach(p=>o[p]=L.filter(w=>w.guesser===p)); return o; }
+function evWinners(L){
+  // pr. aften: hvem havde det højeste gennemsnit som gætter
+  return evenings(L).map(d=>{
+    const ws = L.filter(w=>w.date===d);
+    const per = PLAYERS.map(p=>{ const s = ws.filter(w=>w.guesser===p).map(w=>w.score); return {p, n:s.length, avg: s.length?avg(s):null, sum:s.reduce((a,b)=>a+b,0)}; });
+    const played = per.filter(x=>x.n>0);
+    let winner = null;
+    if(played.length >= 2){
+      const best = Math.max(...played.map(x=>x.avg));
+      const top = played.filter(x=>x.avg===best);
+      winner = top.length===1 ? top[0].p : 'uafgjort';
+    }
+    return { date:d, wines:ws, per, winner };
+  });
+}
+function hitRate(L, cid){
+  const a = L.filter(w=>w.cats[cid].applicable);
+  return a.length ? a.filter(w=>w.cats[cid].pts>0).length / a.length : null;
+}
+function ptsShare(L, cid){
+  const a = L.filter(w=>w.cats[cid].applicable);
+  const c = CATS.find(x=>x.id===cid);
+  return a.length ? a.reduce((s,w)=>s+w.cats[cid].pts,0) / (a.length*c.max) : null;
+}
+function yearOf(s){ const m = /^(\d{4})$/.exec(String(s).trim()); return m ? +m[1] : null; }
+function competitionRank(sorted, key){
+  let rank = 0, prev = null;
+  return sorted.map((x,i)=>{ const v = key(x); if(v !== prev){ rank = i+1; prev = v; } return { rank, item:x }; });
+}
+
+/* ============================================================ tooltip */
+const tip = document.getElementById('tip');
+function showTip(e, html){
+  tip.innerHTML = html; tip.classList.add('show');
+  const pt = e.touches ? e.touches[0] : e;
+  let x = pt.clientX + 14, y = pt.clientY + 14;
+  const r = tip.getBoundingClientRect();
+  if(x + r.width > innerWidth - 8) x = pt.clientX - r.width - 14;
+  if(y + r.height > innerHeight - 8) y = pt.clientY - r.height - 14;
+  tip.style.left = Math.max(8,x)+'px'; tip.style.top = Math.max(8,y)+'px';
+}
+function hideTip(){ tip.classList.remove('show'); }
+function tipRow(color, val, label){ return `<div class="tr"><span class="k" style="background:${color}"></span><b>${esc(val)}</b> ${esc(label)}</div>`; }
+document.addEventListener('scroll', hideTip, {passive:true});
+
+// delegeret hover: elementer med data-tip
+document.addEventListener('pointermove', e=>{
+  const el = e.target.closest && e.target.closest('[data-tip]');
+  if(el && !el.closest('.chart-x')) showTip(e, el.getAttribute('data-tip'));
+  else if(!e.target.closest || !e.target.closest('.chart-x')) hideTip();
+});
+document.addEventListener('focusin', e=>{
+  const el = e.target.closest && e.target.closest('[data-tip]');
+  if(el){ const r = el.getBoundingClientRect(); showTip({clientX:r.left+r.width/2, clientY:r.top}, el.getAttribute('data-tip')); }
+});
+document.addEventListener('focusout', hideTip);
+
+/* ============================================================ render root */
+const root = document.getElementById('root');
+
+function renderLoading(){
+  root.innerHTML = `<div class="state"><div class="hero"><svg viewBox="0 0 24 24" fill="none"><path d="M8 3h8l-.7 8.2c-.3 3-2.1 4.7-3.3 5.2v4.1h3v1.5H9v-1.5h3v-4.1c-1.2-.5-3-2.2-3.3-5.2L8 3z" stroke="#FF2E97" stroke-width="1.4" stroke-linejoin="round"/></svg></div>Henter vine fra regnearket…</div>`;
+}
+function renderError(msg){
+  root.innerHTML = `<div class="state"><div class="hero" style="border-color:var(--bad);animation:none"><svg viewBox="0 0 24 24" fill="none" stroke="#FF3B5C" stroke-width="2"><path d="M12 8v5M12 16.5v.5"/><circle cx="12" cy="12" r="9"/></svg></div>
+    Kunne ikke hente data.<br><span style="color:var(--text-faint);font-size:1rem">${esc(msg)}</span><br><button class="btn" onclick="load()">Prøv igen</button></div>`;
+}
+
+function render(){
+  if(!ALL.length){
+    root.innerHTML = `<div class="state">Ingen vine i fanen Vine endnu.<br><span style="color:var(--text-faint);font-size:1rem">Når I har smagt den første vin i appen, dukker den op her.</span></div>`;
+    return;
+  }
+  const L = filtered(), B = baseFiltered();
+  root.innerHTML = `
+    ${filtersHTML()}
+    ${L.length ? `
+    ${secOverview(L)}
+    ${secStanding(L, B)}
+    ${secTrend(L)}
+    ${secTop10()}
+    ${secCategories(L)}
+    ${secGeo(L)}
+    ${secVintage(L)}
+    ${secHolder(L)}
+    ${secEvenings(B)}
+    ${secRecords(L, B)}
+    ${secArchive(L)}` : `<div class="state">Ingen vine matcher filtrene. <br><button class="btn" onclick="resetFilters()">Nulstil filtre</button></div>${secTop10()}`}
+  `;
+  bindAfterRender();
+}
+
+/* ============================================================ filters UI */
+function filtersHTML(){
+  const ev = evenings(ALL);
+  const years = [...new Set(ev.map(d=>d.slice(0,4)))];
+  const lands = uniqSorted(ALL.map(w=>w.cats.land.t));
+  const druer = uniqSorted(ALL.map(w=>w.cats.drue1.t));
+  const pBtn = (v,l)=>`<button class="${F.player===v?'on':''}" data-f="player" data-v="${esc(v)}">${esc(l)}</button>`;
+  return `<div class="filters">
+    <div class="fgroup"><span class="flabel">Gætter</span><div class="seg">${pBtn('all','Begge')}${PLAYERS.map(p=>pBtn(p,p)).join('')}</div></div>
+    <div class="fgroup"><span class="flabel">Periode</span><select class="sel" data-f="period">
+      <option value="all">Alle aftener</option>
+      ${ev.length>3?`<option value="last3">Seneste 3 aftener</option>`:''}
+      ${years.length>1?years.map(y=>`<option value="y${y}">Hele ${y}</option>`).join(''):''}
+      <optgroup label="Én aften">${ev.slice().reverse().map(d=>`<option value="d${d}">${fmtDate(d)}</option>`).join('')}</optgroup>
+    </select></div>
+    <div class="fgroup"><span class="flabel">Land (facit)</span><select class="sel" data-f="land"><option value="all">Alle lande</option>${lands.map(l=>`<option value="${esc(norm(l))}">${esc(l)}</option>`).join('')}</select></div>
+    <div class="fgroup"><span class="flabel">Drue (facit)</span><select class="sel" data-f="drue"><option value="all">Alle druer</option>${druer.map(l=>`<option value="${esc(norm(l))}">${esc(l)}</option>`).join('')}</select></div>
+    ${isFiltered()?`<button class="reset" onclick="resetFilters()">Nulstil</button>`:''}
+  </div>
+  ${isFiltered()?`<div class="scope-note">Viser <b>${filtered().length}</b> af ${ALL.length} vine · Top 10 viser altid alle vine</div>`:''}`;
+}
+function uniqSorted(arr){
+  const m = new Map(); arr.filter(Boolean).forEach(x=>{ const k = norm(x); if(!m.has(k)) m.set(k, x); });
+  return [...m.values()].sort((a,b)=>a.localeCompare(b,'da'));
+}
+function resetFilters(){ F = { player:'all', period:'all', land:'all', drue:'all' }; render(); }
+function setFilter(k, v){ F[k] = v; render(); }
+
+/* ============================================================ 1. oversigt */
+function secOverview(L){
+  const bp = byPlayer(L);
+  const sp = scopePlayers();
+  const kpis = [
+    {l:'Blindede vine', n:L.length, s:`${evenings(L).length} aftener`},
+    ...sp.map(p=>({l:`${esc(p)} har gættet`, n:bp[p].length, s:'vine', c:colorOf(p)})),
+    {l:'Gns. alle gæt', n:fmt1(avg(L.map(w=>w.score))), s:`af ${MAX} point`},
+    ...sp.map(p=>({l:`Gns. ${esc(p)}`, n:bp[p].length?fmt1(avg(bp[p].map(w=>w.score))):'–', s:`af ${MAX} point`, c:colorOf(p)})),
+  ];
+  // landefordeling
+  const cnt = new Map();
+  L.forEach(w=>{ const k = w.cats.land.t || 'Ukendt'; cnt.set(k,(cnt.get(k)||0)+1); });
+  const lands = [...cnt.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'da'));
+  const mx = Math.max(...lands.map(x=>x[1]));
+  // pr. spiller: antal gættet som stablet søjle
+  return `<section class="section fade-in"><div class="sec-head"><span class="sec-num">01</span><h2>Oversigt</h2></div>
+    <div class="grid g-kpi">${kpis.map(k=>`<div class="card kpi"><div class="l">${k.c?`<span class="dot" style="background:${k.c}"></span>`:''}${k.l}</div><div class="n">${k.n}</div><div class="s">${k.s}</div></div>`).join('')}</div>
+    <div class="grid g2" style="margin-top:14px">
+      <div class="card"><div class="card-title">Fordeling på lande <span class="sec-sub" style="font-family:'VT323',monospace;text-transform:none;letter-spacing:0;color:var(--text-faint);text-shadow:none">klik for at filtrere</span></div>
+        ${lands.map(([l,n])=>`<div class="hbar-row clickable ${F.land===norm(l)?'sel':''}" tabindex="0" data-land="${esc(norm(l))}" data-tip="${esc(`<div class='tt'>${esc(l)}</div>`+tipRow('#FFD500', n+' vine', `· ${pct(n/L.length)} af alle`))}">
+          <span class="nm">${esc(l)}</span><span class="tr"><i style="width:${n/mx*100}%;background:linear-gradient(90deg,var(--accent),#FF6BB5)"></i></span><span class="v">${n}</span></div>`).join('')}
+      </div>
+      <div class="card"><div class="card-title">Hvem har gættet hvor meget</div>${whoGuessedChart(L)}</div>
+    </div>
+  </section>`;
+}
+function whoGuessedChart(L){
+  // pr. spiller: donut-fri – en enkel delt søjle + score-fordeling i intervaller
+  const sp = scopePlayers();
+  const total = L.length;
+  let x = 0;
+  const seg = sp.map(p=>{ const n = L.filter(w=>w.guesser===p).length; const w = total? n/total*100 : 0; const s = `<i style="left:${x}%;width:calc(${w}% - 2px);background:${colorOf(p)}" data-tip="${esc(tipRow(colorOf(p), n+' vine', 'gættet af '+p))}"></i>`; x += w; return s; }).join('');
+  const buckets = [[0,5],[6,10],[11,15],[16,20],[21,24]];
+  const rows = buckets.map(([a,b])=>{
+    const per = sp.map(p=>({p, n:L.filter(w=>w.guesser===p && w.score>=a && w.score<=b).length}));
+    return {lbl:`${a}–${b} p`, per};
+  });
+  const mx = Math.max(1, ...rows.flatMap(r=>r.per.map(x=>x.n)));
+  return `<div style="position:relative;height:22px;margin-bottom:6px">${seg.replace(/<i /g,'<i class="hit" ').replace(/style="/g,'style="position:absolute;top:0;bottom:0;border-radius:3px;')}</div>
+    <div class="legend" style="margin-bottom:16px">${sp.map(p=>`<span><span class="kb" style="background:${colorOf(p)}"></span>${esc(p)} · ${L.filter(w=>w.guesser===p).length}</span>`).join('')}</div>
+    <div class="card-title" style="margin-bottom:6px;color:var(--text-dim);text-shadow:none">Score-fordeling</div>
+    ${rows.map(r=>`<div class="hbar-row"><span class="nm" style="color:var(--text-dim)">${r.lbl}</span><span class="tr pairbars">${r.per.map(x=>`<i class="hit" style="width:${x.n/mx*100}%;background:${colorOf(x.p)};border-radius:0 3px 3px 0" data-tip="${esc(`<div class='tt'>${r.lbl}</div>`+tipRow(colorOf(x.p), x.n+' vine', x.p))}"></i>`).join('')}</span><span class="v">${r.per.map(x=>x.n).join(' / ')}</span></div>`).join('')}`;
+}
+
+/* ============================================================ 2. stillingen */
+function secStanding(L, B){
+  const sp = scopePlayers();
+  const bp = byPlayer(L);
+  const wins = {}; sp.forEach(p=>wins[p]=0);
+  const evs = evWinners(B);
+  evs.forEach(e=>{ if(e.winner && wins[e.winner] !== undefined) wins[e.winner]++; });
+  const decided = evs.filter(e=>e.winner).length;
+  const S = sp.map(p=>{
+    const ws = bp[p];
+    const tot = ws.reduce((s,w)=>s+w.score,0);
+    const a = ws.length ? avg(ws.map(w=>w.score)) : 0;
+    const best = ws.slice().sort((x,y)=>y.score-x.score || y.date.localeCompare(x.date))[0];
+    return { p, tot, a, share: a/MAX, wins: wins[p], best, n: ws.length };
+  });
+  const lead = (key)=>{ if(S.length<2) return null; const m = Math.max(...S.map(s=>s[key])); const t = S.filter(s=>s[key]===m); return t.length===1 ? t[0].p : null; };
+  const L1 = lead('tot'), L2 = lead('a'), L3 = lead('share'), L4 = lead('wins');
+  const col = (s, key, big, small, extra='')=>`<div class="c ${key===s.p?'lead':''}"><span class="big">${big}</span>${small?`<span class="small">${small}</span>`:''}${extra}</div>`;
+  return `<section class="section"><div class="sec-head"><span class="sec-num">02</span><h2>Stillingen</h2><span class="sec-sub">Den med flest point står grønt</span></div>
+    <div class="card"><div class="stand" style="--np:${S.length}">
+      <div class="h"></div>${S.map(s=>`<div class="h" style="color:${colorOf(s.p)}">${esc(s.p)}</div>`).join('')}
+      <div class="c lbl">Samlede point</div>${S.map(s=>col(s,L1,s.tot,`${s.n} vine`)).join('')}
+      <div class="c lbl">Gns. pr. vin</div>${S.map(s=>col(s,L2,fmt1(s.a),'')).join('')}
+      <div class="c lbl">Andel af 24 p</div>${S.map(s=>col(s,L3,pct(s.share),'',`<span class="bar-mini"><i style="width:${s.share*100}%;background:${colorOf(s.p)}"></i></span>`)).join('')}
+      <div class="c lbl">Vundne aftener</div>${S.map(s=>col(s,L4,s.wins,`af ${decided} afgjorte`)).join('')}
+      <div class="c lbl">Bedste vin</div>${S.map(s=>s.best?`<div class="c"><span class="big">${s.best.score}<span style="font-size:0.55em;color:var(--text-faint)">/24</span></span><span class="small linkish" data-wine="${esc(s.best.id)}" title="${esc(s.best.name)}">${esc(s.best.name)}</span></div>`:`<div class="c">–</div>`).join('')}
+    </div>
+    <div class="card-note">En aften vindes af den, der har det højeste gennemsnit som gætter den aften. ${F.player!=='all'?'Aftener tælles med begge spillere, selvom der er filtreret på én.':''}</div></div>
+  </section>`;
+}
+
+/* ============================================================ 3. udvikling */
+function secTrend(L){
+  const ev = evenings(L);
+  const sp = scopePlayers();
+  const series = sp.map(p=>{
+    let cum = 0, cn = 0;
+    const pts = ev.map(d=>{
+      const s = L.filter(w=>w.date===d && w.guesser===p).map(w=>w.score);
+      s.forEach(x=>{ cum += x; cn++; });
+      const v = UI.trend==='evening' ? (s.length?avg(s):null) : (cn?cum/cn:null);
+      return { d, v, n:s.length };
+    });
+    return { p, pts };
+  });
+  return `<section class="section"><div class="sec-head"><span class="sec-num">03</span><h2>Udvikling over tid</h2></div>
+    <div class="card"><div class="card-title"><span>${UI.trend==='evening'?'Gennemsnit pr. aften':'Løbende gennemsnit'}</span>
+      <div class="mini-seg"><button data-ui="trend" data-v="evening" class="${UI.trend==='evening'?'on':''}">Pr. aften</button><button data-ui="trend" data-v="running" class="${UI.trend==='running'?'on':''}">Løbende gns.</button></div></div>
+      ${ev.length < 2 ? `<div class="empty">Der skal være mindst to aftener for at vise en udvikling.</div>` : lineChart(ev, series)}
+      <div class="legend" style="margin-top:8px">${sp.map(p=>`<span><span class="k" style="background:${colorOf(p)}"></span>${esc(p)}</span>`).join('')}</div>
+      <div class="card-note">${UI.trend==='evening'?'Hvert punkt er jeres gennemsnit som gætter den aften.':'Gennemsnittet af alle vine til og med den aften – stiger linjen, bliver man bedre.'}</div>
+    </div></section>`;
+}
+function lineChart(xs, series){
+  const W = narrow() ? 440 : 900, H = narrow() ? 260 : 300, m = {l:36, r:70, t:14, b:34};
+  const iw = W-m.l-m.r, ih = H-m.t-m.b;
+  const X = i => m.l + (xs.length===1 ? iw/2 : i*iw/(xs.length-1));
+  const Y = v => m.t + ih - v/MAX*ih;
+  const ticks = [0,6,12,18,24];
+  let g = ticks.map(t=>`<line x1="${m.l}" x2="${W-m.r}" y1="${Y(t)}" y2="${Y(t)}" stroke="var(--grid)" stroke-width="1"/><text class="lbl-t" x="${m.l-8}" y="${Y(t)+5}" text-anchor="end">${t}</text>`).join('');
+  const step = Math.max(1, Math.ceil(xs.length/8));
+  g += xs.map((d,i)=> (i%step===0 || i===xs.length-1) ? `<text class="lbl-t" x="${X(i)}" y="${H-10}" text-anchor="middle">${fmtDate(d,false)}</text>` : '').join('');
+  const lines = series.map(s=>{
+    const c = colorOf(s.p);
+    let path = '', pen = false;
+    s.pts.forEach((pt,i)=>{ if(pt.v==null){ pen=false; return; } path += (pen?'L':'M') + X(i).toFixed(1)+','+Y(pt.v).toFixed(1); pen = true; });
+    const dots = s.pts.map((pt,i)=> pt.v==null ? '' : `<circle cx="${X(i)}" cy="${Y(pt.v)}" r="4.5" fill="${c}" stroke="#120726" stroke-width="2"/>`).join('');
+    const lastI = s.pts.map(p=>p.v!=null).lastIndexOf(true);
+    const lbl = lastI>=0 ? `<text class="val-t end-lbl" data-y="${Y(s.pts[lastI].v)+5}" x="${X(lastI)+10}" y="${Y(s.pts[lastI].v)+5}" style="fill:${c}">${narrow()?'':esc(s.p)+' '}${fmt1(s.pts[lastI].v)}</text>` : '';
+    return `<path d="${path}" fill="none" stroke="${c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" style="filter:drop-shadow(0 0 4px ${c}88)"/>${dots}${lbl}`;
+  }).join('');
+  const data = encodeURIComponent(JSON.stringify({xs, series: series.map(s=>({p:s.p, c:colorOf(s.p), v:s.pts.map(x=>x.v), n:s.pts.map(x=>x.n)})), m, W, H, mode:UI.trend}));
+  return `<div class="chart chart-x" data-line="${data}"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Udvikling over tid">${g}<line class="xhair" x1="0" x2="0" y1="${m.t}" y2="${m.t+ih}" stroke="var(--text-faint)" stroke-width="1" stroke-dasharray="3 3" style="display:none"/>${lines}<rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent" class="hitbox"/></svg></div>`;
+}
+function bindLineCharts(){
+  document.querySelectorAll('[data-line]').forEach(el=>{
+    const D = JSON.parse(decodeURIComponent(el.getAttribute('data-line')));
+    const svg = el.querySelector('svg'), xh = el.querySelector('.xhair');
+    // skub slut-etiketter fra hinanden, hvis de overlapper
+    const labs = [...el.querySelectorAll('.end-lbl')].sort((a,b)=>+a.dataset.y - +b.dataset.y);
+    for(let i=1;i<labs.length;i++){ const py = +labs[i-1].getAttribute('y'), y = +labs[i].getAttribute('y'); if(y - py < 17) labs[i].setAttribute('y', py + 17); }
+    const iw = D.W - D.m.l - D.m.r;
+    const move = e=>{
+      const pt = e.touches ? e.touches[0] : e;
+      const r = svg.getBoundingClientRect();
+      const sx = (pt.clientX - r.left) / r.width * D.W;
+      let i = D.xs.length===1 ? 0 : Math.round((sx - D.m.l) / (iw/(D.xs.length-1)));
+      i = Math.max(0, Math.min(D.xs.length-1, i));
+      const x = D.m.l + (D.xs.length===1 ? iw/2 : i*iw/(D.xs.length-1));
+      xh.setAttribute('x1',x); xh.setAttribute('x2',x); xh.style.display='';
+      const rows = D.series.map(s=> tipRow(s.c, s.v[i]==null?'–':fmt1(s.v[i]), s.p + (D.mode==='evening' && s.n[i] ? ` · ${s.n[i]} vine` : ''))).join('');
+      showTip(pt, `<div class="tt">${fmtDate(D.xs[i])}</div>${rows}`);
+    };
+    svg.addEventListener('pointermove', move);
+    svg.addEventListener('pointerleave', ()=>{ xh.style.display='none'; hideTip(); });
+  });
+}
+
+/* ============================================================ 4. top 10 */
+function secTop10(){
+  const sorted = ALL.slice().sort((a,b)=> b.score-a.score);
+  const ranked = competitionRank(sorted, w=>w.score).filter(r=>r.rank<=10);
+  return `<section class="section"><div class="sec-head"><span class="sec-num">04</span><h2>Top 10</h2><span class="sec-sub">Bedst gættede vine nogensinde · påvirkes ikke af filtre</span></div>
+    <div class="card"><ol class="top10">${ranked.map(({rank,item:w})=>`<li tabindex="0" data-wine="${esc(w.id)}">
+      <span class="rk ${rank===1?'gold':''}">${rank}.</span>
+      <div style="min-width:0"><div class="nm">${esc(w.name)}</div><div class="sub">${pnameHTML(w.guesser)} gættede · medbragt af ${esc(w.owner)} · ${fmtDate(w.date)}</div></div>
+      <span class="sc">${w.score}<small>/24</small></span></li>`).join('')}</ol></div></section>`;
+}
+
+/* ============================================================ 5. kategorier */
+function secCategories(L){
+  const sp = scopePlayers();
+  const bp = byPlayer(L);
+  const fn = UI.catMode==='hit' ? hitRate : ptsShare;
+  // top 5 (fælles for de valgte spillere)
+  const top = CATS.map(c=>({c, v:hitRate(L,c.id), n:L.filter(w=>w.cats[c.id].applicable).length})).filter(x=>x.v!=null).sort((a,b)=>b.v-a.v).slice(0,5);
+  // hvor taber man point
+  const lost = sp.map(p=>{
+    const ws = bp[p];
+    const tot = CATS.map(c=>({c, lost: ws.reduce((s,w)=> s + (w.cats[c.id].applicable ? c.max - w.cats[c.id].pts : 0), 0)}));
+    const sum = tot.reduce((s,x)=>s+x.lost,0);
+    return {p, tot, sum};
+  });
+  return `<section class="section"><div class="sec-head"><span class="sec-num">05</span><h2>Styrker og svagheder</h2></div>
+    <div class="grid g2">
+      <div class="card"><div class="card-title"><span>Radar pr. kategori</span>
+        <div class="mini-seg"><button data-ui="catMode" data-v="hit" class="${UI.catMode==='hit'?'on':''}">Træfprocent</button><button data-ui="catMode" data-v="share" class="${UI.catMode==='share'?'on':''}">Pointandel</button></div></div>
+        ${radar(sp.map(p=>({p, v:CATS.map(c=>fn(bp[p], c.id))})))}
+        <div class="legend" style="justify-content:center">${sp.map(p=>`<span><span class="k" style="background:${colorOf(p)}"></span>${esc(p)}</span>`).join('')}</div>
+        <div class="card-note">${UI.catMode==='hit'?'Træfprocent: hvor ofte man får point i kategorien (årgang ±1 år tæller med).':'Pointandel: hvor stor en del af kategoriens mulige point man har fået.'} Kategorier uden facit (fx ingen appellation) tælles ikke med.</div>
+      </div>
+      <div class="card"><div class="card-title">Søjler pr. kategori</div>
+        ${CATS.map(c=>`<div class="hbar-row"><span class="nm">${c.label} <span style="color:var(--text-faint)">${c.max}p</span></span><span class="tr pairbars">${sp.map(p=>{ const v = fn(bp[p], c.id); return `<i class="hit" style="width:${(v||0)*100}%;background:${colorOf(p)};border-radius:0 3px 3px 0" data-tip="${esc(`<div class='tt'>${c.label}</div>`+tipRow(colorOf(p), v==null?'–':pct(v), p))}"></i>`; }).join('')}</span><span class="v">${sp.map(p=>{const v=fn(bp[p],c.id);return v==null?'–':pct(v);}).join(' / ')}</span></div>`).join('')}
+      </div>
+    </div>
+    <div class="grid g2" style="margin-top:14px">
+      <div class="card"><div class="card-title">Top 5 · hvor vi oftest scorer</div>
+        ${top.map((x,i)=>`<div class="hbar-row" style="grid-template-columns:28px minmax(90px,140px) 1fr 54px"><span style="font-family:'Press Start 2P';font-size:0.6rem;color:var(--accent)">${i+1}.</span><span class="nm">${x.c.label}</span><span class="tr"><i class="hit" style="width:${x.v*100}%;background:linear-gradient(90deg,var(--accent-2),#7FF8FF)" data-tip="${esc(`<div class='tt'>${x.c.label}</div>`+tipRow('#00F0FF', pct(x.v), `af ${x.n} vine med facit`))}"></i></span><span class="v">${pct(x.v)}</span></div>`).join('')}
+        <div class="card-note">${sp.length>1?'Begge gættere samlet.':'Kun '+esc(sp[0])+'.'} Andel af vinene, hvor kategorien gav point.</div>
+      </div>
+      <div class="card"><div class="card-title">Hvor taber vi point</div>
+        ${lost.map(l=>{ const mx = Math.max(1,...l.tot.map(x=>x.lost)); const worst = l.tot.slice().sort((a,b)=>b.lost-a.lost)[0];
+          return `<div style="margin-bottom:12px"><div style="margin-bottom:6px">${pnameHTML(l.p)} <span style="color:var(--text-faint)">· har tabt ${l.sum} point · mest på <span style="color:var(--text)">${worst?worst.c.label.toLowerCase():'–'}</span></span></div>
+            ${l.tot.slice().sort((a,b)=>b.lost-a.lost).map(x=>`<div class="hbar-row" style="padding:2px 0"><span class="nm" style="font-size:0.98rem;color:var(--text-dim)">${x.c.label}</span><span class="tr" style="height:9px"><i class="hit" style="width:${x.lost/mx*100}%;background:${colorOf(l.p)};opacity:0.85" data-tip="${esc(`<div class='tt'>${x.c.label}</div>`+tipRow(colorOf(l.p), x.lost+' point tabt', `· ${l.sum?pct(x.lost/l.sum):'0%'} af ${l.p}s tab`))}"></i></span><span class="v" style="font-size:0.98rem">${x.lost}</span></div>`).join('')}</div>`; }).join('')}
+      </div>
+    </div></section>`;
+}
+function radar(series){
+  const S = 340, cx = S/2, cy = S/2 + 4, R = 118, n = CATS.length;
+  const ang = i => -Math.PI/2 + i*2*Math.PI/n;
+  const P = (i, r) => [cx + Math.cos(ang(i))*r, cy + Math.sin(ang(i))*r];
+  let g = [0.25,0.5,0.75,1].map(t=>`<polygon points="${CATS.map((c,i)=>P(i,R*t).join(',')).join(' ')}" fill="none" stroke="var(--grid)" stroke-width="1"/>`).join('');
+  g += CATS.map((c,i)=>{ const [x,y] = P(i,R); const [lx,ly] = P(i,R+22); const anchor = Math.abs(lx-cx)<8?'middle':(lx>cx?'start':'end');
+    return `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="var(--grid)"/><text class="lbl-t" x="${lx}" y="${ly+5}" text-anchor="${anchor}" style="font-size:16px;fill:var(--text-dim)">${c.short}</text>`; }).join('');
+  g += `<text class="lbl-t" x="${cx+4}" y="${cy-R*0.5-2}" style="font-size:13px">50%</text><text class="lbl-t" x="${cx+4}" y="${cy-R-2}" style="font-size:13px">100%</text>`;
+  const polys = series.map(s=>{ const c = colorOf(s.p);
+    const pts = s.v.map((v,i)=>P(i, R*(v||0)));
+    return `<polygon points="${pts.map(p=>p.join(',')).join(' ')}" fill="${c}" fill-opacity="0.16" stroke="${c}" stroke-width="2" stroke-linejoin="round" style="filter:drop-shadow(0 0 4px ${c}77)"/>`
+      + pts.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="${c}" stroke="#120726" stroke-width="2"/><circle class="hit" cx="${p[0]}" cy="${p[1]}" r="13" fill="transparent" data-tip="${esc(`<div class='tt'>${CATS[i].label}</div>`+tipRow(c, s.v[i]==null?'–':pct(s.v[i]), s.p))}"/>`).join('');
+  }).join('');
+  return `<div class="chart" style="max-width:420px;margin:0 auto"><svg viewBox="-40 -6 ${S+80} ${S+10}" role="img" aria-label="Radar over kategorier">${g}${polys}</svg></div>`;
+}
+
+/* ============================================================ 6. geografi & druer */
+function secGeo(L){
+  const sp = scopePlayers();
+  const key = UI.geo==='land' ? 'land' : 'drue1';
+  const groups = new Map();
+  L.forEach(w=>{ const t = w.cats[key].t; if(!t) return; const k = norm(t); if(!groups.has(k)) groups.set(k,{name:t, ws:[]}); groups.get(k).ws.push(w); });
+  const rows = [...groups.values()].map(g=>({ ...g, per: sp.map(p=>{ const ws = g.ws.filter(w=>w.guesser===p); return {p, n:ws.length, hit: ws.length? ws.filter(w=>w.cats[key].pts>0).length/ws.length : null, avg: ws.length?avg(ws.map(w=>w.score)):null}; }) }))
+    .sort((a,b)=> b.ws.length - a.ws.length || a.name.localeCompare(b.name,'da'));
+  // forvekslinger (dominerende drue)
+  const conf = new Map();
+  L.forEach(w=>{ const c = w.cats.drue1; if(!c.applicable || c.pts>0 || !c.g) return; const k = norm(c.t)+'→'+norm(c.g); if(!conf.has(k)) conf.set(k,{t:c.t,g:c.g,n:0,who:new Set()}); const o = conf.get(k); o.n++; o.who.add(w.guesser); });
+  const confL = [...conf.values()].sort((a,b)=>b.n-a.n || a.t.localeCompare(b.t,'da')).slice(0,12);
+  const landConf = new Map();
+  L.forEach(w=>{ const c = w.cats.land; if(!c.applicable || c.pts>0 || !c.g) return; const k = norm(c.t)+'→'+norm(c.g); if(!landConf.has(k)) landConf.set(k,{t:c.t,g:c.g,n:0,who:new Set()}); landConf.get(k).n++; landConf.get(k).who.add(w.guesser); });
+  const lc = [...landConf.values()].sort((a,b)=>b.n-a.n).slice(0,6);
+  const fKey = key==='land'?'land':'drue';
+  return `<section class="section"><div class="sec-head"><span class="sec-num">06</span><h2>Geografi og druer</h2></div>
+    <div class="grid g2">
+      <div class="card"><div class="card-title"><span>Træfprocent pr. ${key==='land'?'land':'drue'}</span>
+        <div class="mini-seg"><button data-ui="geo" data-v="land" class="${UI.geo==='land'?'on':''}">Lande</button><button data-ui="geo" data-v="drue" class="${UI.geo==='drue'?'on':''}">Druer</button></div></div>
+        ${rows.map(r=>`<div class="hbar-row clickable ${F[fKey]===norm(r.name)?'sel':''}" tabindex="0" data-${fKey}="${esc(norm(r.name))}"><span class="nm" title="${esc(r.name)}">${esc(r.name)} <span style="color:var(--text-faint)">${r.ws.length}</span></span>
+          <span class="tr pairbars">${r.per.map(x=>`<i class="hit" style="width:${(x.hit||0)*100}%;${x.hit===0?'min-width:2px;':''}background:${colorOf(x.p)};border-radius:0 3px 3px 0;${x.n?'':'opacity:0.25'}" data-tip="${esc(`<div class='tt'>${esc(r.name)}</div>`+(x.n?tipRow(colorOf(x.p), pct(x.hit), `ramt · ${x.p} (${x.n} vine, gns. ${fmt1(x.avg)} p)`):tipRow(colorOf(x.p),'–',`${x.p} har ikke gættet denne`)))}"></i>`).join('')}</span>
+          <span class="v">${r.per.map(x=>x.n?pct(x.hit):'–').join(' / ')}</span></div>`).join('')}
+        <div class="card-note">Hvor ofte ${key==='land'?'landet':'den dominerende drue'} blev ramt, set ud fra facit. Klik for at filtrere.</div>
+      </div>
+      <div class="card"><div class="card-title">Forvekslinger · drue</div>
+        ${confL.length?`<div class="conf">${confL.map(c=>`<span>${esc(c.t)}</span><span class="arrow">→</span><span class="g">${esc(c.g)}</span><span class="x">${c.n}×</span>`).join('')}</div>`:`<div class="empty">Ingen forkerte druegæt i udvalget. Imponerende.</div>`}
+        <div class="card-note">Facit → det, der blev gættet.</div>
+        ${lc.length?`<div class="card-title" style="margin-top:18px">Forvekslinger · land</div><div class="conf">${lc.map(c=>`<span>${esc(c.t)}</span><span class="arrow">→</span><span class="g">${esc(c.g)}</span><span class="x">${c.n}×</span>`).join('')}</div>`:''}
+      </div>
+    </div></section>`;
+}
+
+/* ============================================================ 7. årgang */
+function secVintage(L){
+  const sp = scopePlayers();
+  const per = sp.map(p=>{
+    const d = L.filter(w=>w.guesser===p).map(w=>{ const t = yearOf(w.cats.aargang.t), g = yearOf(w.cats.aargang.g); return (t&&g) ? g - t : null; }).filter(x=>x!=null);
+    const nv = L.filter(w=>w.guesser===p && norm(w.cats.aargang.t)==='nv');
+    return { p, d, mae: d.length?avg(d.map(Math.abs)):null, bias: d.length?avg(d):null, exact: d.filter(x=>x===0).length, near: d.filter(x=>Math.abs(x)===1).length, nv: nv.length, nvHit: nv.filter(w=>w.cats.aargang.pts>0).length };
+  });
+  const range = [-4,-3,-2,-1,0,1,2,3,4];
+  const bucket = (d,v)=> d.filter(x=> v===-4 ? x<=-4 : v===4 ? x>=4 : x===v).length;
+  const mx = Math.max(1, ...per.flatMap(x=>range.map(v=>bucket(x.d,v))));
+  const W = narrow() ? 440 : 900, H = narrow() ? 220 : 230, m = {l:30,r:10,t:18,b:40}, iw = W-m.l-m.r, ih = H-m.t-m.b, bw = iw/range.length, gap = 3;
+  const inner = (bw - 16) / sp.length;
+  let svg = [0, Math.ceil(mx/2), mx].map(t=>`<line x1="${m.l}" x2="${W-m.r}" y1="${m.t+ih-t/mx*ih}" y2="${m.t+ih-t/mx*ih}" stroke="var(--grid)"/><text class="lbl-t" x="${m.l-6}" y="${m.t+ih-t/mx*ih+5}" text-anchor="end">${t}</text>`).join('');
+  range.forEach((v,i)=>{
+    const x0 = m.l + i*bw + 8;
+    svg += `<text class="lbl-t" x="${m.l+i*bw+bw/2}" y="${H-18}" text-anchor="middle" style="${v===0?'fill:var(--good)':''}">${v===0?(narrow()?'0':'præcis'):(v>0?'+':'')+(Math.abs(v)===4?(v>0?'4+':'−4+'):v)}</text>`;
+    per.forEach((x,k)=>{ const n = bucket(x.d,v); const h = n/mx*ih; const c = colorOf(x.p);
+      svg += `<rect x="${x0+k*inner+gap/2}" y="${m.t+ih-h}" width="${Math.max(2,inner-gap)}" height="${Math.max(0,h)}" rx="3" fill="${c}"/>`
+        + `<rect class="hit" x="${x0+k*inner}" y="${m.t}" width="${inner}" height="${ih}" fill="transparent" data-tip="${esc(`<div class='tt'>${v===0?'Præcis årgang':(Math.abs(v)===4?`${v>0?'4 år eller mere for ungt':'4 år eller mere for gammelt'}`:`${Math.abs(v)} år for ${v>0?'ungt':'gammelt'}`)}</div>`+tipRow(c, n+' gæt', x.p))}"/>`; });
+  });
+  svg += `<text class="lbl-t" x="${m.l}" y="${H-2}">← for gammelt</text><text class="lbl-t" x="${W-m.r}" y="${H-2}" text-anchor="end">for ungt →</text>`;
+  return `<section class="section"><div class="sec-head"><span class="sec-num">07</span><h2>Årgang</h2></div>
+    <div class="grid g3">${per.map(x=>`<div class="card kpi"><div class="l">${pnameHTML(x.p)}</div>
+      <div class="n">${x.mae==null?'–':fmt1(x.mae)+' år'}</div><div class="s">gns. ved siden af · ${x.exact} præcise · ${x.near} ±1 år</div>
+      <div class="s" style="margin-top:6px;color:var(--text-dim)">${x.bias==null?'':Math.abs(x.bias)<0.25?'Ingen tydelig tendens':(x.bias>0?`Gætter i snit ${fmt1(x.bias)} år for ungt`:`Gætter i snit ${fmt1(-x.bias)} år for gammelt`)}${x.nv?` · NV: ${x.nvHit}/${x.nv} rigtige`:''}</div></div>`).join('')}
+      <div class="card kpi"><div class="l">Sådan læses det</div><div class="s" style="font-size:1rem;color:var(--text-dim);margin-top:8px;line-height:1.4">"For ungt" betyder, at man har gættet en nyere årgang end facit. NV-vine indgår ikke i afvigelsen.</div></div>
+    </div>
+    <div class="card" style="margin-top:14px"><div class="card-title">Afvigelse i år</div>
+      <div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Afvigelse i årgangsgæt">${svg}</svg></div>
+      <div class="legend">${sp.map(p=>`<span><span class="kb" style="background:${colorOf(p)}"></span>${esc(p)}</span>`).join('')}</div>
+    </div></section>`;
+}
+
+/* ============================================================ 8. vinholderen */
+function secHolder(L){
+  const owners = [...new Set(L.map(w=>w.owner).filter(Boolean))].sort((a,b)=>PLAYERS.indexOf(a)-PLAYERS.indexOf(b));
+  const S = owners.map(o=>{ const ws = L.filter(w=>w.owner===o); const hard = ws.slice().sort((a,b)=>a.score-b.score)[0]; const easy = ws.slice().sort((a,b)=>b.score-a.score)[0];
+    return {o, n:ws.length, a:avg(ws.map(w=>w.score)), hard, easy, zero: ws.filter(w=>w.score===0).length}; });
+  const hardest = S.length>1 ? S.slice().sort((a,b)=>a.a-b.a)[0] : null;
+  return `<section class="section"><div class="sec-head"><span class="sec-num">08</span><h2>Vinholderens side</h2><span class="sec-sub">Hvem tager de sværeste vine med?</span></div>
+    <div class="grid g2">${S.map(s=>`<div class="card"><div class="card-title"><span>${pnameHTML(s.o)} har medbragt</span>${hardest && hardest.o===s.o?`<span class="pill mid">Sværeste vine</span>`:''}</div>
+      <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-end">
+        <div class="kpi" style="padding:0"><div class="n" style="margin:0">${s.n}</div><div class="s">vine</div></div>
+        <div class="kpi" style="padding:0"><div class="n" style="margin:0">${fmt1(s.a)}</div><div class="s">point til modstanderen i snit</div></div>
+        <div class="kpi" style="padding:0"><div class="n" style="margin:0">${s.zero}</div><div class="s">gange 0 point</div></div>
+      </div>
+      <div class="bar-mini" style="max-width:none;margin:14px 0 12px;height:8px" data-tip="${esc(tipRow(colorOf(s.o), pct(s.a/MAX), 'af de 24 point gik til modstanderen'))}"><i style="width:${s.a/MAX*100}%;background:${colorOf(s.o)}"></i></div>
+      <div class="rec"><span class="s">Sværeste vin</span><span class="t linkish" data-wine="${esc(s.hard.id)}">${esc(s.hard.name)}</span><span class="s">${s.hard.score} point til ${esc(s.hard.guesser)} · ${fmtDate(s.hard.date)}</span></div>
+      <div class="rec" style="margin-top:10px"><span class="s">Letteste vin</span><span class="t linkish" data-wine="${esc(s.easy.id)}">${esc(s.easy.name)}</span><span class="s">${s.easy.score} point til ${esc(s.easy.guesser)} · ${fmtDate(s.easy.date)}</span></div>
+    </div>`).join('')}</div>
+    <div class="card-note" style="margin-top:8px">Jo færre point modstanderen får i snit, jo sværere vine tager man med.</div></section>`;
+}
+
+/* ============================================================ 9. aftener */
+function secEvenings(B){
+  const evs = evWinners(B).reverse();
+  return `<section class="section"><div class="sec-head"><span class="sec-num">09</span><h2>Aftener</h2></div>
+    <div class="card"><div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>Dato</th><th class="num">Vine</th>${PLAYERS.map(p=>`<th class="num" style="color:${colorOf(p)}">${esc(p)} · gns</th><th class="num" style="color:${colorOf(p)}">${esc(p)} · point</th>`).join('')}<th>Vinder</th></tr></thead>
+      <tbody>${evs.map(e=>`<tr tabindex="0" data-evening="${e.date}" title="Vis kun denne aften">
+        <td>${fmtDate(e.date)}</td><td class="num">${e.wines.length}</td>
+        ${e.per.map(x=>`<td class="num">${x.n?fmt1(x.avg):'<span class="dim">–</span>'}</td><td class="num dim">${x.n?`${x.sum} <span style="font-size:0.85em">(${x.n})</span>`:'–'}</td>`).join('')}
+        <td>${e.winner==null?'<span class="dim">–</span>':e.winner==='uafgjort'?'<span class="pill mid">Uafgjort</span>':pnameHTML(e.winner)}</td></tr>`).join('')}</tbody>
+    </table></div><div class="card-note">Klik på en aften for at se den alene. Tal i parentes er antal vine, man gættede.</div></div></section>`;
+}
+
+/* ============================================================ 10. rekorder */
+function secRecords(L, B){
+  const sp = scopePlayers();
+  const zeros = L.filter(w=>w.score===0);
+  const perfect = L.filter(w=>w.possible>0 && w.score>=w.possible);
+  const best = L.slice().sort((a,b)=>b.score-a.score)[0];
+  const evs = evWinners(B);
+  let bestEv = null;
+  evs.forEach(e=>e.per.forEach(x=>{ if(x.n && (!bestEv || x.avg > bestEv.avg)) bestEv = {date:e.date, p:x.p, avg:x.avg, n:x.n}; }));
+  const streak = sp.map(p=>{ let cur=0, bestS=0; L.filter(w=>w.guesser===p).forEach(w=>{ if(w.cats.drue1.pts>0){cur++; bestS=Math.max(bestS,cur);} else cur=0; }); return {p, s:bestS}; });
+  const nemesis = sp.map(p=>{
+    const m = new Map();
+    L.filter(w=>w.guesser===p && w.cats.drue1.applicable).forEach(w=>{ const k = norm(w.cats.drue1.t); if(!m.has(k)) m.set(k,{name:w.cats.drue1.t,miss:0,n:0}); const o = m.get(k); o.n++; if(w.cats.drue1.pts===0) o.miss++; });
+    const top = [...m.values()].filter(x=>x.miss>0).sort((a,b)=>b.miss-a.miss || (b.miss/b.n)-(a.miss/a.n))[0];
+    return {p, top};
+  });
+  const catKing = CATS.map(c=>({c, per: sp.map(p=>({p, v:hitRate(L.filter(w=>w.guesser===p), c.id)}))}));
+  const sure = L.filter(w=>w.cats.drue1.pts>0 && w.cats.land.pts===0 && w.cats.land.applicable);
+  const card = (title, big, body)=>`<div class="card rec"><div class="card-title" style="margin-bottom:6px">${title}</div><div class="big">${big}</div>${body}</div>`;
+  const wl = (arr)=> arr.slice(0,4).map(w=>`<span class="t linkish" data-wine="${esc(w.id)}" style="font-size:1rem">${esc(w.name)}</span><span class="s">${esc(w.guesser)} · ${fmtDate(w.date)}</span>`).join('') + (arr.length>4?`<span class="s">+ ${arr.length-4} mere</span>`:'');
+  return `<section class="section"><div class="sec-head"><span class="sec-num">10</span><h2>Rekorder og sjove fakta</h2></div>
+    <div class="grid g3">
+      ${best?card('Højeste score', `${best.score}/24`, `<span class="t linkish" data-wine="${esc(best.id)}">${esc(best.name)}</span><span class="s">${esc(best.guesser)} · ${fmtDate(best.date)}</span>`):''}
+      ${card('Fuldtræffere', perfect.length, perfect.length?wl(perfect):'<span class="s">Alle kategorier med facit ramt – det er ikke sket endnu.</span>')}
+      ${card('Nuller', zeros.length, zeros.length?wl(zeros):'<span class="s">Ingen vine med 0 point.</span>')}
+      ${bestEv?card('Bedste aften', fmt1(bestEv.avg)+' p', `<span class="t">${pnameHTML(bestEv.p)} den ${fmtDate(bestEv.date)}</span><span class="s">gennemsnit over ${bestEv.n} vine</span>`):''}
+      ${card('Længste drue-stime', streak.map(s=>s.s).join(' / '), streak.map(s=>`<span class="t">${pnameHTML(s.p)}: ${s.s} vine i træk med rigtig drue</span>`).join(''))}
+      ${card('Nemesis-drue', nemesis.filter(n=>n.top).length?'😈':'–', nemesis.map(n=>`<span class="t">${pnameHTML(n.p)}: ${n.top?`<span style="color:var(--bad)">${esc(n.top.name)}</span> <span class="s">– ramt forkert ${n.top.miss} af ${n.top.n} gange</span>`:'<span class="s">ingen endnu</span>'}</span>`).join(''))}
+      ${card('Rigtig drue, forkert land', sure.length, sure.length?wl(sure):'<span class="s">Det er ikke sket.</span>')}
+      ${card('Kategori-konger', '👑', catKing.filter(k=>k.per.some(x=>x.v!=null)).map(k=>{ const s = k.per.filter(x=>x.v!=null).sort((a,b)=>b.v-a.v); const tie = s.length>1 && s[0].v===s[1].v; return `<span class="t" style="font-size:1rem">${k.c.label}: ${tie||sp.length<2?`<span class="s">${sp.length<2?pct(s[0].v):'lige'}</span>`:`${pnameHTML(s[0].p)} <span class="s">${pct(s[0].v)}</span>`}</span>`; }).join(''))}
+      ${card('Tomme felter', L.reduce((s,w)=>s+CATS.filter(c=>w.cats[c.id].applicable && !w.cats[c.id].g).length,0), `<span class="s">gange en kategori med facit blev ladt tom</span>`)}
+    </div></section>`;
+}
+
+/* ============================================================ 11. vinarkiv */
+function secArchive(L){
+  return `<section class="section"><div class="sec-head"><span class="sec-num">11</span><h2>Vinarkiv</h2><span class="sec-sub">${L.length} vine</span></div>
+    <div class="card"><div style="margin-bottom:12px"><input class="search" id="arch-q" type="search" placeholder="Søg på vin, land, drue, region…" value="${esc(UI.archiveQ)}" autocomplete="off"></div>
+      <div id="arch-table">${archiveTable(L)}</div></div></section>`;
+}
+function archiveTable(L){
+  const q = norm(UI.archiveQ);
+  let rows = L.filter(w=> !q || [w.name, w.owner, w.guesser, ...CATS.map(c=>w.cats[c.id].t), ...CATS.map(c=>w.cats[c.id].g)].some(s=>norm(s).includes(q)));
+  const {key, dir} = UI.archiveSort;
+  const val = w => key==='date' ? w.date + String(w.seq).padStart(6,'0') : key==='score' ? w.score : key==='name' ? norm(w.name) : key==='land' ? norm(w.cats.land.t) : key==='drue' ? norm(w.cats.drue1.t) : key==='guesser' ? norm(w.guesser) : key==='owner' ? norm(w.owner) : key==='aargang' ? String(w.cats.aargang.t) : '';
+  rows = rows.slice().sort((a,b)=>{ const x = val(a), y = val(b); return (x<y?-1:x>y?1:0)*dir; });
+  const th = (k,l,cls='')=>`<th class="sortable ${cls} ${key===k?'sorted':''}" data-sort="${k}">${l}${key===k?(dir>0?' ▲':' ▼'):''}</th>`;
+  if(!rows.length) return `<div class="empty">Ingen vine matcher “${esc(UI.archiveQ)}”.</div>`;
+  return `<div class="tbl-wrap"><table class="tbl"><thead><tr>${th('date','Dato')}${th('name','Vin')}${th('land','Land')}${th('drue','Drue')}${th('aargang','Årgang')}${th('owner','Medbragt')}${th('guesser','Gætter')}${th('score','Point','num')}</tr></thead>
+    <tbody>${rows.map(w=>`<tr tabindex="0" data-wine="${esc(w.id)}"><td class="dim" style="white-space:nowrap">${fmtDate(w.date)}</td><td>${esc(w.name)}</td>
+      <td>${catCell(w,'land')}</td><td>${catCell(w,'drue1')}</td><td>${catCell(w,'aargang')}</td><td class="dim">${esc(w.owner)}</td><td>${pnameHTML(w.guesser)}</td>
+      <td class="num" style="font-family:'Press Start 2P';font-size:0.62rem;color:var(--accent-2)">${w.score}</td></tr>`).join('')}</tbody></table></div>
+    <div class="card-note">Grøn = ramt, gul = delvist (årgang ±1), rød = forkert. Klik på en vin for facit og gæt.</div>`;
+}
+function catCell(w, cid){ const c = w.cats[cid]; if(!c.applicable) return '<span class="dim">–</span>'; return `<span class="pill ${c.j==='good'?'good':c.j==='mid'?'mid':'bad'}" title="Gæt: ${esc(c.g||'(tomt)')}">${esc(c.t)}</span>`; }
+
+/* ============================================================ vin-detalje */
+function openWine(id){
+  const w = ALL.find(x=>x.id===id); if(!w) return;
+  const body = document.getElementById('modal-body');
+  body.innerHTML = `<button class="icon-btn close" onclick="closeModal()" aria-label="Luk"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <div class="card-title" style="margin-bottom:8px">${fmtDate(w.date)} · medbragt af ${esc(w.owner)}</div>
+    <h3>${esc(w.name)}</h3>
+    <div style="color:var(--text-dim)">Gættet af ${pnameHTML(w.guesser)}</div>
+    <div class="score-big">${w.score}<small> / 24</small></div>
+    <div class="bar-mini" style="max-width:none;height:8px"><i style="width:${w.score/MAX*100}%;background:linear-gradient(90deg,var(--accent),var(--accent-2))"></i></div>
+    <div class="cmp"><div class="hd">Kategori</div><div class="hd">Facit</div><div class="hd">Gæt</div><div class="hd" style="text-align:right">Point</div>
+      ${CATS.map(c=>{ const x = w.cats[c.id]; const cls = x.j==='good'?'good':x.j==='mid'?'mid':x.j==='na'?'na':'bad';
+        return `<div class="cat">${c.label}</div><div>${x.t?esc(x.t):'<span class="dim" style="color:var(--text-faint)">–</span>'}</div><div style="color:${cls==='good'?'var(--good)':cls==='mid'?'var(--mid)':cls==='bad'?'var(--bad)':'var(--text-faint)'}">${x.g?esc(x.g):'<span style="color:var(--text-faint)">–</span>'}</div><div class="pt"><span class="pill ${cls}">${x.applicable?x.pts+'/'+c.max:'–'}</span></div>`; }).join('')}
+    </div>`;
+  const m = document.getElementById('modal'); m.classList.add('show'); m.setAttribute('aria-hidden','false');
+  body.querySelector('.close').focus();
+}
+function closeModal(){ const m = document.getElementById('modal'); m.classList.remove('show'); m.setAttribute('aria-hidden','true'); }
+document.getElementById('modal').addEventListener('click', e=>{ if(e.target.id==='modal') closeModal(); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
+
+/* ============================================================ events */
+function bindAfterRender(){
+  bindLineCharts();
+  const q = document.getElementById('arch-q');
+  if(q) q.addEventListener('input', ()=>{ UI.archiveQ = q.value; document.getElementById('arch-table').innerHTML = archiveTable(filtered()); });
+  root.querySelectorAll('select[data-f]').forEach(s=>{ s.value = F[s.dataset.f]; s.addEventListener('change', ()=>setFilter(s.dataset.f, s.value)); });
+}
+root.addEventListener('click', e=>{
+  const t = e.target;
+  const fb = t.closest('[data-f]:not(select)'); if(fb){ setFilter(fb.dataset.f, fb.dataset.v); return; }
+  const ub = t.closest('[data-ui]'); if(ub){ UI[ub.dataset.ui] = ub.dataset.v; render(); return; }
+  const so = t.closest('[data-sort]'); if(so){ const k = so.dataset.sort; UI.archiveSort = { key:k, dir: UI.archiveSort.key===k ? -UI.archiveSort.dir : (k==='date'||k==='score'?-1:1) }; document.getElementById('arch-table').innerHTML = archiveTable(filtered()); return; }
+  const wn = t.closest('[data-wine]'); if(wn){ openWine(wn.dataset.wine); return; }
+  const ld = t.closest('[data-land]'); if(ld){ setFilter('land', F.land===ld.dataset.land ? 'all' : ld.dataset.land); return; }
+  const dr = t.closest('[data-drue]'); if(dr){ setFilter('drue', F.drue===dr.dataset.drue ? 'all' : dr.dataset.drue); return; }
+  const ev = t.closest('[data-evening]'); if(ev){ setFilter('period', 'd'+ev.dataset.evening); window.scrollTo({top:0, behavior:'smooth'}); return; }
+});
+root.addEventListener('keydown', e=>{
+  if(e.key!=='Enter' && e.key!==' ') return;
+  const el = e.target.closest('[data-wine],[data-land],[data-drue],[data-evening]');
+  if(el && el.tagName!=='INPUT'){ e.preventDefault(); el.click(); }
+});
+
+function narrow(){ return window.innerWidth < 600; }
+let lastNarrow = narrow();
+window.addEventListener('resize', ()=>{ if(narrow() !== lastNarrow){ lastNarrow = narrow(); if(ALL.length) render(); } });
+
+/* ============================================================ load */
+const reloadBtn = document.getElementById('btn-reload');
+reloadBtn.addEventListener('click', ()=>load(true));
+async function load(soft){
+  reloadBtn.classList.add('spin');
+  if(!soft || !ALL.length) renderLoading(); else root.classList.add('loading-dim');
+  try{
+    const list = await fetchWines();
+    ALL = normalize(list);
+    const seen = [];
+    ALL.forEach(w=>{ if(w.guesser && !seen.includes(w.guesser)) seen.push(w.guesser); });
+    // Lars og Tore i fast rækkefølge, øvrige efter
+    PLAYERS = seen.sort((a,b)=>{ const o = n=>{ const k = norm(n); return k==='lars'?0:k==='tore'?1:2; }; return o(a)-o(b) || a.localeCompare(b,'da'); });
+    if(F.player!=='all' && !PLAYERS.includes(F.player)) F.player = 'all';
+    LOADED_AT = new Date();
+    document.getElementById('updated').textContent = 'Opdateret ' + LOADED_AT.toLocaleTimeString('da-DK',{hour:'2-digit',minute:'2-digit'});
+    render();
+  }catch(err){
+    if(soft && ALL.length){ render(); document.getElementById('updated').textContent = 'Kunne ikke opdatere'; }
+    else renderError(err && err.message ? (/Failed to fetch|NetworkError|Load failed/i.test(err.message) ? 'Ingen forbindelse til regnearket. Tjek internetforbindelsen.' : err.message) : 'Ukendt fejl');
+  }finally{
+    reloadBtn.classList.remove('spin'); root.classList.remove('loading-dim');
+  }
+}
+load();
+</script>
+</body>
+</html>

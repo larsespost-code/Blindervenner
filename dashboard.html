@@ -226,6 +226,18 @@ table.tbl{width:100%;border-collapse:collapse;font-size:1.05rem}
   .cmp{grid-template-columns:78px 1fr 1fr 44px}
   .hbar-row{grid-template-columns:minmax(80px,110px) 1fr minmax(48px,auto)}
 }
+
+.g-kpi5{grid-template-columns:repeat(5,minmax(0,1fr))}
+@media(max-width:1000px){.g-kpi5{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){.g-kpi5{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi .s .linkish{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hbar-row .tr .tick{position:absolute;top:-4px;bottom:-4px;width:3px;border-radius:2px;background:#2B1A0E}
+.geo-detail{margin:2px 0 10px;padding:10px 12px;border-radius:12px;background:var(--bg-2);border:1.5px solid var(--border-strong)}
+.geo-detail .hbar-row{padding:3px 0}
+.geo-detail .show-only{margin-top:6px;background:none;border:none;padding:0;font-family:var(--fb);font-size:15px;color:var(--accent);text-decoration:underline;cursor:pointer}
+.hbar-row .caret{display:inline-block;margin-left:6px;color:var(--text-faint);font-size:0.8em;transition:transform .15s}
+.hbar-row.open .caret{transform:rotate(90deg)}
+.stand-note{font-size:0.95rem;color:var(--text-faint);margin-top:10px}
 </style>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap">
 <style id="redesign-gummi">/* Redesign: Gummi */
@@ -370,7 +382,7 @@ const MONTHS = ['jan','feb','mar','apr','maj','jun','jul','aug','sep','okt','nov
 let ALL = [];            // alle vine (normaliseret)
 let PLAYERS = [];        // navne på gættere
 let F = { player:'all', period:'all', land:'all', drue:'all' };
-let UI = { trend:'evening', catMode:'hit', geo:'land', archiveSort:{key:'date',dir:-1}, archiveQ:'' };
+let UI = { trend:'evening', geo:'land', geoOpen:null, archiveSort:{key:'date',dir:-1}, archiveQ:'' };
 let LOADED_AT = null;
 
 function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -445,6 +457,65 @@ function normalize(list){
     .sort((a,b)=> a.date.localeCompare(b.date) || (a.createdAt - b.createdAt) || (a.seq - b.seq));
 }
 
+/* ============================================================ stavning
+   Samme land/drue stavet lidt forskelligt (fx "Frankeig", "France", "Rhone")
+   samles under én stavemåde, så de ikke får hver sin række. Pointene i arket
+   ændres ikke – det er kun visningen og grupperingen. */
+function fold(s){ return String(s ?? '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' '); }
+function lev(a, b){
+  if(a === b) return 0;
+  const m = a.length, n = b.length; if(!m) return n; if(!n) return m;
+  let prev = Array.from({length:n+1}, (_,j)=>j);
+  for(let i=1;i<=m;i++){ const cur = [i]; for(let j=1;j<=n;j++){ cur[j] = Math.min(prev[j]+1, cur[j-1]+1, prev[j-1] + (a[i-1]===b[j-1]?0:1)); } prev = cur; }
+  return prev[n];
+}
+const COUNTRIES = {
+  'Frankrig':['france','frankrike'], 'Italien':['italy','italia'], 'Spanien':['spain','espana'], 'Portugal':[],
+  'Tyskland':['germany','deutschland'], 'Østrig':['austria','osterreich','oestrig','osterrig'], 'Schweiz':['switzerland','suisse'],
+  'Ungarn':['hungary'], 'Grækenland':['greece'], 'Slovenien':['slovenia'], 'Kroatien':['croatia'], 'Georgien':['georgia'],
+  'Libanon':['lebanon'], 'Israel':[], 'Tyrkiet':['turkey'], 'Cypern':['cyprus'], 'Armenien':['armenia'], 'Moldova':[],
+  'Rumænien':['romania'], 'Bulgarien':['bulgaria'], 'Serbien':['serbia'], 'Tjekkiet':['czechia','czech republic'], 'Slovakiet':['slovakia'],
+  'Luxembourg':[], 'England':['uk','storbritannien','great britain'], 'Danmark':['denmark'], 'Sverige':['sweden'],
+  'USA':['united states','us','amerika','u.s.a.'], 'Canada':[], 'Mexico':[], 'Chile':[], 'Argentina':[], 'Uruguay':[],
+  'Brasilien':['brazil'], 'Australien':['australia'], 'New Zealand':['newzealand','nz','ny zealand'], 'Sydafrika':['south africa'],
+  'Kina':['china'], 'Japan':[], 'Marokko':['morocco'], 'Ukraine':[],
+};
+const COUNTRY_IDX = (()=>{ const m = new Map(); Object.entries(COUNTRIES).forEach(([d,al])=>{ m.set(fold(d), d); al.forEach(a=>m.set(fold(a), d)); }); return m; })();
+function capFirst(s){ s = String(s||'').trim(); return s ? s[0].toUpperCase() + s.slice(1) : s; }
+function canonCountry(raw){
+  const f = fold(raw); if(!f) return '';
+  if(COUNTRY_IDX.has(f)) return COUNTRY_IDX.get(f);
+  const lim = f.length >= 6 ? 2 : (f.length >= 4 ? 1 : 0);
+  let best = null, bd = 99;
+  COUNTRY_IDX.forEach((d,k)=>{ const x = lev(f,k); if(x < bd){ bd = x; best = d; } });
+  return bd <= lim ? best : capFirst(raw);
+}
+// Ord, der kun afviger med et par bogstaver fra en hyppigere stavemåde, lægges sammen med den.
+function buildVocab(values){
+  const cnt = new Map(), disp = new Map();
+  values.forEach(v=>{ v = String(v ?? '').trim(); if(!v) return; const f = fold(v);
+    cnt.set(f, (cnt.get(f)||0)+1); const d = disp.get(f) || new Map(); d.set(v, (d.get(v)||0)+1); disp.set(f, d); });
+  const keys = [...cnt.keys()].sort((a,b)=> cnt.get(b)-cnt.get(a) || a.localeCompare(b));
+  const canonKeys = [], map = new Map();
+  keys.forEach(k=>{ const lim = k.length >= 8 ? 2 : (k.length >= 5 ? 1 : 0);
+    const hit = lim ? canonKeys.find(c=>lev(k,c) <= lim) : null;
+    if(!hit) canonKeys.push(k); map.set(k, hit || k); });
+  const display = f => [...disp.get(f).entries()].sort((a,b)=>b[1]-a[1])[0][0];
+  return raw => { const f = fold(raw); if(!f) return ''; const t = map.get(f); return t ? display(t) : String(raw).trim(); };
+}
+function canonicalize(list){
+  const grape = buildVocab(list.flatMap(w=>['drue1','drue2'].flatMap(c=>[w.cats[c].t, w.cats[c].g])));
+  const voc = {}; ['region','appellation','type'].forEach(c=>{ voc[c] = buildVocab(list.flatMap(w=>[w.cats[c].t, w.cats[c].g])); });
+  list.forEach(w=>{
+    ['t','g'].forEach(k=>{
+      w.cats.land[k] = canonCountry(w.cats.land[k]);
+      w.cats.drue1[k] = grape(w.cats.drue1[k]); w.cats.drue2[k] = grape(w.cats.drue2[k]);
+      ['region','appellation','type'].forEach(c=>{ w.cats[c][k] = voc[c](w.cats[c][k]); });
+    });
+  });
+  return list;
+}
+
 /* ============================================================ filters */
 function evenings(list){ return [...new Set(list.map(w=>w.date))].sort(); }
 function baseFiltered(){
@@ -478,6 +549,12 @@ function evWinners(L){
     }
     return { date:d, wines:ws, per, winner };
   });
+}
+function winsSummary(B){
+  const evs = evWinners(B), wins = {};
+  PLAYERS.forEach(p=>wins[p]=0);
+  evs.forEach(e=>{ if(e.winner && wins[e.winner] !== undefined) wins[e.winner]++; });
+  return { wins, total: evs.length, ties: evs.filter(e=>e.winner==='uafgjort').length, solo: evs.filter(e=>!e.winner).length };
 }
 function hitRate(L, cid){
   const a = L.filter(w=>w.cats[cid].applicable);
@@ -520,8 +597,17 @@ document.addEventListener('focusin', e=>{
   if(el){ const r = el.getBoundingClientRect(); showTip({clientX:r.left+r.width/2, clientY:r.top}, el.getAttribute('data-tip')); }
 });
 document.addEventListener('focusout', hideTip);
+// Mobil: et tryk på en graf viser tallene (der findes ingen "hover" på en telefon).
+document.addEventListener('pointerdown', e=>{
+  if(e.pointerType === 'mouse') return;
+  const el = e.target.closest && e.target.closest('[data-tip]');
+  if(el && !el.closest('.chart-x') && !el.hasAttribute('data-geo-open')) showTip(e, el.getAttribute('data-tip'));
+  else if(!e.target.closest || !e.target.closest('.chart-x')) hideTip();
+}, {passive:true});
 
 /* ============================================================ render root */
+let SECN = 0;
+function num(){ SECN++; return String(SECN).padStart(2,'0'); }
 const root = document.getElementById('root');
 
 function renderLoading(){
@@ -537,18 +623,19 @@ function render(){
     root.innerHTML = `<div class="state">Ingen vine i fanen Vine endnu.<br><span style="color:var(--text-faint);font-size:1rem">Når I har smagt den første vin i appen, dukker den op her.</span></div>`;
     return;
   }
+  SECN = 0;
   const L = filtered(), B = baseFiltered();
   root.innerHTML = `
     ${filtersHTML()}
     ${L.length ? `
-    ${secOverview(L)}
+    ${secOverview(L, B)}
     ${secStanding(L, B)}
     ${secTrend(L)}
     ${secTop10()}
     ${secCategories(L)}
     ${secGeo(L)}
     ${secVintage(L)}
-    ${secHolder(L)}
+    ${secHardest(L)}
     ${secEvenings(B)}
     ${secRecords(L, B)}
     ${secArchive(L)}` : `<div class="state">Ingen vine matcher filtrene. <br><button class="btn" onclick="resetFilters()">Nulstil filtre</button></div>${secTop10()}`}
@@ -585,81 +672,111 @@ function resetFilters(){ F = { player:'all', period:'all', land:'all', drue:'all
 function setFilter(k, v){ F[k] = v; render(); }
 
 /* ============================================================ 1. oversigt */
-function secOverview(L){
+function countRows(L, get){
+  const m = new Map();
+  L.forEach(w=>{ const v = get(w); if(!v) return; m.set(v, (m.get(v)||0)+1); });
+  return [...m.entries()].sort((a,b)=>b[1]-a[1] || a[0].localeCompare(b[0],'da'));
+}
+function distCard(title, rows, total, fKey, cap=10){
+  if(!rows.length) return `<div class="card"><div class="card-title">${title}</div><div class="empty">Ingen data.</div></div>`;
+  const shown = rows.slice(0, cap), rest = rows.slice(cap);
+  const mx = Math.max(1, ...rows.map(x=>x[1]));
+  const restN = rest.reduce((a,x)=>a+x[1],0);
+  return `<div class="card"><div class="card-title">${title} <span class="sec-sub" style="font-family:var(--fb);text-transform:none;letter-spacing:0;color:var(--text-faint);text-shadow:none">klik for at filtrere</span></div>
+    ${shown.map(([l,n])=>`<div class="hbar-row clickable ${F[fKey]===norm(l)?'sel':''}" tabindex="0" data-${fKey}="${esc(norm(l))}" data-tip="${esc(`<div class='tt'>${esc(l)}</div>`+tipRow('#A86F00', n+' vine', `· ${pct(n/total)} af alle`))}">
+      <span class="nm">${esc(l)}</span><span class="tr"><i style="width:${n/mx*100}%;background:linear-gradient(90deg,var(--accent),#FF6BB5)"></i></span><span class="v">${n}</span></div>`).join('')}
+    ${rest.length?`<div class="hbar-row" data-tip="${esc(rest.map(([l,n])=>`${esc(l)}: ${n}`).join('<br>'))}"><span class="nm" style="color:var(--text-faint)">Øvrige (${rest.length})</span><span class="tr"><i style="width:${Math.min(100,restN/mx*100)}%;background:var(--border-strong)"></i></span><span class="v">${restN}</span></div>`:''}
+  </div>`;
+}
+function secOverview(L, B){
   const bp = byPlayer(L);
   const sp = scopePlayers();
-  const kpis = [
-    {l:'Blindede vine', n:L.length, s:`${evenings(L).length} aftener`},
-    ...sp.map(p=>({l:`${esc(p)} har gættet`, n:bp[p].length, s:'vine', c:colorOf(p)})),
-    {l:'Gns. alle gæt', n:fmt1(avg(L.map(w=>w.score))), s:`af ${MAX} point`},
-    ...sp.map(p=>({l:`Gns. ${esc(p)}`, n:bp[p].length?fmt1(avg(bp[p].map(w=>w.score))):'–', s:`af ${MAX} point`, c:colorOf(p)})),
-  ];
-  // landefordeling
-  const cnt = new Map();
-  L.forEach(w=>{ const k = w.cats.land.t || 'Ukendt'; cnt.set(k,(cnt.get(k)||0)+1); });
-  const lands = [...cnt.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'da'));
-  const mx = Math.max(...lands.map(x=>x[1]));
-  // pr. spiller: antal gættet som stablet søjle
-  return `<section class="section fade-in"><div class="sec-head"><span class="sec-num">01</span><h2>Oversigt</h2></div>
-    <div class="grid g-kpi">${kpis.map(k=>`<div class="card kpi"><div class="l">${k.c?`<span class="dot" style="background:${k.c}"></span>`:''}${k.l}</div><div class="n">${k.n}</div><div class="s">${k.s}</div></div>`).join('')}</div>
-    <div class="grid g2" style="margin-top:14px">
-      <div class="card"><div class="card-title">Fordeling på lande <span class="sec-sub" style="font-family:var(--fb);text-transform:none;letter-spacing:0;color:var(--text-faint);text-shadow:none">klik for at filtrere</span></div>
-        ${lands.map(([l,n])=>`<div class="hbar-row clickable ${F.land===norm(l)?'sel':''}" tabindex="0" data-land="${esc(norm(l))}" data-tip="${esc(`<div class='tt'>${esc(l)}</div>`+tipRow('#A86F00', n+' vine', `· ${pct(n/L.length)} af alle`))}">
-          <span class="nm">${esc(l)}</span><span class="tr"><i style="width:${n/mx*100}%;background:linear-gradient(90deg,var(--accent),#FF6BB5)"></i></span><span class="v">${n}</span></div>`).join('')}
-      </div>
-      <div class="card"><div class="card-title">Hvem har gættet hvor meget</div>${whoGuessedChart(L)}</div>
+  const lands = countRows(L, w=>w.cats.land.t);
+  const druer = countRows(L, w=>w.cats.drue1.t);
+  const single = sp.length === 1;
+  let kpiHTML;
+  if(single){
+    const p = sp[0], ws = bp[p];
+    const tot = ws.reduce((a,w)=>a+w.score,0), poss = ws.reduce((a,w)=>a+(w.possible||MAX),0);
+    const others = PLAYERS.filter(x=>x!==p).map(o=>{ const ow = B.filter(w=>w.guesser===o); return ow.length ? `${esc(o)}: ${fmt1(avg(ow.map(w=>w.score)))}` : ''; }).filter(Boolean);
+    const W = winsSummary(B);
+    const best = ws.slice().sort((x,y)=>y.score-x.score || y.date.localeCompare(x.date))[0];
+    const k = [
+      {l:'Vine gættet', n:ws.length, s:`${evenings(ws).length} aftener`},
+      {l:'Point i alt', n:tot, s:`af ${poss} mulige`},
+      {l:'Gns. pr. vin', n:ws.length?fmt1(avg(ws.map(w=>w.score))):'–', s: others.length ? others.join(' · ') : `af ${MAX} point`},
+      {l:'Vundne aftener', n:W.wins[p]||0, s:`af ${W.total} aftener`},
+      {l:'Bedste vin', n: best ? `${best.score}<span style="font-size:0.45em;color:var(--text-faint)">/24</span>` : '–', s: best ? `<span class="linkish" data-wine="${esc(best.id)}" title="${esc(best.name)}">${esc(best.name)}</span>` : ''},
+    ];
+    kpiHTML = `<div class="grid g-kpi5">${k.map(x=>`<div class="card kpi"><div class="l">${x.l}</div><div class="n">${x.n}</div><div class="s">${x.s}</div></div>`).join('')}</div>`;
+  } else {
+    const k = [
+      {l:'Blindede vine', n:L.length, s:`${evenings(L).length} aftener`},
+      ...sp.map(p=>({l:`${esc(p)} har gættet`, n:bp[p].length, s:'vine', c:colorOf(p)})),
+      {l:'Gns. alle gæt', n:fmt1(avg(L.map(w=>w.score))), s:`af ${MAX} point`},
+      ...sp.map(p=>({l:`Gns. ${esc(p)}`, n:bp[p].length?fmt1(avg(bp[p].map(w=>w.score))):'–', s:`af ${MAX} point`, c:colorOf(p)})),
+    ];
+    kpiHTML = `<div class="grid g-kpi">${k.map(x=>`<div class="card kpi"><div class="l">${x.c?`<span class="dot" style="background:${x.c}"></span>`:''}${x.l}</div><div class="n">${x.n}</div><div class="s">${x.s}</div></div>`).join('')}</div>`;
+  }
+  return `<section class="section fade-in"><div class="sec-head"><span class="sec-num">${num()}</span><h2>Oversigt</h2>${single?`<span class="sec-sub">${pnameHTML(sp[0])} som gætter</span>`:''}</div>
+    ${kpiHTML}
+    <div class="grid g3" style="margin-top:14px">
+      ${distCard('Fordeling på lande', lands, L.length, 'land')}
+      ${distCard(single ? `Druer ${esc(sp[0])} er blindet i` : 'Oftest blindede druer', druer, L.length, 'drue')}
+      <div class="card"><div class="card-title">${single ? 'Score-fordeling' : 'Hvem har gættet hvor meget'}</div>${single ? scoreDist(L, sp) : whoGuessedChart(L)}</div>
     </div>
   </section>`;
 }
+function scoreDist(L, sp){
+  const buckets = [[0,5],[6,10],[11,15],[16,20],[21,24]];
+  const rows = buckets.map(([a,b])=>({lbl:`${a}–${b} p`, per: sp.map(p=>({p, n:L.filter(w=>w.guesser===p && w.score>=a && w.score<=b).length}))}));
+  const mx = Math.max(1, ...rows.flatMap(r=>r.per.map(x=>x.n)));
+  return rows.map(r=>`<div class="hbar-row"><span class="nm" style="color:var(--text-dim)">${r.lbl}</span><span class="tr pairbars">${r.per.map(x=>`<i class="hit" style="width:${x.n/mx*100}%;background:${colorOf(x.p)};border-radius:0 3px 3px 0" data-tip="${esc(`<div class='tt'>${r.lbl}</div>`+tipRow(colorOf(x.p), x.n+' vine', x.p))}"></i>`).join('')}</span><span class="v">${r.per.map(x=>x.n).join(' / ')}</span></div>`).join('');
+}
 function whoGuessedChart(L){
-  // pr. spiller: donut-fri – en enkel delt søjle + score-fordeling i intervaller
   const sp = scopePlayers();
   const total = L.length;
   let x = 0;
-  const seg = sp.map(p=>{ const n = L.filter(w=>w.guesser===p).length; const w = total? n/total*100 : 0; const s = `<i style="left:${x}%;width:calc(${w}% - 2px);background:${colorOf(p)}" data-tip="${esc(tipRow(colorOf(p), n+' vine', 'gættet af '+p))}"></i>`; x += w; return s; }).join('');
-  const buckets = [[0,5],[6,10],[11,15],[16,20],[21,24]];
-  const rows = buckets.map(([a,b])=>{
-    const per = sp.map(p=>({p, n:L.filter(w=>w.guesser===p && w.score>=a && w.score<=b).length}));
-    return {lbl:`${a}–${b} p`, per};
-  });
-  const mx = Math.max(1, ...rows.flatMap(r=>r.per.map(x=>x.n)));
-  return `<div style="position:relative;height:22px;margin-bottom:6px">${seg.replace(/<i /g,'<i class="hit" ').replace(/style="/g,'style="position:absolute;top:0;bottom:0;border-radius:3px;')}</div>
+  const seg = sp.map(p=>{ const n = L.filter(w=>w.guesser===p).length; const w = total? n/total*100 : 0; const s = `<i class="hit" style="position:absolute;top:0;bottom:0;border-radius:3px;left:${x}%;width:calc(${w}% - 2px);background:${colorOf(p)}" data-tip="${esc(tipRow(colorOf(p), n+' vine', 'gættet af '+p))}"></i>`; x += w; return s; }).join('');
+  return `<div style="position:relative;height:22px;margin-bottom:6px">${seg}</div>
     <div class="legend" style="margin-bottom:16px">${sp.map(p=>`<span><span class="kb" style="background:${colorOf(p)}"></span>${esc(p)} · ${L.filter(w=>w.guesser===p).length}</span>`).join('')}</div>
     <div class="card-title" style="margin-bottom:6px;color:var(--text-dim);text-shadow:none">Score-fordeling</div>
-    ${rows.map(r=>`<div class="hbar-row"><span class="nm" style="color:var(--text-dim)">${r.lbl}</span><span class="tr pairbars">${r.per.map(x=>`<i class="hit" style="width:${x.n/mx*100}%;background:${colorOf(x.p)};border-radius:0 3px 3px 0" data-tip="${esc(`<div class='tt'>${r.lbl}</div>`+tipRow(colorOf(x.p), x.n+' vine', x.p))}"></i>`).join('')}</span><span class="v">${r.per.map(x=>x.n).join(' / ')}</span></div>`).join('')}`;
+    ${scoreDist(L, sp)}`;
 }
 
 /* ============================================================ 2. stillingen */
 function secStanding(L, B){
   const sp = scopePlayers();
+  if(sp.length < 2) return '';   // i enkeltpersonvisning står tallene i oversigten
   const bp = byPlayer(L);
-  const wins = {}; sp.forEach(p=>wins[p]=0);
-  const evs = evWinners(B);
-  evs.forEach(e=>{ if(e.winner && wins[e.winner] !== undefined) wins[e.winner]++; });
-  const decided = evs.filter(e=>e.winner).length;
+  const W = winsSummary(B);
   const S = sp.map(p=>{
     const ws = bp[p];
     const tot = ws.reduce((s,w)=>s+w.score,0);
     const a = ws.length ? avg(ws.map(w=>w.score)) : 0;
     const best = ws.slice().sort((x,y)=>y.score-x.score || y.date.localeCompare(x.date))[0];
-    return { p, tot, a, share: a/MAX, wins: wins[p], best, n: ws.length };
+    return { p, tot, a, wins: W.wins[p]||0, best, n: ws.length };
   });
-  const lead = (key)=>{ if(S.length<2) return null; const m = Math.max(...S.map(s=>s[key])); const t = S.filter(s=>s[key]===m); return t.length===1 ? t[0].p : null; };
-  const L1 = lead('tot'), L2 = lead('a'), L3 = lead('share'), L4 = lead('wins');
-  const col = (s, key, big, small, extra='')=>`<div class="c ${key===s.p?'lead':''}"><span class="big">${big}</span>${small?`<span class="small">${small}</span>`:''}${extra}</div>`;
-  return `<section class="section"><div class="sec-head"><span class="sec-num">02</span><h2>Stillingen</h2><span class="sec-sub">Den med flest point står grønt</span></div>
+  const lead = (key)=>{ const m = Math.max(...S.map(s=>s[key])); const t = S.filter(s=>s[key]===m); return t.length===1 ? t[0].p : null; };
+  const L1 = lead('tot'), L2 = lead('a'), L4 = lead('wins');
+  const col = (s, key, big, small)=>`<div class="c ${key===s.p?'lead':''}"><span class="big">${big}</span>${small?`<span class="small">${small}</span>`:''}</div>`;
+  const notes = [];
+  if(W.ties) notes.push(`${W.ties} ${W.ties===1?'aften':'aftener'} endte uafgjort`);
+  if(W.solo) notes.push(`${W.solo} ${W.solo===1?'aften':'aftener'} gættede kun den ene af jer`);
+  const rule = esc(`<div class='tt'>Vundne aftener</div>Aftenens vinder er den, der fik flest point pr. vin i snit som gætter.`);
+  return `<section class="section"><div class="sec-head"><span class="sec-num">${num()}</span><h2>Stillingen</h2><span class="sec-sub">Den, der fører, står med grønt</span></div>
     <div class="card"><div class="stand" style="--np:${S.length}">
       <div class="h"></div>${S.map(s=>`<div class="h" style="color:${colorOf(s.p)}">${esc(s.p)}</div>`).join('')}
       <div class="c lbl">Samlede point</div>${S.map(s=>col(s,L1,s.tot,`${s.n} vine`)).join('')}
       <div class="c lbl">Gns. pr. vin</div>${S.map(s=>col(s,L2,fmt1(s.a),'')).join('')}
-      <div class="c lbl">Andel af 24 p</div>${S.map(s=>col(s,L3,pct(s.share),'',`<span class="bar-mini"><i style="width:${s.share*100}%;background:${colorOf(s.p)}"></i></span>`)).join('')}
-      <div class="c lbl">Vundne aftener</div>${S.map(s=>col(s,L4,s.wins,`af ${decided} afgjorte`)).join('')}
+      <div class="c lbl" data-tip="${rule}" tabindex="0">Vundne aftener <span style="color:var(--text-faint);font-weight:400">ⓘ</span></div>${S.map(s=>col(s,L4,s.wins,`af ${W.total} aftener`)).join('')}
       <div class="c lbl">Bedste vin</div>${S.map(s=>s.best?`<div class="c"><span class="big">${s.best.score}<span style="font-size:0.55em;color:var(--text-faint)">/24</span></span><span class="small linkish" data-wine="${esc(s.best.id)}" title="${esc(s.best.name)}">${esc(s.best.name)}</span></div>`:`<div class="c">–</div>`).join('')}
     </div>
-    <div class="card-note">En aften vindes af den, der har det højeste gennemsnit som gætter den aften. ${F.player!=='all'?'Aftener tælles med begge spillere, selvom der er filtreret på én.':''}</div></div>
+    ${notes.length?`<div class="stand-note">${notes.join(' · ')}</div>`:''}</div>
   </section>`;
 }
 
+/* ============================================================ 3. udvikling */
 /* ============================================================ 3. udvikling */
 function secTrend(L){
   const ev = evenings(L);
@@ -674,7 +791,7 @@ function secTrend(L){
     });
     return { p, pts };
   });
-  return `<section class="section"><div class="sec-head"><span class="sec-num">03</span><h2>Udvikling over tid</h2></div>
+  return `<section class="section"><div class="sec-head"><span class="sec-num">${num()}</span><h2>Udvikling over tid</h2></div>
     <div class="card"><div class="card-title"><span>${UI.trend==='evening'?'Gennemsnit pr. aften':'Løbende gennemsnit'}</span>
       <div class="mini-seg"><button data-ui="trend" data-v="evening" class="${UI.trend==='evening'?'on':''}">Pr. aften</button><button data-ui="trend" data-v="running" class="${UI.trend==='running'?'on':''}">Løbende gns.</button></div></div>
       ${ev.length < 2 ? `<div class="empty">Der skal være mindst to aftener for at vise en udvikling.</div>` : lineChart(ev, series)}
@@ -723,6 +840,7 @@ function bindLineCharts(){
       showTip(pt, `<div class="tt">${fmtDate(D.xs[i])}</div>${rows}`);
     };
     svg.addEventListener('pointermove', move);
+    svg.addEventListener('pointerdown', move);
     svg.addEventListener('pointerleave', ()=>{ xh.style.display='none'; hideTip(); });
   });
 }
@@ -731,7 +849,7 @@ function bindLineCharts(){
 function secTop10(){
   const sorted = ALL.slice().sort((a,b)=> b.score-a.score);
   const ranked = competitionRank(sorted, w=>w.score).filter(r=>r.rank<=10);
-  return `<section class="section"><div class="sec-head"><span class="sec-num">04</span><h2>Top 10</h2><span class="sec-sub">Bedst gættede vine nogensinde · påvirkes ikke af filtre</span></div>
+  return `<section class="section"><div class="sec-head"><span class="sec-num">${num()}</span><h2>Top 10</h2><span class="sec-sub">Bedst gættede vine nogensinde · påvirkes ikke af filtre</span></div>
     <div class="card"><ol class="top10">${ranked.map(({rank,item:w})=>`<li tabindex="0" data-wine="${esc(w.id)}">
       <span class="rk ${rank===1?'gold':''}">${rank}.</span>
       <div style="min-width:0"><div class="nm">${esc(w.name)}</div><div class="sub">${pnameHTML(w.guesser)} gættede · medbragt af ${esc(w.owner)} · ${fmtDate(w.date)}</div></div>
@@ -742,80 +860,98 @@ function secTop10(){
 function secCategories(L){
   const sp = scopePlayers();
   const bp = byPlayer(L);
-  const fn = UI.catMode==='hit' ? hitRate : ptsShare;
-  // top 5 (fælles for de valgte spillere)
+  const head = `<section class="section"><div class="sec-head"><span class="sec-num">${num()}</span><h2>Styrker og svagheder</h2></div>`;
+  const note = `Pointfrekvens: hvor ofte der er scoret point i kategorien (årgang ±1 år tæller med). Kategorier uden facit, fx ingen appellation, tæller ikke med.`;
+  if(sp.length === 1){
+    const p = sp[0], ws = bp[p], B = baseFiltered();
+    const others = PLAYERS.filter(x=>x!==p);
+    const rows = CATS.map(c=>{ const a = ws.filter(w=>w.cats[c.id].applicable); const h = a.filter(w=>w.cats[c.id].pts>0).length;
+      return { c, n:a.length, h, v: a.length ? h/a.length : null, o: others.map(o=>({o, v: hitRate(B.filter(w=>w.guesser===o), c.id)})).filter(x=>x.v!=null) }; })
+      .filter(r=>r.v!=null).sort((a,b)=>b.v-a.v);
+    return head + `<div class="card"><div class="card-title">Pointfrekvens pr. kategori <span class="sec-sub" style="font-family:var(--fb);text-transform:none;letter-spacing:0;color:var(--text-faint)">stærkest øverst</span></div>
+      ${rows.map(r=>`<div class="hbar-row" style="grid-template-columns:minmax(110px,170px) 1fr minmax(84px,auto)" data-tip="${esc(`<div class='tt'>${r.c.label} · ${r.c.max} p</div>`+tipRow(colorOf(p), pct(r.v), `${p} · ${r.h} af ${r.n} vine`)+r.o.map(x=>tipRow(colorOf(x.o), pct(x.v), x.o)).join(''))}">
+        <span class="nm">${r.c.label} <span style="color:var(--text-faint)">${r.c.max}p</span></span>
+        <span class="tr"><i style="width:${r.v*100}%;${r.v===0?'min-width:2px;':''}background:${colorOf(p)}"></i>${r.o.map(x=>`<b class="tick" style="left:calc(${x.v*100}% - 1px)"></b>`).join('')}</span>
+        <span class="v"><b style="font-weight:700;color:var(--text)">${pct(r.v)}</b> <span style="color:var(--text-faint)">${r.h}/${r.n}</span></span></div>`).join('')}
+      <div class="legend" style="margin-top:10px"><span><span class="kb" style="background:${colorOf(p)}"></span>${esc(p)}</span>${others.length?`<span><span class="kb" style="background:#2B1A0E;width:3px"></span>${others.map(esc).join(', ')} til sammenligning</span>`:''}</div>
+      <div class="card-note">${note}</div></div></section>`;
+  }
   const top = CATS.map(c=>({c, v:hitRate(L,c.id), n:L.filter(w=>w.cats[c.id].applicable).length})).filter(x=>x.v!=null).sort((a,b)=>b.v-a.v).slice(0,5);
-  // hvor taber man point
-  const lost = sp.map(p=>{
-    const ws = bp[p];
-    const tot = CATS.map(c=>({c, lost: ws.reduce((s,w)=> s + (w.cats[c.id].applicable ? c.max - w.cats[c.id].pts : 0), 0)}));
-    const sum = tot.reduce((s,x)=>s+x.lost,0);
-    return {p, tot, sum};
-  });
-  return `<section class="section"><div class="sec-head"><span class="sec-num">05</span><h2>Styrker og svagheder</h2></div>
-    <div class="grid g2">
-      <div class="card"><div class="card-title"><span>Radar pr. kategori</span>
-        <div class="mini-seg"><button data-ui="catMode" data-v="hit" class="${UI.catMode==='hit'?'on':''}">Træfprocent</button><button data-ui="catMode" data-v="share" class="${UI.catMode==='share'?'on':''}">Pointandel</button></div></div>
-        ${radar(sp.map(p=>({p, v:CATS.map(c=>fn(bp[p], c.id))})))}
+  return head + `<div class="grid g2">
+      <div class="card"><div class="card-title">Radar pr. kategori</div>
+        ${radar(sp.map(p=>({p, v:CATS.map(c=>hitRate(bp[p], c.id))})))}
         <div class="legend" style="justify-content:center">${sp.map(p=>`<span><span class="k" style="background:${colorOf(p)}"></span>${esc(p)}</span>`).join('')}</div>
-        <div class="card-note">${UI.catMode==='hit'?'Træfprocent: hvor ofte man får point i kategorien (årgang ±1 år tæller med).':'Pointandel: hvor stor en del af kategoriens mulige point man har fået.'} Kategorier uden facit (fx ingen appellation) tælles ikke med.</div>
+        <div class="card-note">Jo længere ude, jo oftere scorer man point i kategorien. Tryk på et punkt for tallene.</div>
       </div>
-      <div class="card"><div class="card-title">Søjler pr. kategori</div>
-        ${CATS.map(c=>`<div class="hbar-row"><span class="nm">${c.label} <span style="color:var(--text-faint)">${c.max}p</span></span><span class="tr pairbars">${sp.map(p=>{ const v = fn(bp[p], c.id); return `<i class="hit" style="width:${(v||0)*100}%;background:${colorOf(p)};border-radius:0 3px 3px 0" data-tip="${esc(`<div class='tt'>${c.label}</div>`+tipRow(colorOf(p), v==null?'–':pct(v), p))}"></i>`; }).join('')}</span><span class="v">${sp.map(p=>{const v=fn(bp[p],c.id);return v==null?'–':pct(v);}).join(' / ')}</span></div>`).join('')}
+      <div class="card"><div class="card-title">Pointfrekvens pr. kategori</div>
+        ${CATS.map(c=>`<div class="hbar-row"><span class="nm">${c.label} <span style="color:var(--text-faint)">${c.max}p</span></span><span class="tr pairbars">${sp.map(p=>{ const v = hitRate(bp[p], c.id); return `<i class="hit" style="width:${(v||0)*100}%;background:${colorOf(p)};border-radius:0 3px 3px 0" data-tip="${esc(`<div class='tt'>${c.label}</div>`+tipRow(colorOf(p), v==null?'–':pct(v), p))}"></i>`; }).join('')}</span><span class="v">${sp.map(p=>{const v=hitRate(bp[p],c.id);return v==null?'–':pct(v);}).join(' / ')}</span></div>`).join('')}
+        <div class="card-note">${note}</div>
       </div>
     </div>
-    <div class="grid g2" style="margin-top:14px">
-      <div class="card"><div class="card-title">Top 5 · hvor vi oftest scorer</div>
-        ${top.map((x,i)=>`<div class="hbar-row" style="grid-template-columns:28px minmax(90px,140px) 1fr 54px"><span style="font-family:var(--fnum);font-size:0.6rem;color:var(--accent)">${i+1}.</span><span class="nm">${x.c.label}</span><span class="tr"><i class="hit" style="width:${x.v*100}%;background:linear-gradient(90deg,var(--accent-2),#7FF8FF)" data-tip="${esc(`<div class='tt'>${x.c.label}</div>`+tipRow('#1E8C7A', pct(x.v), `af ${x.n} vine med facit`))}"></i></span><span class="v">${pct(x.v)}</span></div>`).join('')}
-        <div class="card-note">${sp.length>1?'Begge gættere samlet.':'Kun '+esc(sp[0])+'.'} Andel af vinene, hvor kategorien gav point.</div>
-      </div>
-      <div class="card"><div class="card-title">Hvor taber vi point</div>
-        ${lost.map(l=>{ const mx = Math.max(1,...l.tot.map(x=>x.lost)); const worst = l.tot.slice().sort((a,b)=>b.lost-a.lost)[0];
-          return `<div style="margin-bottom:12px"><div style="margin-bottom:6px">${pnameHTML(l.p)} <span style="color:var(--text-faint)">· har tabt ${l.sum} point · mest på <span style="color:var(--text)">${worst?worst.c.label.toLowerCase():'–'}</span></span></div>
-            ${l.tot.slice().sort((a,b)=>b.lost-a.lost).map(x=>`<div class="hbar-row" style="padding:2px 0"><span class="nm" style="font-size:0.98rem;color:var(--text-dim)">${x.c.label}</span><span class="tr" style="height:9px"><i class="hit" style="width:${x.lost/mx*100}%;background:${colorOf(l.p)};opacity:0.85" data-tip="${esc(`<div class='tt'>${x.c.label}</div>`+tipRow(colorOf(l.p), x.lost+' point tabt', `· ${l.sum?pct(x.lost/l.sum):'0%'} af ${l.p}s tab`))}"></i></span><span class="v" style="font-size:0.98rem">${x.lost}</span></div>`).join('')}</div>`; }).join('')}
-      </div>
+    <div class="card" style="margin-top:14px"><div class="card-title">Top 5 · hvor vi oftest scorer</div>
+      ${top.map((x,i)=>`<div class="hbar-row" style="grid-template-columns:28px minmax(90px,140px) 1fr 54px"><span style="font-family:var(--fnum);font-weight:800;color:var(--accent)">${i+1}.</span><span class="nm">${x.c.label}</span><span class="tr"><i class="hit" style="width:${x.v*100}%;background:linear-gradient(90deg,var(--accent-2),#7FF8FF)" data-tip="${esc(`<div class='tt'>${x.c.label}</div>`+tipRow('#1E8C7A', pct(x.v), `af ${x.n} vine med facit`))}"></i></span><span class="v">${pct(x.v)}</span></div>`).join('')}
+      <div class="card-note">Begge gættere samlet. Andel af vinene, hvor kategorien gav point.</div>
     </div></section>`;
 }
 function radar(series){
-  const S = 340, cx = S/2, cy = S/2 + 4, R = 118, n = CATS.length;
+  const S = 340, cx = S/2, cy = S/2 + 4, R = 112, n = CATS.length;
   const ang = i => -Math.PI/2 + i*2*Math.PI/n;
   const P = (i, r) => [cx + Math.cos(ang(i))*r, cy + Math.sin(ang(i))*r];
   let g = [0.25,0.5,0.75,1].map(t=>`<polygon points="${CATS.map((c,i)=>P(i,R*t).join(',')).join(' ')}" fill="none" stroke="var(--grid)" stroke-width="1"/>`).join('');
-  g += CATS.map((c,i)=>{ const [x,y] = P(i,R); const [lx,ly] = P(i,R+22); const anchor = Math.abs(lx-cx)<8?'middle':(lx>cx?'start':'end');
-    return `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="var(--grid)"/><text class="lbl-t" x="${lx}" y="${ly+5}" text-anchor="${anchor}" style="font-size:16px;fill:var(--text-dim)">${c.short}</text>`; }).join('');
-  g += `<text class="lbl-t" x="${cx+4}" y="${cy-R*0.5-2}" style="font-size:13px">50%</text><text class="lbl-t" x="${cx+4}" y="${cy-R-2}" style="font-size:13px">100%</text>`;
+  g += CATS.map((c,i)=>{ const [x,y] = P(i,R); const [lx,ly] = P(i,R+24); const anchor = Math.abs(lx-cx)<8?'middle':(lx>cx?'start':'end');
+    const upper = ly < cy - 10;
+    const vals = series.map((s,k)=>`<tspan style="fill:${colorOf(s.p)};font-weight:700">${s.v[i]==null?'–':pct(s.v[i])}</tspan>${k<series.length-1?'<tspan style="fill:var(--text-faint)"> · </tspan>':''}`).join('');
+    const nameY = upper ? ly - 4 : ly + 4, valY = upper ? nameY + 17 : nameY + 17;
+    return `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="var(--grid)"/>`
+      + `<text class="lbl-t" x="${lx}" y="${upper ? nameY - 17 : nameY}" text-anchor="${anchor}" style="font-size:15px;fill:var(--text)">${c.short}</text>`
+      + `<text class="lbl-t" x="${lx}" y="${upper ? nameY : valY}" text-anchor="${anchor}" style="font-size:14px">${vals}</text>`; }).join('');
   const polys = series.map(s=>{ const c = colorOf(s.p);
     const pts = s.v.map((v,i)=>P(i, R*(v||0)));
-    return `<polygon points="${pts.map(p=>p.join(',')).join(' ')}" fill="${c}" fill-opacity="0.16" stroke="${c}" stroke-width="2" stroke-linejoin="round" style="filter:drop-shadow(0 0 4px ${c}77)"/>`
-      + pts.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="${c}" stroke="#FFFFFF" stroke-width="2"/><circle class="hit" cx="${p[0]}" cy="${p[1]}" r="13" fill="transparent" data-tip="${esc(`<div class='tt'>${CATS[i].label}</div>`+tipRow(c, s.v[i]==null?'–':pct(s.v[i]), s.p))}"/>`).join('');
+    return `<polygon points="${pts.map(p=>p.join(',')).join(' ')}" fill="${c}" fill-opacity="0.16" stroke="${c}" stroke-width="2" stroke-linejoin="round"/>`
+      + pts.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="${c}" stroke="#FFFFFF" stroke-width="2"/><circle class="hit" cx="${p[0]}" cy="${p[1]}" r="14" fill="transparent" data-tip="${esc(`<div class='tt'>${CATS[i].label}</div>`+series.map(z=>tipRow(colorOf(z.p), z.v[i]==null?'–':pct(z.v[i]), z.p)).join(''))}"/>`).join('');
   }).join('');
-  return `<div class="chart" style="max-width:420px;margin:0 auto"><svg viewBox="-40 -6 ${S+80} ${S+10}" role="img" aria-label="Radar over kategorier">${g}${polys}</svg></div>`;
+  return `<div class="chart" style="max-width:440px;margin:0 auto"><svg viewBox="-70 -34 ${S+140} ${S+74}" role="img" aria-label="Radar over kategorier">${g}${polys}</svg></div>`;
 }
 
 /* ============================================================ 6. geografi & druer */
 function secGeo(L){
   const sp = scopePlayers();
+  const both = sp.length > 1;
   const key = UI.geo==='land' ? 'land' : 'drue1';
+  const fKey = key==='land' ? 'land' : 'drue';
   const groups = new Map();
   L.forEach(w=>{ const t = w.cats[key].t; if(!t) return; const k = norm(t); if(!groups.has(k)) groups.set(k,{name:t, ws:[]}); groups.get(k).ws.push(w); });
-  const rows = [...groups.values()].map(g=>({ ...g, per: sp.map(p=>{ const ws = g.ws.filter(w=>w.guesser===p); return {p, n:ws.length, hit: ws.length? ws.filter(w=>w.cats[key].pts>0).length/ws.length : null, avg: ws.length?avg(ws.map(w=>w.score)):null}; }) }))
-    .sort((a,b)=> b.ws.length - a.ws.length || a.name.localeCompare(b.name,'da'));
-  // forvekslinger (dominerende drue)
+  const rows = [...groups.values()].map(g=>{
+    const h = g.ws.filter(w=>w.cats[key].pts>0).length;
+    return { ...g, h, hit: h/g.ws.length, per: sp.map(p=>{ const ws = g.ws.filter(w=>w.guesser===p); const ph = ws.filter(w=>w.cats[key].pts>0).length; return {p, n:ws.length, h:ph, hit: ws.length ? ph/ws.length : null, avg: ws.length?avg(ws.map(w=>w.score)):null}; }) };
+  }).sort((a,b)=> b.ws.length - a.ws.length || a.name.localeCompare(b.name,'da'));
   const conf = new Map();
-  L.forEach(w=>{ const c = w.cats.drue1; if(!c.applicable || c.pts>0 || !c.g) return; const k = norm(c.t)+'→'+norm(c.g); if(!conf.has(k)) conf.set(k,{t:c.t,g:c.g,n:0,who:new Set()}); const o = conf.get(k); o.n++; o.who.add(w.guesser); });
+  L.forEach(w=>{ const c = w.cats.drue1; if(!c.applicable || c.pts>0 || !c.g || norm(c.g)===norm(c.t)) return; const k = norm(c.t)+'→'+norm(c.g); if(!conf.has(k)) conf.set(k,{t:c.t,g:c.g,n:0}); conf.get(k).n++; });
   const confL = [...conf.values()].sort((a,b)=>b.n-a.n || a.t.localeCompare(b.t,'da')).slice(0,12);
   const landConf = new Map();
-  L.forEach(w=>{ const c = w.cats.land; if(!c.applicable || c.pts>0 || !c.g) return; const k = norm(c.t)+'→'+norm(c.g); if(!landConf.has(k)) landConf.set(k,{t:c.t,g:c.g,n:0,who:new Set()}); landConf.get(k).n++; landConf.get(k).who.add(w.guesser); });
+  L.forEach(w=>{ const c = w.cats.land; if(!c.applicable || c.pts>0 || !c.g || norm(c.g)===norm(c.t)) return; const k = norm(c.t)+'→'+norm(c.g); if(!landConf.has(k)) landConf.set(k,{t:c.t,g:c.g,n:0}); landConf.get(k).n++; });
   const lc = [...landConf.values()].sort((a,b)=>b.n-a.n).slice(0,6);
-  const fKey = key==='land'?'land':'drue';
-  return `<section class="section"><div class="sec-head"><span class="sec-num">06</span><h2>Geografi og druer</h2></div>
+  const splitTip = r => esc(`<div class='tt'>${esc(r.name)} · ${r.h} af ${r.ws.length} ramt</div>` + r.per.map(x=> x.n ? tipRow(colorOf(x.p), pct(x.hit), `${x.p} (${x.h} af ${x.n})`) : tipRow(colorOf(x.p), '–', `${x.p} har ikke gættet denne`)).join(''));
+  const rowHTML = r => {
+    const id = fKey + ':' + norm(r.name);
+    if(!both){
+      const x = r.per[0];
+      return `<div class="hbar-row clickable ${F[fKey]===norm(r.name)?'sel':''}" tabindex="0" data-${fKey}="${esc(norm(r.name))}" data-tip="${splitTip(r)}"><span class="nm" title="${esc(r.name)}">${esc(r.name)} <span style="color:var(--text-faint)">${r.ws.length}</span></span>
+        <span class="tr"><i style="width:${(x.hit||0)*100}%;${x.hit===0?'min-width:2px;':''}background:${colorOf(x.p)}"></i></span><span class="v">${pct(x.hit)}</span></div>`;
+    }
+    const open = UI.geoOpen === id;
+    return `<div class="hbar-row clickable ${open?'open':''} ${F[fKey]===norm(r.name)?'sel':''}" tabindex="0" data-geo-open="${esc(id)}" data-tip="${splitTip(r)}">
+        <span class="nm" title="${esc(r.name)}">${esc(r.name)} <span style="color:var(--text-faint)">${r.ws.length}</span><span class="caret">▸</span></span>
+        <span class="tr"><i style="width:${r.hit*100}%;${r.hit===0?'min-width:2px;':''}background:#FFB020;box-shadow:inset 0 0 0 1.5px #2B1A0E"></i></span><span class="v">${pct(r.hit)}</span></div>
+      ${open?`<div class="geo-detail">${r.per.map(x=>`<div class="hbar-row"><span class="nm">${pnameHTML(x.p)}</span><span class="tr"><i style="width:${(x.hit||0)*100}%;${x.hit===0?'min-width:2px;':''}background:${colorOf(x.p)};${x.n?'':'opacity:0.25'}"></i></span><span class="v">${x.n?`${pct(x.hit)} <span style="color:var(--text-faint)">${x.h}/${x.n}</span>`:'–'}</span></div>`).join('')}
+        <button class="show-only" data-${fKey}="${esc(norm(r.name))}">${F[fKey]===norm(r.name)?'Fjern filter':'Vis kun '+esc(r.name)}</button></div>`:''}`;
+  };
+  return `<section class="section"><div class="sec-head"><span class="sec-num">${num()}</span><h2>Geografi og druer</h2></div>
     <div class="grid g2">
       <div class="card"><div class="card-title"><span>Træfprocent pr. ${key==='land'?'land':'drue'}</span>
         <div class="mini-seg"><button data-ui="geo" data-v="land" class="${UI.geo==='land'?'on':''}">Lande</button><button data-ui="geo" data-v="drue" class="${UI.geo==='drue'?'on':''}">Druer</button></div></div>
-        ${rows.map(r=>`<div class="hbar-row clickable ${F[fKey]===norm(r.name)?'sel':''}" tabindex="0" data-${fKey}="${esc(norm(r.name))}"><span class="nm" title="${esc(r.name)}">${esc(r.name)} <span style="color:var(--text-faint)">${r.ws.length}</span></span>
-          <span class="tr pairbars">${r.per.map(x=>`<i class="hit" style="width:${(x.hit||0)*100}%;${x.hit===0?'min-width:2px;':''}background:${colorOf(x.p)};border-radius:0 3px 3px 0;${x.n?'':'opacity:0.25'}" data-tip="${esc(`<div class='tt'>${esc(r.name)}</div>`+(x.n?tipRow(colorOf(x.p), pct(x.hit), `ramt · ${x.p} (${x.n} vine, gns. ${fmt1(x.avg)} p)`):tipRow(colorOf(x.p),'–',`${x.p} har ikke gættet denne`)))}"></i>`).join('')}</span>
-          <span class="v">${r.per.map(x=>x.n?pct(x.hit):'–').join(' / ')}</span></div>`).join('')}
-        <div class="card-note">Hvor ofte ${key==='land'?'landet':'den dominerende drue'} blev ramt, set ud fra facit. Klik for at filtrere.</div>
+        ${rows.map(rowHTML).join('')}
+        <div class="card-note">Hvor ofte ${key==='land'?'landet':'den dominerende drue'} blev ramt, set ud fra facit. ${both?'Tallet er for jer begge. Tryk på en række for at se fordelingen mellem jer.':'Tryk for at filtrere.'}</div>
       </div>
       <div class="card"><div class="card-title">Forvekslinger · drue</div>
         ${confL.length?`<div class="conf">${confL.map(c=>`<span>${esc(c.t)}</span><span class="arrow">→</span><span class="g">${esc(c.g)}</span><span class="x">${c.n}×</span>`).join('')}</div>`:`<div class="empty">Ingen forkerte druegæt i udvalget. Imponerende.</div>`}
@@ -825,6 +961,7 @@ function secGeo(L){
     </div></section>`;
 }
 
+/* ============================================================ 7. årgang */
 /* ============================================================ 7. årgang */
 function secVintage(L){
   const sp = scopePlayers();
@@ -847,7 +984,7 @@ function secVintage(L){
         + `<rect class="hit" x="${x0+k*inner}" y="${m.t}" width="${inner}" height="${ih}" fill="transparent" data-tip="${esc(`<div class='tt'>${v===0?'Præcis årgang':(Math.abs(v)===4?`${v>0?'4 år eller mere for ungt':'4 år eller mere for gammelt'}`:`${Math.abs(v)} år for ${v>0?'ungt':'gammelt'}`)}</div>`+tipRow(c, n+' gæt', x.p))}"/>`; });
   });
   svg += `<text class="lbl-t" x="${m.l}" y="${H-2}">← for gammelt</text><text class="lbl-t" x="${W-m.r}" y="${H-2}" text-anchor="end">for ungt →</text>`;
-  return `<section class="section"><div class="sec-head"><span class="sec-num">07</span><h2>Årgang</h2></div>
+  return `<section class="section"><div class="sec-head"><span class="sec-num">${num()}</span><h2>Årgang</h2></div>
     <div class="grid g3">${per.map(x=>`<div class="card kpi"><div class="l">${pnameHTML(x.p)}</div>
       <div class="n">${x.mae==null?'–':fmt1(x.mae)+' år'}</div><div class="s">gns. ved siden af · ${x.exact} præcise · ${x.near} ±1 år</div>
       <div class="s" style="margin-top:6px;color:var(--text-dim)">${x.bias==null?'':Math.abs(x.bias)<0.25?'Ingen tydelig tendens':(x.bias>0?`Gætter i snit ${fmt1(x.bias)} år for ungt`:`Gætter i snit ${fmt1(-x.bias)} år for gammelt`)}${x.nv?` · NV: ${x.nvHit}/${x.nv} rigtige`:''}</div></div>`).join('')}
@@ -859,30 +996,25 @@ function secVintage(L){
     </div></section>`;
 }
 
-/* ============================================================ 8. vinholderen */
-function secHolder(L){
-  const owners = [...new Set(L.map(w=>w.owner).filter(Boolean))].sort((a,b)=>PLAYERS.indexOf(a)-PLAYERS.indexOf(b));
-  const S = owners.map(o=>{ const ws = L.filter(w=>w.owner===o); const hard = ws.slice().sort((a,b)=>a.score-b.score)[0]; const easy = ws.slice().sort((a,b)=>b.score-a.score)[0];
-    return {o, n:ws.length, a:avg(ws.map(w=>w.score)), hard, easy, zero: ws.filter(w=>w.score===0).length}; });
-  const hardest = S.length>1 ? S.slice().sort((a,b)=>a.a-b.a)[0] : null;
-  return `<section class="section"><div class="sec-head"><span class="sec-num">08</span><h2>Vinholderens side</h2><span class="sec-sub">Hvem tager de sværeste vine med?</span></div>
-    <div class="grid g2">${S.map(s=>`<div class="card"><div class="card-title"><span>${pnameHTML(s.o)} har medbragt</span>${hardest && hardest.o===s.o?`<span class="pill mid">Sværeste vine</span>`:''}</div>
-      <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-end">
-        <div class="kpi" style="padding:0"><div class="n" style="margin:0">${s.n}</div><div class="s">vine</div></div>
-        <div class="kpi" style="padding:0"><div class="n" style="margin:0">${fmt1(s.a)}</div><div class="s">point til modstanderen i snit</div></div>
-        <div class="kpi" style="padding:0"><div class="n" style="margin:0">${s.zero}</div><div class="s">gange 0 point</div></div>
-      </div>
-      <div class="bar-mini" style="max-width:none;margin:14px 0 12px;height:8px" data-tip="${esc(tipRow(colorOf(s.o), pct(s.a/MAX), 'af de 24 point gik til modstanderen'))}"><i style="width:${s.a/MAX*100}%;background:${colorOf(s.o)}"></i></div>
-      <div class="rec"><span class="s">Sværeste vin</span><span class="t linkish" data-wine="${esc(s.hard.id)}">${esc(s.hard.name)}</span><span class="s">${s.hard.score} point til ${esc(s.hard.guesser)} · ${fmtDate(s.hard.date)}</span></div>
-      <div class="rec" style="margin-top:10px"><span class="s">Letteste vin</span><span class="t linkish" data-wine="${esc(s.easy.id)}">${esc(s.easy.name)}</span><span class="s">${s.easy.score} point til ${esc(s.easy.guesser)} · ${fmtDate(s.easy.date)}</span></div>
-    </div>`).join('')}</div>
-    <div class="card-note" style="margin-top:8px">Jo færre point modstanderen får i snit, jo sværere vine tager man med.</div></section>`;
+/* ============================================================ 8. sværeste vine */
+function secHardest(L){
+  const sp = scopePlayers();
+  const sorted = L.slice().sort((a,b)=> a.score-b.score || b.date.localeCompare(a.date));
+  const ranked = competitionRank(sorted, w=>w.score).filter(r=>r.rank<=10);
+  const shown = ranked.slice(0,12), more = ranked.length - shown.length;
+  return `<section class="section"><div class="sec-head"><span class="sec-num">${num()}</span><h2>De sværeste vine</h2><span class="sec-sub">${sp.length===1?`Der hvor ${esc(sp[0])} scorede færrest point`:'Laveste scorer'}</span></div>
+    <div class="card"><ol class="top10">${shown.map(({rank,item:w})=>`<li tabindex="0" data-wine="${esc(w.id)}">
+      <span class="rk">${rank}.</span>
+      <div style="min-width:0"><div class="nm">${esc(w.name)}</div><div class="sub">medbragt af ${esc(w.owner)} · ${pnameHTML(w.guesser)} gættede · ${fmtDate(w.date)}</div></div>
+      <span class="sc" style="color:var(--bad)">${w.score}<small>/24</small></span></li>`).join('')}</ol>
+      ${more>0?`<div class="card-note">+ ${more} vine mere med samme score.</div>`:''}</div></section>`;
 }
 
 /* ============================================================ 9. aftener */
+/* ============================================================ 9. aftener */
 function secEvenings(B){
   const evs = evWinners(B).reverse();
-  return `<section class="section"><div class="sec-head"><span class="sec-num">09</span><h2>Aftener</h2></div>
+  return `<section class="section"><div class="sec-head"><span class="sec-num">${num()}</span><h2>Aftener</h2></div>
     <div class="card"><div class="tbl-wrap"><table class="tbl">
       <thead><tr><th>Dato</th><th class="num">Vine</th>${PLAYERS.map(p=>`<th class="num" style="color:${colorOf(p)}">${esc(p)} · gns</th><th class="num" style="color:${colorOf(p)}">${esc(p)} · point</th>`).join('')}<th>Vinder</th></tr></thead>
       <tbody>${evs.map(e=>`<tr tabindex="0" data-evening="${e.date}" title="Vis kun denne aften">
@@ -912,7 +1044,7 @@ function secRecords(L, B){
   const sure = L.filter(w=>w.cats.drue1.pts>0 && w.cats.land.pts===0 && w.cats.land.applicable);
   const card = (title, big, body)=>`<div class="card rec"><div class="card-title" style="margin-bottom:6px">${title}</div><div class="big">${big}</div>${body}</div>`;
   const wl = (arr)=> arr.slice(0,4).map(w=>`<span class="t linkish" data-wine="${esc(w.id)}" style="font-size:1rem">${esc(w.name)}</span><span class="s">${esc(w.guesser)} · ${fmtDate(w.date)}</span>`).join('') + (arr.length>4?`<span class="s">+ ${arr.length-4} mere</span>`:'');
-  return `<section class="section"><div class="sec-head"><span class="sec-num">10</span><h2>Rekorder og sjove fakta</h2></div>
+  return `<section class="section"><div class="sec-head"><span class="sec-num">${num()}</span><h2>Rekorder og sjove fakta</h2></div>
     <div class="grid g3">
       ${best?card('Højeste score', `${best.score}/24`, `<span class="t linkish" data-wine="${esc(best.id)}">${esc(best.name)}</span><span class="s">${esc(best.guesser)} · ${fmtDate(best.date)}</span>`):''}
       ${card('Fuldtræffere', perfect.length, perfect.length?wl(perfect):'<span class="s">Alle kategorier med facit ramt – det er ikke sket endnu.</span>')}
@@ -922,13 +1054,12 @@ function secRecords(L, B){
       ${card('Nemesis-drue', nemesis.filter(n=>n.top).length?'😈':'–', nemesis.map(n=>`<span class="t">${pnameHTML(n.p)}: ${n.top?`<span style="color:var(--bad)">${esc(n.top.name)}</span> <span class="s">– ramt forkert ${n.top.miss} af ${n.top.n} gange</span>`:'<span class="s">ingen endnu</span>'}</span>`).join(''))}
       ${card('Rigtig drue, forkert land', sure.length, sure.length?wl(sure):'<span class="s">Det er ikke sket.</span>')}
       ${card('Kategori-konger', '👑', catKing.filter(k=>k.per.some(x=>x.v!=null)).map(k=>{ const s = k.per.filter(x=>x.v!=null).sort((a,b)=>b.v-a.v); const tie = s.length>1 && s[0].v===s[1].v; return `<span class="t" style="font-size:1rem">${k.c.label}: ${tie||sp.length<2?`<span class="s">${sp.length<2?pct(s[0].v):'lige'}</span>`:`${pnameHTML(s[0].p)} <span class="s">${pct(s[0].v)}</span>`}</span>`; }).join(''))}
-      ${card('Tomme felter', L.reduce((s,w)=>s+CATS.filter(c=>w.cats[c.id].applicable && !w.cats[c.id].g).length,0), `<span class="s">gange en kategori med facit blev ladt tom</span>`)}
     </div></section>`;
 }
 
 /* ============================================================ 11. vinarkiv */
 function secArchive(L){
-  return `<section class="section"><div class="sec-head"><span class="sec-num">11</span><h2>Vinarkiv</h2><span class="sec-sub">${L.length} vine</span></div>
+  return `<section class="section"><div class="sec-head"><span class="sec-num">${num()}</span><h2>Vinarkiv</h2><span class="sec-sub">${L.length} vine</span></div>
     <div class="card"><div style="margin-bottom:12px"><input class="search" id="arch-q" type="search" placeholder="Søg på vin, land, drue, region…" value="${esc(UI.archiveQ)}" autocomplete="off"></div>
       <div id="arch-table">${archiveTable(L)}</div></div></section>`;
 }
@@ -981,6 +1112,7 @@ root.addEventListener('click', e=>{
   const fb = t.closest('[data-f]:not(select)'); if(fb){ setFilter(fb.dataset.f, fb.dataset.v); return; }
   const ub = t.closest('[data-ui]'); if(ub){ UI[ub.dataset.ui] = ub.dataset.v; render(); return; }
   const so = t.closest('[data-sort]'); if(so){ const k = so.dataset.sort; UI.archiveSort = { key:k, dir: UI.archiveSort.key===k ? -UI.archiveSort.dir : (k==='date'||k==='score'?-1:1) }; document.getElementById('arch-table').innerHTML = archiveTable(filtered()); return; }
+  const go = t.closest('[data-geo-open]'); if(go){ UI.geoOpen = UI.geoOpen === go.dataset.geoOpen ? null : go.dataset.geoOpen; render(); return; }
   const wn = t.closest('[data-wine]'); if(wn){ openWine(wn.dataset.wine); return; }
   const ld = t.closest('[data-land]'); if(ld){ setFilter('land', F.land===ld.dataset.land ? 'all' : ld.dataset.land); return; }
   const dr = t.closest('[data-drue]'); if(dr){ setFilter('drue', F.drue===dr.dataset.drue ? 'all' : dr.dataset.drue); return; }
@@ -988,7 +1120,7 @@ root.addEventListener('click', e=>{
 });
 root.addEventListener('keydown', e=>{
   if(e.key!=='Enter' && e.key!==' ') return;
-  const el = e.target.closest('[data-wine],[data-land],[data-drue],[data-evening]');
+  const el = e.target.closest('[data-wine],[data-land],[data-drue],[data-evening],[data-geo-open]');
   if(el && el.tagName!=='INPUT'){ e.preventDefault(); el.click(); }
 });
 
@@ -1004,7 +1136,7 @@ async function load(soft){
   if(!soft || !ALL.length) renderLoading(); else root.classList.add('loading-dim');
   try{
     const list = await fetchWines();
-    ALL = normalize(list);
+    ALL = canonicalize(normalize(list));
     const seen = [];
     ALL.forEach(w=>{ if(w.guesser && !seen.includes(w.guesser)) seen.push(w.guesser); });
     // Lars og Tore i fast rækkefølge, øvrige efter

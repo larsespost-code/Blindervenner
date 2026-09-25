@@ -328,7 +328,10 @@ input[type=text]:focus,select.year-select:focus{border-color:var(--accent);box-s
 .stat-box{border:2px solid #2B1A0E;background:#FFFFFF}
 .sec-num{transform:rotate(-4deg);display:inline-block;background:#FF6B1A;color:#2B1A0E;border:2px solid #2B1A0E}
 .field-label .pts{background:#FFB020;color:#2B1A0E;border:2px solid #2B1A0E;transform:rotate(3deg)}
-.card:nth-child(odd){background:#FFFDF6}</style>
+.card:nth-child(odd){background:#FFFDF6}
+/* Mobil: topbjælken hænger ikke fast – på iOS kunne den dække filtrene, når man scrollede tilbage op */
+@media(max-width:760px){.topbar{position:relative!important;top:auto!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;background:transparent!important}}
+</style>
 
 </head>
 <body>

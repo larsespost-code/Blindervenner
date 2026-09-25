@@ -556,6 +556,7 @@ function winsSummary(B){
   evs.forEach(e=>{ if(e.winner && wins[e.winner] !== undefined) wins[e.winner]++; });
   return { wins, total: evs.length, ties: evs.filter(e=>e.winner==='uafgjort').length, solo: evs.filter(e=>!e.winner).length };
 }
+function hitCount(L, cid){ const a = L.filter(w=>w.cats[cid].applicable); return a.length ? `${a.filter(w=>w.cats[cid].pts>0).length}/${a.length}` : '–'; }
 function hitRate(L, cid){
   const a = L.filter(w=>w.cats[cid].applicable);
   return a.length ? a.filter(w=>w.cats[cid].pts>0).length / a.length : null;
@@ -861,7 +862,7 @@ function secCategories(L){
   const sp = scopePlayers();
   const bp = byPlayer(L);
   const head = `<section class="section"><div class="sec-head"><span class="sec-num">${num()}</span><h2>Styrker og svagheder</h2></div>`;
-  const note = `Pointfrekvens: hvor ofte der er scoret point i kategorien (årgang ±1 år tæller med). Kategorier uden facit, fx ingen appellation, tæller ikke med.`;
+  const note = `Pointfrekvens: antal vine med point i kategorien ud af antal forsøg (årgang ±1 år tæller med). Kategorier uden facit, fx ingen appellation, tæller ikke med.`;
   if(sp.length === 1){
     const p = sp[0], ws = bp[p], B = baseFiltered();
     const others = PLAYERS.filter(x=>x!==p);
@@ -872,7 +873,7 @@ function secCategories(L){
       ${rows.map(r=>`<div class="hbar-row" style="grid-template-columns:minmax(110px,170px) 1fr minmax(84px,auto)" data-tip="${esc(`<div class='tt'>${r.c.label} · ${r.c.max} p</div>`+tipRow(colorOf(p), pct(r.v), `${p} · ${r.h} af ${r.n} vine`)+r.o.map(x=>tipRow(colorOf(x.o), pct(x.v), x.o)).join(''))}">
         <span class="nm">${r.c.label} <span style="color:var(--text-faint)">${r.c.max}p</span></span>
         <span class="tr"><i style="width:${r.v*100}%;${r.v===0?'min-width:2px;':''}background:${colorOf(p)}"></i>${r.o.map(x=>`<b class="tick" style="left:calc(${x.v*100}% - 1px)"></b>`).join('')}</span>
-        <span class="v"><b style="font-weight:700;color:var(--text)">${pct(r.v)}</b> <span style="color:var(--text-faint)">${r.h}/${r.n}</span></span></div>`).join('')}
+        <span class="v"><b style="font-weight:700;color:var(--text)">${r.h}/${r.n}</b></span></div>`).join('')}
       <div class="legend" style="margin-top:10px"><span><span class="kb" style="background:${colorOf(p)}"></span>${esc(p)}</span>${others.length?`<span><span class="kb" style="background:#2B1A0E;width:3px"></span>${others.map(esc).join(', ')} til sammenligning</span>`:''}</div>
       <div class="card-note">${note}</div></div></section>`;
   }
@@ -884,7 +885,7 @@ function secCategories(L){
         <div class="card-note">Jo længere ude, jo oftere scorer man point i kategorien. Tryk på et punkt for tallene.</div>
       </div>
       <div class="card"><div class="card-title">Pointfrekvens pr. kategori</div>
-        ${CATS.map(c=>`<div class="hbar-row"><span class="nm">${c.label} <span style="color:var(--text-faint)">${c.max}p</span></span><span class="tr pairbars">${sp.map(p=>{ const v = hitRate(bp[p], c.id); return `<i class="hit" style="width:${(v||0)*100}%;background:${colorOf(p)};border-radius:0 3px 3px 0" data-tip="${esc(`<div class='tt'>${c.label}</div>`+tipRow(colorOf(p), v==null?'–':pct(v), p))}"></i>`; }).join('')}</span><span class="v">${sp.map(p=>{const v=hitRate(bp[p],c.id);return v==null?'–':pct(v);}).join(' / ')}</span></div>`).join('')}
+        ${CATS.map(c=>`<div class="hbar-row"><span class="nm">${c.label} <span style="color:var(--text-faint)">${c.max}p</span></span><span class="tr pairbars">${sp.map(p=>{ const v = hitRate(bp[p], c.id); return `<i class="hit" style="width:${(v||0)*100}%;background:${colorOf(p)};border-radius:0 3px 3px 0" data-tip="${esc(`<div class='tt'>${c.label}</div>`+tipRow(colorOf(p), v==null?'–':pct(v), p))}"></i>`; }).join('')}</span><span class="v">${sp.map(p=>`<span style="color:${colorOf(p)};font-weight:700">${hitCount(bp[p],c.id)}</span>`).join(' <span style="color:var(--text-faint)">·</span> ')}</span></div>`).join('')}
         <div class="card-note">${note}</div>
       </div>
     </div>

@@ -396,12 +396,6 @@ input[type=text]:focus,select.year-select:focus{border-color:var(--accent);box-s
       <div class="brand-name">Blindervenner</div>
     </div>
     <div class="topbar-actions">
-      <div class="icon-btn" id="btn-history" title="Historik">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
-      </div>
-      <div class="icon-btn" id="btn-analysis" title="Analyse">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><path d="M12 3.5V7M20.5 12H17M12 20.5V17M3.5 12H7"/></svg>
-      </div>
       <div class="icon-btn" id="btn-settings" title="Deltagere">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.2"/><path d="M4.5 20c1.4-3.6 4.4-5.5 7.5-5.5s6.1 1.9 7.5 5.5"/></svg>
       </div>
@@ -1196,7 +1190,7 @@ function renderIdle(){
     </div>
     <button class="btn btn-secondary btn-block" style="margin-top:10px;" onclick="switchView('day')">📅 Dagens resultat</button>
     <button class="btn btn-ghost btn-block" onclick="switchView('history')" style="margin-top:6px;">Se historik →</button>
-    <a class="btn btn-ghost btn-block" href="https://larsespost-code.github.io/Blindervenner/dashboard.html" target="_blank" rel="noopener" style="text-decoration:none;">Se analyse ↗</a>
+    <a class="btn btn-ghost btn-block" href="https://larsespost-code.github.io/Blindervenner/dashboard.html" target="_blank" rel="noopener" style="text-decoration:none;">Se analyse →</a>
     ` : ''}
     ${BACKEND==='sheets' ? `<button class="btn btn-ghost btn-block" onclick="copyShareLink()" style="margin-top:6px;">📨 Send link til din medsmager</button>` : ''}
     ${USE_DB ? '' : `<div class="sync-note">⚠ Kører kun lokalt på denne telefon — ingen delt forbindelse fundet.</div>`}
@@ -1897,8 +1891,6 @@ function removeParticipant(i){
 /* ================= NAV / ROOT RENDER ================= */
 function goHome(){ OPEN_HIST_ID=null; CONFIRM=null; switchView('game'); window.scrollTo(0,0); }
 function switchView(v){ VIEW=v; CONFIRM=null; render(); }
-document.getElementById('btn-history').addEventListener('click', ()=>switchView(VIEW==='history'?'game':'history'));
-document.getElementById('btn-analysis').addEventListener('click', ()=>switchView(VIEW==='analysis'?'game':'analysis'));
 document.getElementById('btn-settings').addEventListener('click', ()=>switchView(VIEW==='settings'?'game':'settings'));
 
 // The name step and (when no round is under way yet) the role step both
@@ -1980,8 +1972,6 @@ window.addEventListener('pagehide', ()=>{ if(hasPendingChanges()) flushPendingCh
 
 let LAST_SCREEN_KEY = null;
 function render(){
-  document.getElementById('btn-history').classList.toggle('active', VIEW==='history');
-  document.getElementById('btn-analysis').classList.toggle('active', VIEW==='analysis');
   document.getElementById('btn-settings').classList.toggle('active', VIEW==='settings');
   const c = document.getElementById('content');
   // Identity must be picked before ANYTHING else is shown, on every view —

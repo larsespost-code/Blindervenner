@@ -2,7 +2,7 @@
 <html lang="da">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#F1EBE4">
 <title>Blindervenner · Stats</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -362,6 +362,17 @@ html{overflow-x:clip}
 @media(max-width:760px){.topbar{position:relative!important;top:auto!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}}
 .hbar-row .tr .tick{background:#1E2D32}
 .geo-detail{border:1px solid rgba(30,45,50,.16);background:#E9E0D6}
+#sync-pill{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;pointer-events:none;z-index:120;
+  background:#1E2D32;color:#F1EBE4;font-family:var(--fb);font-size:14px;font-weight:600;padding:9px 16px;border-radius:999px;box-shadow:0 8px 24px rgba(30,45,50,.25);transition:opacity .2s,transform .2s;white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis}
+#sync-pill.show{opacity:1;transform:translate(-50%,0)}
+#sync-pill.busy::before{content:'';display:inline-block;width:10px;height:10px;margin-right:8px;border:2px solid rgba(241,235,228,.35);border-top-color:#CA9954;border-radius:50%;vertical-align:-1px;animation:spin .8s linear infinite}
+#sync-pill.err{background:#A34A3A}
+/* Toppen må aldrig havne bag telefonens statuslinje */
+.app{padding-top:env(safe-area-inset-top,0px)}
+#to-top{position:fixed;right:16px;bottom:calc(72px + env(safe-area-inset-bottom,0px));z-index:110;width:48px;height:48px;border-radius:50%;border:1.5px solid #1E2D32;background:#1E2D32;color:#F1EBE4;
+  display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(30,45,50,.25);opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .2s,transform .2s;cursor:pointer}
+#to-top.show{opacity:1;transform:none;pointer-events:auto}
+#dbg{position:fixed;left:8px;top:8px;z-index:300;background:rgba(30,45,50,.9);color:#fff;font:12px/1.4 monospace;padding:6px 8px;border-radius:6px;pointer-events:none;white-space:pre}
 </style>
 
 </head>
@@ -1169,28 +1180,80 @@ function narrow(){ return window.innerWidth < 600; }
 let lastNarrow = narrow();
 window.addEventListener('resize', ()=>{ if(narrow() !== lastNarrow){ lastNarrow = narrow(); if(ALL.length) render(); } });
 
-/* ============================================================ load */
+/* ============================================================ til toppen
+   Knap nederst til højre, når man har scrollet ned: ét tryk og man er tilbage
+   ved filtrene (og kan skifte mellem Begge, Lars og Tore). */
+const toTop = document.createElement('button');
+toTop.id = 'to-top'; toTop.type = 'button'; toTop.setAttribute('aria-label','Til toppen');
+toTop.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
+document.body.appendChild(toTop);
+function scrollTopAll(){
+  try{ window.scrollTo({top:0, behavior:'smooth'}); }catch(e){ window.scrollTo(0,0); }
+  setTimeout(()=>{ if(document.scrollingElement) document.scrollingElement.scrollTop = 0; document.body.scrollTop = 0; document.documentElement.scrollTop = 0; }, 450);
+}
+toTop.addEventListener('click', scrollTopAll);
+function onScrollUI(){ const y = Math.max(window.scrollY||0, document.body.scrollTop||0); toTop.classList.toggle('show', y > 500); if(DBG) dbg(); }
+window.addEventListener('scroll', onScrollUI, {passive:true});
+document.body.addEventListener('scroll', onScrollUI, {passive:true});
+// Fejlsøgning: tilføj ?debug til adressen for at se scroll-tal i hjørnet
+const DBG = /[?&]debug/.test(location.search);
+function dbg(){
+  let el = document.getElementById('dbg'); if(!el){ el = document.createElement('div'); el.id = 'dbg'; document.body.appendChild(el); }
+  const vv = window.visualViewport, tb = document.querySelector('.topbar').getBoundingClientRect();
+  el.textContent = `scrollY ${Math.round(scrollY)} · body ${document.body.scrollTop}\ninner ${innerWidth}x${innerHeight}` + (vv?`\nvv top ${Math.round(vv.offsetTop)} h ${Math.round(vv.height)} pageTop ${Math.round(vv.pageTop)}`:'') + `\ntopbar y ${Math.round(tb.top)} h ${Math.round(tb.height)}\ndoc ${document.documentElement.scrollHeight}`;
+}
+if(DBG){ dbg(); if(window.visualViewport){ visualViewport.addEventListener('resize', dbg); visualViewport.addEventListener('scroll', dbg); } setInterval(dbg, 1000); }
+
+/* ============================================================ load
+   Google Apps Script kan være 10-20 sekunder om at vågne, hvis det har hvilet.
+   Derfor vises de senest hentede vine med det samme (gemt i browseren), mens
+   de nyeste hentes i baggrunden. Siden opdateres, når de nye vine er hentet. */
+const CACHE_KEY = 'bv_stats_cache_v1';
 const reloadBtn = document.getElementById('btn-reload');
 reloadBtn.addEventListener('click', ()=>load(true));
+function readCache(){ try{ const c = JSON.parse(localStorage.getItem(CACHE_KEY)||'null'); if(c && Array.isArray(c.list)) return c; }catch(e){} return null; }
+function writeCache(list){ try{ localStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), list })); }catch(e){} }
+function hhmm(d){ return new Date(d).toLocaleTimeString('da-DK',{hour:'2-digit',minute:'2-digit'}); }
+function applyList(list){
+  ALL = canonicalize(normalize(JSON.parse(JSON.stringify(list))));
+  const seen = [];
+  ALL.forEach(w=>{ if(w.guesser && !seen.includes(w.guesser)) seen.push(w.guesser); });
+  // Lars og Tore i fast rækkefølge, øvrige efter
+  PLAYERS = seen.sort((a,b)=>{ const o = n=>{ const k = norm(n); return k==='lars'?0:k==='tore'?1:2; }; return o(a)-o(b) || a.localeCompare(b,'da'); });
+  if(F.player!=='all' && !PLAYERS.includes(F.player)) F.player = 'all';
+}
+const syncPill = document.createElement('div');
+syncPill.id = 'sync-pill';
+syncPill.setAttribute('role','status');
+document.body.appendChild(syncPill);
+function setPill(text, kind){
+  syncPill.textContent = text || '';
+  syncPill.className = text ? ('show ' + (kind||'')) : '';
+}
+let pillTimer = null;
+let lastJSON = null;
 async function load(soft){
   reloadBtn.classList.add('spin');
-  if(!soft || !ALL.length) renderLoading(); else root.classList.add('loading-dim');
+  clearTimeout(pillTimer);
+  if(!ALL.length){
+    const c = readCache();
+    if(c){ applyList(c.list); lastJSON = JSON.stringify(c.list); render(); document.getElementById('updated').textContent = 'Vine fra kl. ' + hhmm(c.at); }
+    else renderLoading();
+  }
+  if(ALL.length) setPill('Henter de nyeste vine…', 'busy');
   try{
     const list = await fetchWines();
-    ALL = canonicalize(normalize(list));
-    const seen = [];
-    ALL.forEach(w=>{ if(w.guesser && !seen.includes(w.guesser)) seen.push(w.guesser); });
-    // Lars og Tore i fast rækkefølge, øvrige efter
-    PLAYERS = seen.sort((a,b)=>{ const o = n=>{ const k = norm(n); return k==='lars'?0:k==='tore'?1:2; }; return o(a)-o(b) || a.localeCompare(b,'da'); });
-    if(F.player!=='all' && !PLAYERS.includes(F.player)) F.player = 'all';
+    const json = JSON.stringify(list);
+    writeCache(list);
+    if(json !== lastJSON || !ALL.length){ applyList(list); lastJSON = json; render(); }
     LOADED_AT = new Date();
-    document.getElementById('updated').textContent = 'Opdateret ' + LOADED_AT.toLocaleTimeString('da-DK',{hour:'2-digit',minute:'2-digit'});
-    render();
+    document.getElementById('updated').textContent = 'Opdateret ' + hhmm(LOADED_AT);
+    setPill('Opdateret', 'ok'); pillTimer = setTimeout(()=>setPill(''), 1600);
   }catch(err){
-    if(soft && ALL.length){ render(); document.getElementById('updated').textContent = 'Kunne ikke opdatere'; }
+    if(ALL.length){ setPill('Kunne ikke hente nye vine – viser de senest hentede', 'err'); pillTimer = setTimeout(()=>setPill(''), 5000); }
     else renderError(err && err.message ? (/Failed to fetch|NetworkError|Load failed/i.test(err.message) ? 'Ingen forbindelse til regnearket. Tjek internetforbindelsen.' : err.message) : 'Ukendt fejl');
   }finally{
-    reloadBtn.classList.remove('spin'); root.classList.remove('loading-dim');
+    reloadBtn.classList.remove('spin');
   }
 }
 load();

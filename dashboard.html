@@ -368,11 +368,10 @@ html{overflow-x:clip}
 #sync-pill.err{background:#A34A3A}
 /* Toppen må aldrig havne bag telefonens statuslinje */
 .app{padding-top:env(safe-area-inset-top,0px)}
-#to-top{position:fixed;right:16px;bottom:calc(72px + env(safe-area-inset-bottom,0px));z-index:110;width:48px;height:48px;border-radius:50%;border:1.5px solid #1E2D32;background:#1E2D32;color:#F1EBE4;
-  display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(30,45,50,.25);opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .2s,transform .2s;cursor:pointer}
-#to-top.show{opacity:1;transform:none;pointer-events:auto}
-#dbg{position:fixed;left:8px;top:8px;z-index:300;background:rgba(30,45,50,.9);color:#fff;font:12px/1.4 monospace;padding:6px 8px;border-radius:6px;pointer-events:none;white-space:pre}
-/* Topbjælken står altid fast øverst og har personvalget (Begge/Lars/Tore) */
+/* Topbjælken med personvalg (Begge/Lars/Tore): glider væk ved scroll ned, tilbage ved scroll op */
+.topbar{transition:transform .25s ease;will-change:transform}
+.topbar.hdr-hidden{transform:translateY(-100%)}
+@media (prefers-reduced-motion:reduce){.topbar{transition:none}}
 .topbar{position:-webkit-sticky!important;position:sticky!important;top:0!important;z-index:40!important;background:rgba(241,235,228,.97)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;border-bottom:1px solid rgba(30,45,50,.14)!important;flex-wrap:wrap;row-gap:10px;margin:0 -16px;padding-left:16px!important;padding-right:16px!important}
 .hdr-player{display:flex;align-items:center}
 .hdr-player .seg button{padding:6px 14px}
@@ -1195,29 +1194,23 @@ function narrow(){ return window.innerWidth < 600; }
 let lastNarrow = narrow();
 window.addEventListener('resize', ()=>{ if(narrow() !== lastNarrow){ lastNarrow = narrow(); if(ALL.length) render(); } });
 
-/* ============================================================ til toppen
-   Knap nederst til højre, når man har scrollet ned: ét tryk og man er tilbage
-   ved filtrene (og kan skifte mellem Begge, Lars og Tore). */
-const toTop = document.createElement('button');
-toTop.id = 'to-top'; toTop.type = 'button'; toTop.setAttribute('aria-label','Til toppen');
-toTop.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
-document.body.appendChild(toTop);
-function scrollTopAll(){
-  try{ window.scrollTo({top:0, behavior:'smooth'}); }catch(e){ window.scrollTo(0,0); }
-  setTimeout(()=>{ if(document.scrollingElement) document.scrollingElement.scrollTop = 0; document.body.scrollTop = 0; document.documentElement.scrollTop = 0; }, 450);
-}
-toTop.addEventListener('click', scrollTopAll);
-function onScrollUI(){ const y = Math.max(window.scrollY||0, document.body.scrollTop||0); toTop.classList.toggle('show', y > 500); if(DBG) dbg(); }
-window.addEventListener('scroll', onScrollUI, {passive:true});
-document.body.addEventListener('scroll', onScrollUI, {passive:true});
-// Fejlsøgning: tilføj ?debug til adressen for at se scroll-tal i hjørnet
-const DBG = /[?&]debug/.test(location.search);
-function dbg(){
-  let el = document.getElementById('dbg'); if(!el){ el = document.createElement('div'); el.id = 'dbg'; document.body.appendChild(el); }
-  const vv = window.visualViewport, tb = document.querySelector('.topbar').getBoundingClientRect();
-  el.textContent = `scrollY ${Math.round(scrollY)} · body ${document.body.scrollTop}\ninner ${innerWidth}x${innerHeight}` + (vv?`\nvv top ${Math.round(vv.offsetTop)} h ${Math.round(vv.height)} pageTop ${Math.round(vv.pageTop)}`:'') + `\ntopbar y ${Math.round(tb.top)} h ${Math.round(tb.height)}\ndoc ${document.documentElement.scrollHeight}`;
-}
-if(DBG){ dbg(); if(window.visualViewport){ visualViewport.addEventListener('resize', dbg); visualViewport.addEventListener('scroll', dbg); } setInterval(dbg, 1000); }
+/* ============================================================ topbjælke
+   Glider væk, når man scroller ned (så den ikke fylder), og kommer tilbage,
+   så snart man scroller lidt op – med personvalg og app-ikon. */
+(function(){
+  const bar = document.querySelector('.topbar');
+  let lastY = window.scrollY, ticking = false;
+  function update(){
+    const y = Math.max(0, window.scrollY), h = bar.offsetHeight, d = y - lastY;
+    if(y <= h) bar.classList.remove('hdr-hidden');                                   // helt i toppen: altid synlig
+    else if(d > 6 && !bar.contains(document.activeElement)) bar.classList.add('hdr-hidden'); // scroller ned
+    else if(d < -6) bar.classList.remove('hdr-hidden');                              // scroller op
+    if(Math.abs(d) > 6 || y <= h) lastY = y;
+    ticking = false;
+  }
+  window.addEventListener('scroll', ()=>{ if(!ticking){ ticking = true; requestAnimationFrame(update); } }, {passive:true});
+  bar.addEventListener('focusin', ()=>bar.classList.remove('hdr-hidden'));
+})();
 
 /* ============================================================ load
    Google Apps Script kan være 10-20 sekunder om at vågne, hvis det har hvilet.

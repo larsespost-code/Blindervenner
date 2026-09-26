@@ -675,6 +675,7 @@ function render(){
     return;
   }
   SECN = 0;
+  window.BAR_QUIET_UNTIL = Date.now() + 800;
   renderHeaderPlayer();
   const L = filtered(), B = baseFiltered();
   root.innerHTML = `
@@ -1199,17 +1200,29 @@ window.addEventListener('resize', ()=>{ if(narrow() !== lastNarrow){ lastNarrow 
    så snart man scroller lidt op – med personvalg og app-ikon. */
 (function(){
   const bar = document.querySelector('.topbar');
-  let lastY = window.scrollY, ticking = false;
+  const HIDE_AFTER = 160;   // så langt skal man scrolle ned (px), før den skjules
+  const SHOW_AFTER = 24;    // så lidt skal man scrolle op, før den vises
+  const HOLD_MS = 1200;     // når den er kommet frem, bliver den mindst så længe
+  let lastY = window.scrollY, down = 0, up = 0, shownAt = 0, ticking = false, touching = false;
+  window.BAR_QUIET_UNTIL = 0;  // sat af render(): indholdet skifter højde – ignorer det
+  const show = ()=>{ if(bar.classList.contains('hdr-hidden')){ bar.classList.remove('hdr-hidden'); shownAt = Date.now(); } down = 0; };
+  const hide = ()=>{ bar.classList.add('hdr-hidden'); up = 0; };
   function update(){
-    const y = Math.max(0, window.scrollY), h = bar.offsetHeight, d = y - lastY;
-    if(y <= h) bar.classList.remove('hdr-hidden');                                   // helt i toppen: altid synlig
-    else if(d > 6 && !bar.contains(document.activeElement)) bar.classList.add('hdr-hidden'); // scroller ned
-    else if(d < -6) bar.classList.remove('hdr-hidden');                              // scroller op
-    if(Math.abs(d) > 6 || y <= h) lastY = y;
     ticking = false;
+    const y = Math.max(0, window.scrollY), d = y - lastY; lastY = y;
+    if(y <= bar.offsetHeight){ show(); return; }                // øverst: altid synlig
+    if(Date.now() < window.BAR_QUIET_UNTIL) return;
+    if(d > 0){ down += d; up = 0;
+      if(!bar.classList.contains('hdr-hidden') && down > HIDE_AFTER && Date.now() - shownAt > HOLD_MS && !touching && !bar.contains(document.activeElement)) hide();
+    } else if(d < 0){ up -= d; down = 0;
+      if(up > SHOW_AFTER) show();
+    }
   }
   window.addEventListener('scroll', ()=>{ if(!ticking){ ticking = true; requestAnimationFrame(update); } }, {passive:true});
-  bar.addEventListener('focusin', ()=>bar.classList.remove('hdr-hidden'));
+  bar.addEventListener('touchstart', ()=>{ touching = true; show(); }, {passive:true});
+  bar.addEventListener('touchend', ()=>{ touching = false; shownAt = Date.now(); }, {passive:true});
+  bar.addEventListener('pointerenter', show);
+  bar.addEventListener('focusin', show);
 })();
 
 /* ============================================================ load

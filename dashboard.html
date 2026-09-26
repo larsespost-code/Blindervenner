@@ -359,7 +359,6 @@ body{background:#F1EBE4!important}
 html,body{overflow-anchor:none}
 html{overflow-x:clip}
 .app{overflow-x:visible}
-@media(max-width:760px){.topbar{position:relative!important;top:auto!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}}
 .hbar-row .tr .tick{background:#1E2D32}
 .geo-detail{border:1px solid rgba(30,45,50,.16);background:#E9E0D6}
 #sync-pill{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;pointer-events:none;z-index:120;
@@ -373,6 +372,12 @@ html{overflow-x:clip}
   display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(30,45,50,.25);opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .2s,transform .2s;cursor:pointer}
 #to-top.show{opacity:1;transform:none;pointer-events:auto}
 #dbg{position:fixed;left:8px;top:8px;z-index:300;background:rgba(30,45,50,.9);color:#fff;font:12px/1.4 monospace;padding:6px 8px;border-radius:6px;pointer-events:none;white-space:pre}
+/* Topbjælken står altid fast øverst og har personvalget (Begge/Lars/Tore) */
+.topbar{position:-webkit-sticky!important;position:sticky!important;top:0!important;z-index:40!important;background:rgba(241,235,228,.97)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;border-bottom:1px solid rgba(30,45,50,.14)!important;flex-wrap:wrap;row-gap:10px;margin:0 -16px;padding-left:16px!important;padding-right:16px!important}
+.hdr-player{display:flex;align-items:center}
+.hdr-player .seg button{padding:6px 14px}
+@media(min-width:761px){.hdr-player{margin-left:auto;margin-right:12px}}
+@media(max-width:760px){.topbar{padding-top:10px!important;padding-bottom:10px!important}.hdr-player{order:3;width:100%}.hdr-player .seg{flex:1;display:flex}.hdr-player .seg button{flex:1;padding:8px 6px}}
 </style>
 
 </head>
@@ -383,6 +388,7 @@ html{overflow-x:clip}
       <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 3h8l-.7 8.2c-.3 3-2.1 4.7-3.3 5.2v4.1h3v1.5H9v-1.5h3v-4.1c-1.2-.5-3-2.2-3.3-5.2L8 3z" stroke="#CA9954" stroke-width="1.4" stroke-linejoin="round"/></svg>
       <div class="brand-name">Blindervenner<span class="brand-sub">STATS</span></div>
     </div>
+    <div class="hdr-player" id="hdr-player"></div>
     <div class="top-actions">
       <span class="updated" id="updated"></span>
       <button class="icon-btn" id="btn-reload" title="Hent data igen" aria-label="Hent data igen">
@@ -670,6 +676,7 @@ function render(){
     return;
   }
   SECN = 0;
+  renderHeaderPlayer();
   const L = filtered(), B = baseFiltered();
   root.innerHTML = `
     ${filtersHTML()}
@@ -690,6 +697,15 @@ function render(){
 }
 
 /* ============================================================ filters UI */
+function renderHeaderPlayer(){
+  const el = document.getElementById('hdr-player'); if(!el) return;
+  if(!PLAYERS.length){ el.innerHTML = ''; return; }
+  const b = (v,l)=>`<button class="${F.player===v?'on':''}" data-f="player" data-v="${esc(v)}">${esc(l)}</button>`;
+  el.innerHTML = `<div class="seg" role="group" aria-label="Vis gætter">${b('all','Begge')}${PLAYERS.map(p=>b(p,p)).join('')}</div>`;
+}
+document.getElementById('hdr-player').addEventListener('click', e=>{
+  const fb = e.target.closest('[data-f]'); if(fb) setFilter(fb.dataset.f, fb.dataset.v);
+});
 function filtersHTML(){
   const ev = evenings(ALL);
   const years = [...new Set(ev.map(d=>d.slice(0,4)))];
@@ -697,7 +713,6 @@ function filtersHTML(){
   const druer = uniqSorted(ALL.map(w=>w.cats.drue1.t));
   const pBtn = (v,l)=>`<button class="${F.player===v?'on':''}" data-f="player" data-v="${esc(v)}">${esc(l)}</button>`;
   return `<div class="filters">
-    <div class="fgroup"><span class="flabel">Gætter</span><div class="seg">${pBtn('all','Begge')}${PLAYERS.map(p=>pBtn(p,p)).join('')}</div></div>
     <div class="fgroup"><span class="flabel">Periode</span><select class="sel" data-f="period">
       <option value="all">Alle aftener</option>
       ${ev.length>3?`<option value="last3">Seneste 3 aftener</option>`:''}

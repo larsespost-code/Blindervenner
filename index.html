@@ -854,6 +854,7 @@ function buildNestedPatch(flat){
 async function flushPendingChanges(){
   clearTimeout(saveTimer);
   if(!ACTIVE || !hasPendingChanges()) return;
+  if(ROUND_READY) return; // the wine is still being saved — this is sent right after
   const patch = buildNestedPatch(pendingPatch);
   pendingPatch = {};
   const now = Date.now();
@@ -906,6 +907,7 @@ function retrySync(){
 // overwrite, so no phone can ever push an old copy over newer data.
 async function patchRoundNow(fields){
   if(!ACTIVE) return;
+  if(ROUND_READY){ try{ await ROUND_READY; }catch(e){} if(!ACTIVE) return; } // wait until the new wine exists
   clearTimeout(saveTimer);
   const patch = Object.assign(buildNestedPatch(pendingPatch), clone(fields));
   pendingPatch = {};
@@ -993,23 +995,38 @@ function myRole(){
 // Before starting a wine, re-read the shared state: if the other phone has a
 // wine under way that this phone hasn't heard about yet, join it instead of
 // overwriting it.
-async function newRound(){
-  if(USE_DB){
-    try{
-      const p = await DB.doc('state/active').get();
-      const id = p.exists ? p.data().roundId : null;
-      if(id && !IGNORED_ROUNDS.has(id) && (!ACTIVE || ACTIVE.id !== id)){
-        const r = await DB.doc('rounds/'+id).get();
-        if(r.exists && r.data().phase !== 'result'){
-          VIEW = 'game'; applyPointer(id); applyRoundSnapshot(r.data());
-          showToast('Der er allerede en vin i gang'); return;
+// Starting a wine: the entry screen appears IMMEDIATELY. In the background
+// the app checks once whether the other phone already has a wine under way
+// (then you are moved into that one) and saves the new wine. Anything typed
+// meanwhile is kept and sent as soon as the wine is saved.
+let ROUND_READY = null; // promise while a just-started wine is being saved
+function newRound(){
+  createRoundLocal();
+  const mine = ACTIVE.id;
+  const ready = (async()=>{
+    if(USE_DB){
+      try{
+        const p = await DB.doc('state/active').get();
+        const id = p.exists ? p.data().roundId : null;
+        const knownFinished = id && (IGNORED_ROUNDS.has(id) || HISTORY.some(h=>h.id===id));
+        if(id && id !== mine && !knownFinished){
+          const r = await DB.doc('rounds/'+id).get();
+          if(r.exists && r.data().phase !== 'result' && ACTIVE && ACTIVE.id === mine){
+            PENDING_NEW_ROUND = null; pendingPatch = {}; ACTIVE = null;
+            VIEW = 'game'; applyPointer(id); applyRoundSnapshot(r.data());
+            showToast('Der er allerede en vin i gang');
+            return;
+          }
         }
-      }
-    }catch(e){ /* can't check right now — go ahead */ }
-  }
-  createRound();
+      }catch(e){ /* can't check right now — go ahead */ }
+    }
+    if(!ACTIVE || ACTIVE.id !== mine) return; // cancelled meanwhile
+    await pushActiveNow();
+  })();
+  ROUND_READY = ready;
+  ready.finally(()=>{ if(ROUND_READY === ready) ROUND_READY = null; if(hasPendingChanges()) flushPendingChanges(); });
 }
-function createRound(){
+function createRoundLocal(){
   const others = otherParticipants(MY_IDENTITY);
   ACTIVE = { id: uid(), phase:'entry', date: todayISO(), createdAt: Date.now(), ownerName: MY_IDENTITY,
     guesserName: others.length===1 ? others[0] : null, wineNote:'',
@@ -1018,7 +1035,7 @@ function createRound(){
     judged:{} };
   VIEW='game'; RULES_OPEN=false;
   PENDING_NEW_ROUND = { id: ACTIVE.id, at: Date.now() };
-  pushActiveNow(); render();
+  render();
 }
 function setGuesser(name){ ACTIVE.guesserName = name; patchRoundNow({guesserName:name}); render(); }
 function updTruth(id,val){ if(!ACTIVE) return; ACTIVE.truth[id]=val; markDirty('truth.'+id, val); queueSave(); }

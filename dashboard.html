@@ -692,7 +692,17 @@ function render(){
   document.body.classList.toggle('sheet-open', !!UI.sheet);
   bindAfterRender();
 }
-function setTab(t){ UI.tab = t; UI.geoOpen = null; render(); window.scrollTo({top:0}); }
+function toTop(){
+  const se = document.scrollingElement || document.documentElement;
+  se.style.overflow = 'hidden'; se.scrollTop = 0; window.scrollTo(0,0);
+  requestAnimationFrame(()=>{ se.style.overflow = ''; se.scrollTop = 0; window.scrollTo(0,0); });
+  setTimeout(()=>window.scrollTo(0,0), 80);
+  const bar = document.querySelector('.topbar'); if(bar) bar.classList.remove('hdr-hidden');
+}
+function setTab(t, dir){
+  UI.tab = t; UI.geoOpen = null; render(); toTop();
+  if(dir){ root.classList.remove('slide-l','slide-r'); void root.offsetWidth; root.classList.add(dir>0?'slide-l':'slide-r'); }
+}
 document.addEventListener('click', e=>{
   const t = e.target;
   const tb = t.closest('[data-tab]'); if(tb){ setTab(tb.dataset.tab); return; }
@@ -791,7 +801,6 @@ function secOverview(L, B){
       {l:'Seneste aften', n: lastEv ? fmtDate(lastEv,false) : '–', s: lastEv ? `Se ${L.filter(w=>w.date===lastEv).length} vine →` : '', ev:lastEv},
     ];
     kpiHTML = `<div class="card hero-duel"><span class="eyebrow">Gennemsnit pr. vin</span>
-        <div class="head">${head}</div>
         <div class="hp-grid" style="--np:${S.length}">${S.map(s=>`<div class="hp">${pnameHTML(s.p)}<b>${fmt1(s.a)}</b><span class="s">point pr. vin · ${s.n} vine</span></div>`).join('')}</div>
         <div class="hero-total"><span class="eyebrow">Samlet antal point</span>
           <div class="splitbar" style="margin-top:10px">${S.map(s=>`<i style="flex:${s.tot||0.001};background:${colorOf(s.p)}" data-tip="${esc(tipRow(colorOf(s.p), s.tot+' point', s.p))}"></i>`).join('')}</div>
@@ -1572,5 +1581,32 @@ addEventListener('scroll',f,{passive:true});addEventListener('resize',f);
 if(window.ResizeObserver)new ResizeObserver(f).observe(document.body);f()})();
 </script>
 <!-- /VINKORT-BAGGRUND -->
+<style id="ux-swipe">
+@keyframes slideL{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:none}}
+@keyframes slideR{from{opacity:0;transform:translateX(-28px)}to{opacity:1;transform:none}}
+#root.slide-l{animation:slideL .22s ease}
+#root.slide-r{animation:slideR .22s ease}
+@media (prefers-reduced-motion:reduce){#root.slide-l,#root.slide-r{animation:none}}
+</style>
+<script>
+/* Swipe mellem fanerne (ud over bundmenuen) */
+(function(){
+  let x0 = null, y0 = 0, t0 = 0, skip = false;
+  const NO = '.recs,.tbl-wrap,.chart-x,input,select,textarea,.mini-seg,.seg';
+  document.addEventListener('touchstart', e=>{
+    if(e.touches.length !== 1 || UI.sheet || document.getElementById('modal').classList.contains('show')){ x0 = null; return; }
+    skip = !!e.target.closest(NO);
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; t0 = Date.now();
+  }, {passive:true});
+  document.addEventListener('touchend', e=>{
+    if(x0 === null || skip || !ALL.length) return;
+    const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0; x0 = null;
+    if(Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.8 || Date.now() - t0 > 700) return;
+    const i = TABS.findIndex(x=>x.id===UI.tab), j = i + (dx < 0 ? 1 : -1);
+    if(j < 0 || j >= TABS.length) return;
+    setTab(TABS[j].id, dx < 0 ? 1 : -1);
+  }, {passive:true});
+})();
+</script>
 </body>
 </html>

@@ -663,7 +663,7 @@ function renderError(msg){
     Kunne ikke hente data.<br><span style="color:var(--text-faint);font-size:1rem">${esc(msg)}</span><br><button class="btn" onclick="load()">Prøv igen</button></div>`;
 }
 
-const APP_VERSION = '11 · 3. okt 2026';
+const APP_VERSION = '12 · 3. okt 2026';
 const TABS = [
   {id:'smagninger', l:'Smagninger', i:'<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>'},
   {id:'vine',       l:'Vinene',     i:'<path d="M8 3h8l-.7 8.2c-.3 3-2.1 4.7-3.3 5.2V21M9 21h6"/>'},
@@ -1356,36 +1356,32 @@ window.addEventListener('resize', ()=>{ if(narrow() !== lastNarrow){ lastNarrow 
    Glider væk, når man scroller ned (så den ikke fylder), og kommer tilbage,
    så snart man scroller lidt op – med personvalg og app-ikon. */
 (function(){
-  /* Topbjælken ruller væk sammen med indholdet og ligger aldrig hen over sidens top.
-     Scroller man op, glider den frem igen; øverst på siden står den på sin normale plads. */
+  /* Topbjælken
+     - Øverst på siden står den på sin normale plads og ruller væk med indholdet.
+     - Scroller man mindst 30 px op, glider den frem og bliver stående i mindst 1 sekund.
+     - Har man derefter scrollet mindst 60 px ned (målt fra det højeste punkt, mens den var fremme), gemmer den sig.
+     Tilstanden beregnes ud fra den aktuelle scroll-position, både ved scroll og ved et fast tjek 6 gange i sekundet,
+     så den ikke afhænger af, hvordan telefonen sender scroll-signaler. */
   const bar = document.querySelector('.topbar');
-  const SHOW_AFTER = 30;
-  const HIDE_AFTER = 60, HOLD_MS = 1000;   // skal scrolles så langt ned og ligge så længe, før den gemmes igen
-  let lastY = window.scrollY, up = 0, down = 0, pinnedAt = 0, touching = false, ticking = false;
+  const SHOW_UP = 30, HIDE_DOWN = 60, HOLD_MS = 1000;
+  let pinned = false, anchor = 0, pinnedAt = 0;
   window.BAR_QUIET_UNTIL = 0;
   const setH = ()=> document.documentElement.style.setProperty('--barh', bar.offsetHeight + 'px');
-  let holdTimer = null;
-  // Er der scrollet ned, mens bjælken holdt sit sekund, gemmes den, så snart sekundet er gået – også selvom scrollet er stoppet.
-  const recheck = ()=>{ holdTimer = null; if(bar.classList.contains('pinned') && down > HIDE_AFTER && !touching && window.scrollY > bar.offsetHeight) unpin(); };
-  const armHold = ()=>{ clearTimeout(holdTimer); holdTimer = setTimeout(recheck, Math.max(0, HOLD_MS - (Date.now() - pinnedAt)) + 30); };
-  const pin = ()=>{ if(!bar.classList.contains('pinned')){ bar.classList.add('pinned'); pinnedAt = Date.now(); } down = 0; };
-  const unpin = ()=>{ bar.classList.remove('pinned'); up = 0; down = 0; };
-  window.unpinBar = ()=>{ unpin(); lastY = 0; };
-  function update(){
-    ticking = false;
-    const y = Math.max(0, window.scrollY), d = y - lastY; lastY = y;
-    if(y <= 2){ unpin(); return; }
-    if(Date.now() < window.BAR_QUIET_UNTIL) return;
-    if(d > 0){ up = 0; down += d;
-      if(bar.classList.contains('pinned') && down > HIDE_AFTER){ if(Date.now() - pinnedAt > HOLD_MS && !touching) unpin(); else armHold(); } }
-    else if(d < 0){ up -= d; down = 0; if(up > SHOW_AFTER && y > bar.offsetHeight) pin(); }
+  const apply = ()=> bar.classList.toggle('pinned', pinned);
+  function tick(){
+    const y = Math.max(0, window.scrollY), H = bar.offsetHeight;
+    if(y <= 1){ if(pinned){ pinned = false; apply(); } anchor = 0; return; }
+    if(!pinned){
+      anchor = Math.max(anchor, y);                        // dybeste punkt siden den gemte sig
+      if(anchor - y >= SHOW_UP){ pinned = true; pinnedAt = Date.now(); anchor = y; apply(); }
+    } else {
+      anchor = Math.min(anchor, y);                        // højeste punkt, mens den er fremme
+      if(y - anchor >= HIDE_DOWN && y > H && Date.now() - pinnedAt >= HOLD_MS){ pinned = false; anchor = y; apply(); }
+    }
   }
-  window.addEventListener('scroll', ()=>{ if(!ticking){ ticking = true; requestAnimationFrame(update); } }, {passive:true});
-  bar.addEventListener('touchstart', ()=>{ touching = true; pinnedAt = Date.now(); }, {passive:true});
-  bar.addEventListener('touchend', ()=>{ touching = false; pinnedAt = Date.now(); }, {passive:true});
-  bar.addEventListener('touchcancel', ()=>{ touching = false; }, {passive:true});
-  window.addEventListener('touchend', ()=>{ touching = false; if(bar.classList.contains('pinned') && down > HIDE_AFTER) armHold(); }, {passive:true});
-  bar.addEventListener('pointerdown', ()=>{ pinnedAt = Date.now(); });
+  window.unpinBar = ()=>{ pinned = false; anchor = 0; apply(); };
+  window.addEventListener('scroll', tick, {passive:true});
+  setInterval(tick, 160);
   window.addEventListener('resize', setH);
   if(window.ResizeObserver) new ResizeObserver(setH).observe(bar);
   setH();

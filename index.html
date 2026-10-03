@@ -557,8 +557,9 @@ function loadBackendCfg(){
     }
   }catch(e){}
   try{ const c = JSON.parse(localStorage.getItem('vino_backend')||'null'); if(c && c.url && c.key) return c; }catch(e){}
-  return null;
+  return DEFAULT_BACKEND; // indbygget forbindelse: virker uden link, også fra hjemmeskærmen på iPhone
 }
+const DEFAULT_BACKEND = { url: 'https://script.google.com/macros/s/AKfycbyla01AQW2iYGt4-uJ7kI4QTu1mkJDnVvpElWs4Lof2MdstBK-nE4RuCeB2o00xzMPe-g/exec', key: '5144ab14747841ad8e946ae2' };
 function shareLink(){
   const c = loadBackendCfg(); if(!c) return '';
   return location.origin + location.pathname + '#s=' + encodeURIComponent(c.url) + '&k=' + encodeURIComponent(c.key);

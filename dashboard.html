@@ -663,7 +663,7 @@ function renderError(msg){
     Kunne ikke hente data.<br><span style="color:var(--text-faint);font-size:1rem">${esc(msg)}</span><br><button class="btn" onclick="load()">Prøv igen</button></div>`;
 }
 
-const APP_VERSION = '12 · 3. okt 2026';
+const APP_VERSION = '13 · 3. okt 2026';
 const TABS = [
   {id:'smagninger', l:'Smagninger', i:'<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>'},
   {id:'vine',       l:'Vinene',     i:'<path d="M8 3h8l-.7 8.2c-.3 3-2.1 4.7-3.3 5.2V21M9 21h6"/>'},
@@ -1358,30 +1358,47 @@ window.addEventListener('resize', ()=>{ if(narrow() !== lastNarrow){ lastNarrow 
 (function(){
   /* Topbjælken
      - Øverst på siden står den på sin normale plads og ruller væk med indholdet.
-     - Scroller man mindst 30 px op, glider den frem og bliver stående i mindst 1 sekund.
-     - Har man derefter scrollet mindst 60 px ned (målt fra det højeste punkt, mens den var fremme), gemmer den sig.
-     Tilstanden beregnes ud fra den aktuelle scroll-position, både ved scroll og ved et fast tjek 6 gange i sekundet,
-     så den ikke afhænger af, hvordan telefonen sender scroll-signaler. */
+     - Scroller man mindst 30 px op, glider den frem.
+     - Den gemmer sig igen 1 sekund efter, at man er holdt op med at scrolle – eller straks, hvis man scroller ned.
+     - Rører man ved bjælken (fx for at trykke på Lars/Tore/Filtrér), bliver den stående, til 1 sekund efter man slipper.
+     Tilstanden beregnes ud fra den aktuelle scroll-position, både ved scroll og ved et fast tjek, så den ikke
+     afhænger af, hvordan telefonen sender scroll-signaler. */
   const bar = document.querySelector('.topbar');
-  const SHOW_UP = 30, HIDE_DOWN = 60, HOLD_MS = 1000;
-  let pinned = false, anchor = 0, pinnedAt = 0;
+  const SHOW_UP = 30, HIDE_DOWN = 40, IDLE_MS = 1000;
+  let pinned = false, anchor = 0, lastY = 0, lastActive = 0, touchingBar = false, hideTimer = null;
   window.BAR_QUIET_UNTIL = 0;
   const setH = ()=> document.documentElement.style.setProperty('--barh', bar.offsetHeight + 'px');
-  const apply = ()=> bar.classList.toggle('pinned', pinned);
+  function setPinned(v){
+    if(v === pinned) return;
+    pinned = v; clearTimeout(hideTimer);
+    if(v){ bar.classList.remove('unpinning'); bar.classList.add('pinned'); }
+    else if(bar.classList.contains('pinned') && window.scrollY > bar.offsetHeight){
+      bar.classList.add('unpinning');                               // glid op og ud
+      hideTimer = setTimeout(()=>{ bar.classList.remove('pinned','unpinning'); }, 200);
+    } else bar.classList.remove('pinned','unpinning');
+  }
   function tick(){
-    const y = Math.max(0, window.scrollY), H = bar.offsetHeight;
-    if(y <= 1){ if(pinned){ pinned = false; apply(); } anchor = 0; return; }
+    const y = Math.max(0, window.scrollY), H = bar.offsetHeight, now = Date.now();
+    if(y !== lastY){ lastY = y; lastActive = now; }
+    if(y <= 1){ setPinned(false); anchor = 0; return; }
     if(!pinned){
-      anchor = Math.max(anchor, y);                        // dybeste punkt siden den gemte sig
-      if(anchor - y >= SHOW_UP){ pinned = true; pinnedAt = Date.now(); anchor = y; apply(); }
+      anchor = Math.max(anchor, y);                                  // dybeste punkt siden den gemte sig
+      if(anchor - y >= SHOW_UP){ setPinned(true); anchor = y; lastActive = now; }
     } else {
-      anchor = Math.min(anchor, y);                        // højeste punkt, mens den er fremme
-      if(y - anchor >= HIDE_DOWN && y > H && Date.now() - pinnedAt >= HOLD_MS){ pinned = false; anchor = y; apply(); }
+      anchor = Math.min(anchor, y);                                  // højeste punkt, mens den er fremme
+      const idle = !touchingBar && now - lastActive >= IDLE_MS;
+      if(y > H && (idle || (y - anchor >= HIDE_DOWN && !touchingBar))){ setPinned(false); anchor = y; }
     }
   }
-  window.unpinBar = ()=>{ pinned = false; anchor = 0; apply(); };
+  bar.addEventListener('touchstart', ()=>{ touchingBar = true; lastActive = Date.now(); }, {passive:true});
+  const release = ()=>{ if(touchingBar){ touchingBar = false; lastActive = Date.now(); } };
+  window.addEventListener('touchend', release, {passive:true});
+  window.addEventListener('touchcancel', release, {passive:true});
+  bar.addEventListener('mousemove', ()=>{ lastActive = Date.now(); });
+  bar.addEventListener('click', ()=>{ lastActive = Date.now(); });
+  window.unpinBar = ()=>{ pinned = true; setPinned(false); bar.classList.remove('pinned','unpinning'); anchor = 0; lastY = 0; };
   window.addEventListener('scroll', tick, {passive:true});
-  setInterval(tick, 160);
+  setInterval(tick, 150);
   window.addEventListener('resize', setH);
   if(window.ResizeObserver) new ResizeObserver(setH).observe(bar);
   setH();
@@ -1593,6 +1610,7 @@ if(window.ResizeObserver)new ResizeObserver(f).observe(document.body);f()})();
 .topbar{padding-top:calc(10px + env(safe-area-inset-top,0px))!important;padding-left:calc(16px + env(safe-area-inset-left,0px))!important;padding-right:calc(16px + env(safe-area-inset-right,0px))!important}
 .topbar{top:calc(-1 * var(--barh, 140px) - 2px)!important}
 .topbar.pinned{top:0!important;animation:barIn .22s ease}
+.topbar.pinned.unpinning{transform:translateY(-100%);transition:transform .2s ease;animation:none}
 @keyframes barIn{from{transform:translateY(-100%)}to{transform:none}}
 @media (prefers-reduced-motion:reduce){.topbar.pinned{animation:none}}
 </style>

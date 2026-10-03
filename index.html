@@ -812,6 +812,12 @@ async function initBackend(){
     }catch(e){ /* fall through to local fallback below */ }
   }
   if(!MY_IDENTITY) MY_IDENTITY = loadLocalIdentity(); // only reached with no account id, or db unavailable
+  // Personligt link (?navn=Pelle): appen ved selv, hvem du er — intet navnevalg.
+  try{
+    const linkName = new URLSearchParams(location.search).get('navn');
+    const hit = linkName && CONFIG.participants.find(p=>p.toLowerCase()===linkName.trim().toLowerCase());
+    if(hit){ MY_IDENTITY = hit; saveLocalIdentity(hit); }
+  }catch(e){}
 
   if(USE_DB){
     subscribeConfig();

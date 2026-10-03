@@ -663,7 +663,7 @@ function renderError(msg){
     Kunne ikke hente data.<br><span style="color:var(--text-faint);font-size:1rem">${esc(msg)}</span><br><button class="btn" onclick="load()">Prøv igen</button></div>`;
 }
 
-const APP_VERSION = '7 · 3. okt 2026';
+const APP_VERSION = '8 · 3. okt 2026';
 const TABS = [
   {id:'smagninger', l:'Smagninger', i:'<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>'},
   {id:'vine',       l:'Vinene',     i:'<path d="M8 3h8l-.7 8.2c-.3 3-2.1 4.7-3.3 5.2V21M9 21h6"/>'},
@@ -698,7 +698,7 @@ function toTop(){
   se.style.overflow = 'hidden'; se.scrollTop = 0; window.scrollTo(0,0);
   requestAnimationFrame(()=>{ se.style.overflow = ''; se.scrollTop = 0; window.scrollTo(0,0); });
   setTimeout(()=>window.scrollTo(0,0), 80);
-  const bar = document.querySelector('.topbar'); if(bar) bar.classList.remove('hdr-hidden');
+  const bar = document.querySelector('.topbar'); if(bar) bar.classList.remove('hdr-hidden'); if(window.unpinBar) window.unpinBar();
 }
 function setTab(t, dir){
   UI.tab = t; UI.geoOpen = null; render(); toTop();
@@ -1356,30 +1356,28 @@ window.addEventListener('resize', ()=>{ if(narrow() !== lastNarrow){ lastNarrow 
    Glider væk, når man scroller ned (så den ikke fylder), og kommer tilbage,
    så snart man scroller lidt op – med personvalg og app-ikon. */
 (function(){
+  /* Topbjælken ruller væk sammen med indholdet og ligger aldrig hen over sidens top.
+     Scroller man op, glider den frem igen; øverst på siden står den på sin normale plads. */
   const bar = document.querySelector('.topbar');
-  const HIDE_AFTER = 160;   // så langt skal man scrolle ned (px), før den skjules
-  const SHOW_AFTER = 24;    // så lidt skal man scrolle op, før den vises
-  const HOLD_MS = 1200;     // når den er kommet frem, bliver den mindst så længe
-  let lastY = window.scrollY, down = 0, up = 0, shownAt = 0, ticking = false, touching = false;
-  window.BAR_QUIET_UNTIL = 0;  // sat af render(): indholdet skifter højde – ignorer det
-  const show = ()=>{ if(bar.classList.contains('hdr-hidden')){ bar.classList.remove('hdr-hidden'); shownAt = Date.now(); } down = 0; };
-  const hide = ()=>{ bar.classList.add('hdr-hidden'); up = 0; };
+  const SHOW_AFTER = 30;
+  let lastY = window.scrollY, up = 0, ticking = false;
+  window.BAR_QUIET_UNTIL = 0;
+  const setH = ()=> document.documentElement.style.setProperty('--barh', bar.offsetHeight + 'px');
+  const pin = ()=>{ if(!bar.classList.contains('pinned')) bar.classList.add('pinned'); };
+  const unpin = ()=>{ bar.classList.remove('pinned'); up = 0; };
+  window.unpinBar = ()=>{ unpin(); lastY = 0; };
   function update(){
     ticking = false;
     const y = Math.max(0, window.scrollY), d = y - lastY; lastY = y;
-    if(y <= bar.offsetHeight){ show(); return; }                // øverst: altid synlig
+    if(y <= 2){ unpin(); return; }
     if(Date.now() < window.BAR_QUIET_UNTIL) return;
-    if(d > 0){ down += d; up = 0;
-      if(!bar.classList.contains('hdr-hidden') && down > HIDE_AFTER && Date.now() - shownAt > HOLD_MS && !touching && !bar.contains(document.activeElement)) hide();
-    } else if(d < 0){ up -= d; down = 0;
-      if(up > SHOW_AFTER) show();
-    }
+    if(d > 0){ up = 0; if(bar.classList.contains('pinned')) unpin(); }
+    else if(d < 0){ up -= d; if(up > SHOW_AFTER && y > bar.offsetHeight) pin(); }
   }
   window.addEventListener('scroll', ()=>{ if(!ticking){ ticking = true; requestAnimationFrame(update); } }, {passive:true});
-  bar.addEventListener('touchstart', ()=>{ touching = true; show(); }, {passive:true});
-  bar.addEventListener('touchend', ()=>{ touching = false; shownAt = Date.now(); }, {passive:true});
-  bar.addEventListener('pointerenter', show);
-  bar.addEventListener('focusin', show);
+  window.addEventListener('resize', setH);
+  if(window.ResizeObserver) new ResizeObserver(setH).observe(bar);
+  setH();
 })();
 
 /* ============================================================ load
@@ -1586,7 +1584,10 @@ if(window.ResizeObserver)new ResizeObserver(f).observe(document.body);f()})();
 /* Topbjælken må ikke havne bag telefonens statuslinje/browserbjælke, når browseren folder sin bjælke sammen */
 .app{padding-top:0!important}
 .topbar{padding-top:calc(10px + env(safe-area-inset-top,0px))!important;padding-left:calc(16px + env(safe-area-inset-left,0px))!important;padding-right:calc(16px + env(safe-area-inset-right,0px))!important}
-.topbar.hdr-hidden{transform:translateY(calc(-100% - 2px))}
+.topbar{top:calc(-1 * var(--barh, 140px) - 2px)!important}
+.topbar.pinned{top:0!important;animation:barIn .22s ease}
+@keyframes barIn{from{transform:translateY(-100%)}to{transform:none}}
+@media (prefers-reduced-motion:reduce){.topbar.pinned{animation:none}}
 </style>
 <style id="ux-ver">
 .ver{text-align:center;margin:34px 0 0;font-family:var(--fb);font-size:12px;color:var(--text-faint);letter-spacing:.04em}
@@ -1598,7 +1599,7 @@ if(window.ResizeObserver)new ResizeObserver(f).observe(document.body);f()})();
   if(!/[?&]debug/.test(location.search)) return;
   const d = document.createElement('div'); d.id = 'dbg'; document.body.appendChild(d);
   const upd = ()=>{ const bar = document.querySelector('.topbar'), vv = window.visualViewport, r = bar.getBoundingClientRect();
-    d.textContent = `v${APP_VERSION} · scrollY ${Math.round(scrollY)} · innerH ${innerHeight}\nvv top ${vv?Math.round(vv.offsetTop):'-'} · vv h ${vv?Math.round(vv.height):'-'} · bar top ${Math.round(r.top)} · skjult ${bar.classList.contains('hdr-hidden')?'ja':'nej'}\nsafe-top ${getComputedStyle(bar).paddingTop}`; };
+    d.textContent = `v${APP_VERSION} · scrollY ${Math.round(scrollY)} · innerH ${innerHeight}\nvv top ${vv?Math.round(vv.offsetTop):'-'} · vv h ${vv?Math.round(vv.height):'-'} · bar top ${Math.round(r.top)} · fastgjort ${bar.classList.contains('pinned')?'ja':'nej'}\nsafe-top ${getComputedStyle(bar).paddingTop}`; };
   addEventListener('scroll', upd, {passive:true}); addEventListener('resize', upd); if(window.visualViewport) visualViewport.addEventListener('resize', upd);
   setInterval(upd, 500); upd();
 })();

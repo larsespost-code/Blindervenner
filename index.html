@@ -410,6 +410,14 @@ select.year-select,select.sel{border:1.5px solid #1E2D32;border-radius:8px;paddi
 .wtype-tag{display:inline-block;margin:2px auto 10px;padding:4px 12px;border-radius:999px;border:1px solid currentColor;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim)}
 .center-text .wtype-tag{display:inline-block}
 .rate-card{text-align:center}
+.reveal{margin:0 0 20px;text-align:center}
+.reveal-kicker{font-family:var(--fm);font-size:12px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+.reveal-label{position:relative;background:#F8F4EE;border:1.5px solid #1E2D32;border-radius:14px;padding:26px 20px 22px;box-shadow:0 0 0 5px #F8F4EE,0 0 0 6.5px #CA9954,0 14px 30px rgba(30,45,50,.12)}
+.reveal-type{display:inline-block;font-family:var(--fm);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-dim);border-bottom:1px solid #CA9954;padding-bottom:4px;margin-bottom:12px}
+.reveal-name{font-family:var(--fd);font-weight:800;font-stretch:112%;font-size:clamp(28px,8vw,40px);line-height:1.02;letter-spacing:-.03em;color:var(--text);text-wrap:balance;word-break:break-word}
+.reveal-year{font-family:var(--fnum);font-weight:900;font-stretch:112%;font-size:clamp(40px,13vw,60px);line-height:1;letter-spacing:-.04em;color:var(--accent);margin-top:10px;font-variant-numeric:tabular-nums}
+.reveal-facts{margin-top:12px;font-size:15px;color:var(--text-dim);line-height:1.45}
+.reveal-facts span{margin:0 7px;color:#CA9954}
 .rate-val{font-family:var(--fnum),var(--fd),sans-serif;font-size:3rem;line-height:1;margin:6px 0 2px;color:var(--text);font-variant-numeric:tabular-nums}
 .rate-hint{font-size:.85rem;color:var(--text-faint);min-height:1.2em}
 .rate-wrap{position:relative;margin:18px 4px 4px}
@@ -876,6 +884,8 @@ function applyRoundSnapshot(rdata){
   if(!sameRound && VIEW==='day' && incoming.phase!=='result') VIEW = 'game'; // a new wine started — follow it
   const visibleChanged = phaseChanged || visibleContent(incoming) !== visibleContent(ACTIVE);
   ACTIVE = incoming;
+  WAITING_TO_GUESS = false;
+  if(ACTIVE.phase==='result') LOCAL_DONE.set(ACTIVE.id, clone(ACTIVE));
   if(phaseChanged) CONFIRM = null;
   // Someone started a wine while this person was choosing "servér/blindes": just take them in.
   if(!MY_IDENTITY && PENDING_GATE_NAME && ACTIVE.phase !== 'result'){
@@ -899,11 +909,16 @@ function visibleContent(r){
 
 function applyPointer(roundId, pdata){
   // "Det var dagens sidste flaske" pressed on either phone → both show the day summary.
+  const stillRating = ()=> ACTIVE && ACTIVE.phase==='result' && canRate(ACTIVE) && !RATED_DONE.has(ACTIVE.id);
   if(pdata && pdata.dayEndAt && pdata.dayEndAt !== DAY_END_SEEN && Date.now() - pdata.dayEndAt < 3*3600*1000){
     DAY_END_SEEN = pdata.dayEndAt;
-    if(ACTIVE && ACTIVE.phase==='result') IGNORED_ROUNDS.add(ACTIVE.id);
-    VIEW = 'day'; ACTIVE = null; render();
+    if(stillRating()) PENDING_DAY = true; // shown as soon as this phone has sent its score
+    else {
+      if(ACTIVE && ACTIVE.phase==='result') IGNORED_ROUNDS.add(ACTIVE.id);
+      VIEW = 'day'; ACTIVE = null; render();
+    }
   }
+  if(PENDING_DAY && !roundId && stillRating()) return;
   // A round was just created on this phone: until the shared pointer shows
   // it, ignore older pointer values (a read that was already under way).
   if(PENDING_NEW_ROUND){
@@ -1181,6 +1196,7 @@ function newRound(){
   ready.finally(()=>{ if(ROUND_READY === ready) ROUND_READY = null; if(hasPendingChanges()) flushPendingChanges(); });
 }
 function createRoundLocal(){
+  WAITING_TO_GUESS = false;
   const others = otherParticipants(MY_IDENTITY);
   ACTIVE = { id: uid(), phase:'entry', date: todayISO(), createdAt: Date.now(), ownerName: MY_IDENTITY,
     guesserName: others.length===1 ? others[0] : null, wineNote:'', wineType:'',
@@ -1240,6 +1256,7 @@ function finishRound(){
   ACTIVE.score = computeScore(ACTIVE);
   ACTIVE.finishedAt = Date.now();
   ACTIVE.phase = 'result';
+  LOCAL_DONE.set(ACTIVE.id, clone(ACTIVE));
   if(!USE_DB){ HISTORY.unshift(clone(ACTIVE)); pushActiveNow(); }
   else patchRoundNow({phase:'result', score:ACTIVE.score, ownerIndex:ACTIVE.ownerIndex, judged:ACTIVE.judged, finishedAt:ACTIVE.finishedAt});
   render();
@@ -1325,13 +1342,26 @@ function posToRate(p){ return Math.max(0, Math.min(RATE_MAX, Math.round(+p)))/10
 function fmtRate(v){ return (v==null || v==='') ? '–' : Number(v).toFixed(1).replace('.', ','); }
 function myRating(){ return ACTIVE && ACTIVE.ratings && ACTIVE.ratings[MY_IDENTITY] != null ? ACTIVE.ratings[MY_IDENTITY] : null; }
 function canRate(r){ return !!r && !!MY_IDENTITY && (r.ownerName===MY_IDENTITY || r.guesserName===MY_IDENTITY); }
+const RATED_DONE = new Set(); // rounds this phone has sent its score for (→ the "what now?" screen)
+let PENDING_DAY = false;      // the evening was ended on the other phone while this one was still scoring
 function setMyRating(v){
   if(!ACTIVE || !canRate(ACTIVE)) return;
   ACTIVE.ratings = ACTIVE.ratings || {};
   ACTIVE.ratings[MY_IDENTITY] = v;
-  markDirty('ratings.'+MY_IDENTITY, v); queueSave();
   const el = document.getElementById('rate-val'); if(el) el.textContent = fmtRate(v);
-  const h = document.getElementById('rate-hint'); if(h) h.textContent = 'Gemt';
+  const h = document.getElementById('rate-hint'); if(h) h.textContent = 'Tryk “Send din bedømmelse”, når du er klar';
+}
+function sendRating(){
+  if(!ACTIVE) return;
+  if(canRate(ACTIVE)){
+    const s = document.getElementById('rate-slider');
+    const v = myRating() ?? (s ? posToRate(s.value) : 4);
+    ACTIVE.ratings = ACTIVE.ratings || {}; ACTIVE.ratings[MY_IDENTITY] = v;
+    markDirty('ratings.'+MY_IDENTITY, v); flushPendingChanges();
+  }
+  RATED_DONE.add(ACTIVE.id);
+  if(PENDING_DAY){ PENDING_DAY = false; IGNORED_ROUNDS.add(ACTIVE.id); ACTIVE = null; VIEW = 'day'; }
+  render(); window.scrollTo(0,0);
 }
 function onRateInput(pos){ setMyRating(posToRate(pos)); }
 function nudgeRate(d){
@@ -1346,20 +1376,22 @@ function ratingsOthersHtml(r){
 function updateRatingsUI(){ const el = document.getElementById('rate-others'); if(el && ACTIVE) el.innerHTML = ratingsOthersHtml(ACTIVE); }
 function ratingCardHtml(r){
   const others = ratingsOthersHtml(r);
-  if(!canRate(r)) return others ? `<div class="card rate-card"><div class="eyebrow">Score for vinen</div><div class="rate-others">${others}</div></div>` : '';
+  if(!canRate(r)) return (others ? `<div class="card rate-card"><div class="eyebrow">Score for vinen</div><div class="rate-others">${others}</div></div>` : '')
+    + `<button class="btn btn-primary btn-block" onclick="sendRating()">Videre →</button>`;
   const mine = myRating();
   const ticks = [0,1,2,3,4,5].map(v=>`<span style="left:${(rateToPos(v)/RATE_MAX*100).toFixed(2)}%">${v}</span>`).join('');
   return `<div class="card rate-card">
     <div class="eyebrow">Din score for vinen</div>
     <div class="rate-val" id="rate-val">${fmtRate(mine)}</div>
-    <div class="rate-hint" id="rate-hint">${mine!=null ? 'Gemt' : 'Træk for at give en score (0,0–5,0)'}</div>
+    <div class="rate-hint" id="rate-hint">Træk for at give en score (0,0–5,0)</div>
     <div class="rate-wrap">
       <input type="range" class="rate-slider" id="rate-slider" min="0" max="${RATE_MAX}" step="1" value="${rateToPos(mine ?? 4)}" oninput="onRateInput(this.value)" aria-label="Score 0 til 5">
     </div>
     <div class="rate-ticks">${ticks}</div>
     <div class="rate-fine"><button class="btn btn-secondary btn-sm" onclick="nudgeRate(-0.1)">−0,1</button><button class="btn btn-secondary btn-sm" onclick="nudgeRate(0.1)">+0,1</button></div>
     ${others ? `<div class="rate-others" id="rate-others">${others}</div>` : `<div class="rate-others" id="rate-others"></div>`}
-  </div>`;
+  </div>
+  <button class="btn btn-primary btn-block" onclick="sendRating()">Send din bedømmelse →</button>`;
 }
 
 /* ================= RENDER: GAME ================= */
@@ -1369,7 +1401,7 @@ function renderGame(){
   if(ACTIVE.phase==='entry') return role==='owner' ? renderEntry() : renderWaiting('entry');
   if(ACTIVE.phase==='guessing') return role==='guesser' ? renderGuessing() : renderWaiting('guessing');
   if(ACTIVE.phase==='review') return renderReview(role==='owner');
-  if(ACTIVE.phase==='result') return renderResult();
+  if(ACTIVE.phase==='result') return RATED_DONE.has(ACTIVE.id) ? renderNextStep(ACTIVE) : renderResult();
   return renderIdle();
 }
 
@@ -1395,7 +1427,19 @@ function last24hRows(){
     </div>`).join('');
 }
 
+let WAITING_TO_GUESS = false; // chose "Jeg skal gætte den næste vin" and no wine is under way yet
+function renderWaitingToGuess(){
+  return `
+  <div class="fade-in center-text">
+    ${identityPillHtml()}
+    <h2>Klar til at blive blindet</h2>
+    <p class="sub">Venter på, at den anden serverer en vin. Skærmen skifter af sig selv, når det er din tur til at gætte.</p>
+    <button class="btn btn-secondary btn-block" onclick="WAITING_TO_GUESS=false; newRound();">🍷 Jeg vil hellere servere en vin</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:6px;" onclick="WAITING_TO_GUESS=false; render();">Til forsiden</button>
+  </div>`;
+}
 function renderIdle(){
+  if(WAITING_TO_GUESS) return renderWaitingToGuess();
   const rounds = HISTORY.length;
   const today = HISTORY.filter(r=>r.date===todayISO()).length;
   const avg = rounds ? (HISTORY.reduce((a,r)=>a+(Number(r.score)||0),0)/rounds).toFixed(1).replace('.',',') : '0';
@@ -1683,7 +1727,7 @@ function renderReviewWaiting(){
 const BOTTLE = { bottom: 292, neckBase: 104 };
 function bottleLevelY(score){ return BOTTLE.bottom - (BOTTLE.bottom - BOTTLE.neckBase) * Math.max(0, Math.min(1, score/MAX_SCORE)); }
 
-function bottleSvg(){
+function bottleSvg(name){
   const body = 'M50 12 H78 V92 C78 108 108 118 108 150 V282 Q108 296 94 296 H34 Q20 296 20 282 V150 C20 118 50 108 50 92 Z';
   const ticks = [6,12,18,24].map(p=>{ const y=bottleLevelY(p).toFixed(1);
     return `<line x1="112" y1="${y}" x2="120" y2="${y}" stroke="rgba(30,45,50,0.35)" stroke-width="1"/><text x="124" y="${(+y+4).toFixed(1)}" fill="#6E5E9C" font-family="VT323" font-size="13">${p}</text>`; }).join('');
@@ -1703,6 +1747,10 @@ function bottleSvg(){
     <rect x="47" y="6" width="34" height="10" rx="2" fill="#CA9954" opacity="0.85"/>
     <line x1="30" y1="160" x2="30" y2="270" stroke="rgba(255,255,255,0.12)" stroke-width="4" stroke-linecap="round"/>
     ${ticks}
+    ${(()=>{ // the guesser's name on a see-through label — the fill stays visible behind it
+      const nm = String(name||''), fs = Math.min(17, 128/Math.max(4, nm.length));
+      return nm ? `<rect x="25" y="190" width="78" height="38" rx="5" fill="#F8F4EE" fill-opacity="0.62" stroke="#1E2D32" stroke-opacity="0.35" stroke-width="1"/>
+        <text x="64" y="${(209 + fs*0.36).toFixed(1)}" text-anchor="middle" font-family="Figtree,sans-serif" font-weight="800" font-size="${fs.toFixed(1)}" fill="#1E2D32">${esc(nm)}</text>` : ''; })()}
   </svg>`;
 }
 
@@ -1715,13 +1763,13 @@ function animateBottle(round){
   const target = round.score||0, endY = bottleLevelY(target);
   const set = (y, n)=>{ fill.setAttribute('y', y.toFixed(1)); fill.setAttribute('height', (BOTTLE.bottom - y + 10).toFixed(1));
     surf.setAttribute('y', (y-1).toFixed(1)); surf.style.opacity = (y < BOTTLE.bottom-1 ? 0.7 : 0); num.textContent = n; };
+  // A rising fill level is not the kind of motion "reduce motion" guards against — keep it, just shorter.
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if(reduce){ set(endY, target); return; }
-  if(!BOTTLE_ANIM || BOTTLE_ANIM.id !== round.id) BOTTLE_ANIM = { id: round.id, t0: performance.now(), dur: 900 + 1500*(target/MAX_SCORE) };
+  if(!BOTTLE_ANIM || BOTTLE_ANIM.id !== round.id) BOTTLE_ANIM = { id: round.id, t0: performance.now() + 250, dur: (900 + 1500*(target/MAX_SCORE)) * (reduce ? 0.45 : 1) };
   const a = BOTTLE_ANIM;
   (function step(now){
     if(!fill.isConnected) return; // this copy of the screen was replaced; the new one animates itself
-    const t = Math.min(1, (now-a.t0)/a.dur), e = 1-Math.pow(1-t,3);
+    const t = Math.max(0, Math.min(1, (now-a.t0)/a.dur)), e = 1-Math.pow(1-t,3);
     set(BOTTLE.bottom - (BOTTLE.bottom-endY)*e, Math.round(target*e));
     if(t<1) requestAnimationFrame(step);
   })(performance.now());
@@ -1746,29 +1794,55 @@ function resultRowsHtml(r){
   return rows + (skipped.length ? `<div class="hint" style="padding:10px 14px;">Ikke besvaret: ${skipped.map(c=>c.label).join(', ')}</div>` : '');
 }
 
+// "Lars' 1. vin var …" — the answer presented as a wine label.
+function revealBoxHtml(r){
+  const t = r.truth || {};
+  const name = (r.wineNote||'').trim() || [t.drue1, t.appellation || t.region].filter(x=>String(x||'').trim()).join(' · ') || 'Ukendt vin';
+  const year = String(t.aargang||'').trim();
+  const place = [t.appellation, t.region, t.land].map(x=>String(x||'').trim()).filter((x,i,a)=>x && a.findIndex(y=>y.toLowerCase()===x.toLowerCase())===i).join(', ');
+  const grapes = [t.drue1, t.drue2].map(x=>String(x||'').trim()).filter(Boolean).join(' & ');
+  const facts = [grapes, place, String(t.type||'').trim()].filter(Boolean);
+  return `<div class="reveal">
+    <div class="reveal-kicker">${wineTag()} var …</div>
+    <div class="reveal-label">
+      ${r.wineType ? `<div class="reveal-type">${esc(r.wineType)}</div>` : ''}
+      <div class="reveal-name">${esc(name)}</div>
+      ${year ? `<div class="reveal-year">${esc(year)}</div>` : ''}
+      ${facts.length ? `<div class="reveal-facts">${facts.map(esc).join('<span>·</span>')}</div>` : ''}
+    </div>
+  </div>`;
+}
+// After the score: what happens next. Each phone chooses for itself.
+function renderNextStep(r){
+  const others = ratingsOthersHtml(r);
+  return `
+  <div class="fade-in center-text">
+    <div class="eyebrow" style="display:block;margin-top:10px;">${canRate(r) ? 'Tak for din bedømmelse' : wineTag()}</div>
+    <h2>Hvad nu?</h2>
+    ${others ? `<p class="sub" id="rate-others">${others}</p>` : ''}
+    <button class="btn btn-primary btn-block" onclick="nextServe()">🍷 Jeg serverer den næste vin</button>
+    <button class="btn btn-secondary btn-block" style="margin-top:10px;" onclick="nextGuess()">🕶️ Jeg skal gætte den næste vin</button>
+    <button class="btn btn-secondary btn-block" style="margin-top:10px;" onclick="endDay()">🍾 Det var aftenens sidste vin</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:14px;" onclick="RATED_DONE.delete(ACTIVE.id); render();">← Se resultatet igen</button>
+  </div>`;
+}
+function nextServe(){ dismissResult(); newRound(); }
+function nextGuess(){ dismissResult(); WAITING_TO_GUESS = true; render(); window.scrollTo(0,0); }
 function renderResult(){
   const r = ACTIVE;
   return `
   <div class="fade-in">
-    ${renderPhaseTrack('result')}
-    <div class="eyebrow center-text" style="display:block;">Resultat</div>
-    <h2 class="center-text">${wineTag()}${r.wineNote?` — ${esc(r.wineNote)}`:''}</h2>
-    <div class="center-text">${wineTypeTag(r)}</div>
-    <p class="sub center-text">${esc(r.guesserName)} gættede blindt.</p>
-    <div style="display:flex;align-items:center;justify-content:center;gap:18px;margin:6px 0 18px;">
-      ${bottleSvg()}
+    <div class="eyebrow center-text" style="display:block;margin:4px 0 6px;">Resultat · ${wineTag()}</div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:18px;margin:4px 0 22px;">
+      ${bottleSvg(r.guesserName)}
       <div style="text-align:left;min-width:92px;">
         <div id="score-count" style="font-family:var(--fnum),monospace;font-size:2rem;color:var(--text);text-shadow:0 0 12px rgba(202,153,84,.55);">0</div>
         <div style="color:var(--text-faint);font-size:1.05rem;margin-top:6px;">af ${MAX_SCORE} point</div>
       </div>
     </div>
+    ${revealBoxHtml(r)}
     <div class="card" style="padding:6px;">${resultRowsHtml(r)}</div>
     ${ratingCardHtml(r)}
-    <div class="toolbar">
-      <button class="btn btn-primary btn-block" onclick="dismissResult(); newRound();">Servér næste vin →</button>
-      <button class="btn btn-secondary btn-block" onclick="endDay()">🍾 Det var dagens sidste flaske</button>
-    </div>
-    <button class="btn btn-ghost btn-block" onclick="dismissResult(); switchView('history');" style="margin-top:6px;">Se historik</button>
   </div>`;
 }
 
@@ -1776,8 +1850,19 @@ function renderResult(){
 // "The day" = the latest tasting session: the most recent finished wines
 // with no gap longer than 6 hours between them (an evening that runs past
 // midnight still counts as one day).
+// Wines this phone saw finish tonight — the sheet's history can lag a little behind.
+const LOCAL_DONE = new Map(); // round id → round
+function continueEveningHtml(){
+  return `<div class="card card-flat" style="text-align:center;">
+      <div class="eyebrow">Kom I til at afslutte for tidligt?</div>
+      <p class="hint" style="margin:0 0 12px;">Start bare en ny vin — den tæller med i samme aften.</p>
+      <button class="btn btn-secondary btn-block" onclick="newRound()">🍷 Jeg serverer den næste vin</button>
+      <button class="btn btn-secondary btn-block" style="margin-top:8px;" onclick="WAITING_TO_GUESS=true; switchView('game')">🕶️ Jeg skal gætte den næste vin</button>
+    </div>`;
+}
 function sessionRounds(){
-  const list = HISTORY.slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  const known = new Set(HISTORY.map(h=>h.id));
+  const list = HISTORY.concat([...LOCAL_DONE.values()].filter(r=>!known.has(r.id))).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
   if(!list.length || Date.now() - (list[0].createdAt||0) > 24*3600*1000) return [];
   const out = [list[0]];
   for(let i=1;i<list.length;i++){
@@ -1798,7 +1883,7 @@ function endDay(){
 function renderDay(){
   const rounds = sessionRounds();
   if(!rounds.length) return `<div class="fade-in"><h2>Dagens resultat</h2><div class="empty">Ingen færdige vine i dag endnu.</div>
-    <button class="btn btn-primary btn-block" onclick="switchView('game')">Tilbage</button></div>`;
+    ${continueEveningHtml()}<button class="btn btn-ghost btn-block" onclick="switchView('game')">Tilbage</button></div>`;
   const people = {};
   CONFIG.participants.forEach(p=>people[p]={points:0, bottles:0});
   rounds.forEach(r=>{ const g=r.guesserName; if(!g) return; people[g]=people[g]||{points:0,bottles:0}; people[g].points+=r.score||0; people[g].bottles++; });
@@ -1820,7 +1905,8 @@ function renderDay(){
     <div class="card"><div class="eyebrow">Pointgennemsnit pr. flaske</div>${avgRows}
       <div class="hint">Til sammenligning, når I ikke har gættet lige mange flasker — tæller ikke med i dagens vinder.</div></div>
     <div class="card"><div class="eyebrow">Dagens flasker</div>${wines}</div>
-    <button class="btn btn-primary btn-block" onclick="switchView('game')">Tilbage til start</button>
+    ${continueEveningHtml()}
+    <button class="btn btn-ghost btn-block" onclick="switchView('game')">Tilbage til start</button>
   </div>`;
 }
 
@@ -2139,6 +2225,7 @@ function pickGateName(name){
   PENDING_GATE_NAME = name; render();
 }
 function chooseGateRole(role){
+  if(role==='guess' && !ACTIVE) WAITING_TO_GUESS = true;
   const name = PENDING_GATE_NAME; PENDING_GATE_NAME = null;
   setIdentity(name);
   if(role==='serve' && (!ACTIVE || ACTIVE.phase==='result')) newRound(); // never take over a wine that is under way
@@ -2159,7 +2246,7 @@ function renderIdentityGate(){
     ${heroIcon}
     <h2>Hej ${esc(PENDING_GATE_NAME)}!</h2>
     <p class="sub">Vil du servere en vin nu, eller blindes i en?</p>
-    <button class="btn btn-primary btn-block" onclick="chooseGateRole('serve')">🍷 Jeg servérer en vin</button>
+    <button class="btn btn-primary btn-block" onclick="chooseGateRole('serve')">🍷 Jeg serverer en vin</button>
     <button class="btn btn-secondary btn-block" style="margin-top:10px;" onclick="chooseGateRole('guess')">🕶️ Jeg skal blindes</button>
     <button class="btn btn-ghost btn-block" style="margin-top:10px;" onclick="PENDING_GATE_NAME=null; render();">← Skift navn</button>
   </div>`;
@@ -2209,6 +2296,7 @@ document.addEventListener('visibilitychange', ()=>{
 window.addEventListener('pagehide', ()=>{ if(hasPendingChanges()) flushPendingChanges(); });
 
 let LAST_SCREEN_KEY = null;
+let RESULT_SCROLLED = null; // round whose result screen has been scrolled to the top on this phone
 function render(){
   document.getElementById('btn-settings').classList.toggle('active', VIEW==='settings');
   const c = document.getElementById('content');
@@ -2233,7 +2321,11 @@ function render(){
   if(screenKey === LAST_SCREEN_KEY) html = html.replace(/\bfade-in\b/g, '');
   LAST_SCREEN_KEY = screenKey;
   c.innerHTML = html;
-  if(!needsIdentity && VIEW==='game' && ACTIVE && ACTIVE.phase==='result') animateBottle(ACTIVE);
+  if(!needsIdentity && VIEW==='game' && ACTIVE && ACTIVE.phase==='result'){
+    // the bottle must be in view when the result appears — wherever this phone was scrolled to
+    if(RESULT_SCROLLED !== ACTIVE.id){ RESULT_SCROLLED = ACTIVE.id; window.scrollTo(0,0); }
+    animateBottle(ACTIVE);
+  }
   syncWakeLock();
 }
 

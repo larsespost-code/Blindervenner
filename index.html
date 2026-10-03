@@ -1807,8 +1807,9 @@ async function deleteHist(id){
 
 /* ================= EXPORT ================= */
 function buildRows(list){
+  const RATE_NAMES = [...new Set([...(CONFIG.participants||[]), ...list.flatMap(r=>Object.keys(r.ratings||{}))])];
   const allCats = [...CATEGORIES, {id:'aargang', label:'Årgang', points:2}];
-  const header = ['Dato','Vinholder','Vin nr.','Vinnavn','Blindsmager', ...allCats.flatMap(c=>[c.label+' facit', c.label+' gæt', c.label+' point']), 'Total','Maks','Vintype','Vurdering medbringer','Vurdering gætter'];
+  const header = ['Dato','Vinholder','Vin nr.','Vinnavn','Blindsmager', ...allCats.flatMap(c=>[c.label+' facit', c.label+' gæt', c.label+' point']), 'Total','Maks','Vintype',...RATE_NAMES.map(n=>'Vurdering – '+n)];
   const rows=[header];
   list.forEach(r=>{
     const cells = allCats.flatMap(c=>{
@@ -1817,7 +1818,7 @@ function buildRows(list){
       return [r.truth[c.id]||'', r.guess[c.id]||'', pts];
     });
     const rt = r.ratings||{};
-    rows.push([r.date||'', r.ownerName||'', r.ownerIndex||'', r.wineNote||'', r.guesserName||'', ...cells, r.score, MAX_SCORE, r.wineType||'', rt[r.ownerName]!=null ? fmtRate(rt[r.ownerName]) : '', rt[r.guesserName]!=null ? fmtRate(rt[r.guesserName]) : '']);
+    rows.push([r.date||'', r.ownerName||'', r.ownerIndex||'', r.wineNote||'', r.guesserName||'', ...cells, r.score, MAX_SCORE, r.wineType||'', ...RATE_NAMES.map(n=>rt[n]!=null&&rt[n]!=='' ? fmtRate(rt[n]) : '')]);
   });
   return rows;
 }

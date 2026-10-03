@@ -404,6 +404,27 @@ select.year-select,select.sel{border:1.5px solid #1E2D32;border-radius:8px;paddi
 </style>
 
 
+
+<style>
+/* --- Vintype + vurdering (tilføjet funktion) --- */
+.wtype-tag{display:inline-block;margin:2px auto 10px;padding:4px 12px;border-radius:999px;border:1px solid currentColor;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim)}
+.center-text .wtype-tag{display:inline-block}
+.rate-card{text-align:center}
+.rate-val{font-family:var(--fnum),var(--fd),sans-serif;font-size:3rem;line-height:1;margin:6px 0 2px;color:var(--text);font-variant-numeric:tabular-nums}
+.rate-hint{font-size:.85rem;color:var(--text-faint);min-height:1.2em}
+.rate-wrap{position:relative;margin:18px 4px 4px}
+.rate-zone{position:absolute;top:50%;height:10px;transform:translateY(-50%);border-radius:6px;pointer-events:none;background:var(--accent);opacity:.18}
+.rate-slider{-webkit-appearance:none;appearance:none;width:100%;height:44px;background:transparent;margin:0;position:relative;touch-action:pan-y}
+.rate-slider::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:var(--border-strong,rgba(0,0,0,.25))}
+.rate-slider::-moz-range-track{height:6px;border-radius:3px;background:var(--border-strong,rgba(0,0,0,.25))}
+.rate-slider::-webkit-slider-thumb{-webkit-appearance:none;width:30px;height:30px;border-radius:50%;margin-top:-12px;background:var(--accent);border:3px solid var(--surface,#fff);box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.rate-slider::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:var(--accent);border:3px solid var(--surface,#fff);box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.rate-ticks{position:relative;height:18px;margin:0 4px;font-size:.72rem;color:var(--text-faint);font-variant-numeric:tabular-nums}
+.rate-ticks span{position:absolute;transform:translateX(-50%)}
+.rate-fine{display:flex;gap:10px;justify-content:center;margin-top:10px}
+.rate-fine .btn{min-width:64px}
+.rate-others{margin-top:12px;font-size:.95rem;color:var(--text-dim)}
+</style>
 <div class="app">
   <div class="topbar">
     <div class="brand" onclick="goHome()" role="button" title="Til forsiden" style="cursor:pointer;">
@@ -712,14 +733,14 @@ function canonical(o){
   if(o && typeof o==='object') return '{'+Object.keys(o).sort().map(k=>JSON.stringify(k)+':'+canonical(o[k])).join(',')+'}';
   return JSON.stringify(o===undefined?null:o);
 }
-function roundContent(r){ const c = Object.assign({}, r); delete c._writer; delete c.updatedAt; return canonical(c); }
+function roundContent(r){ const c = Object.assign({}, r); delete c._writer; delete c.updatedAt; delete c.exported; return canonical(c); }
 
 // The fields THIS phone is the author of right now. Only this phone edits
 // them in this phase, so an incoming copy can never overwrite them — the
 // local version is always the newest (it may just not have arrived yet).
 function ownedFields(r){
   if(!r || !MY_IDENTITY) return [];
-  if(r.phase==='entry'    && r.ownerName===MY_IDENTITY)   return ['truth','wineNote','guesserName'];
+  if(r.phase==='entry'    && r.ownerName===MY_IDENTITY)   return ['truth','wineNote','guesserName','wineType'];
   if(r.phase==='guessing' && r.guesserName===MY_IDENTITY) return ['guess'];
   if(r.phase==='review'   && r.ownerName===MY_IDENTITY)   return ['judged'];
   return [];
@@ -734,6 +755,8 @@ function applyRoundSnapshot(rdata){
     // Never move a round's phase backwards (a late/out-of-order copy).
     if((PHASE_ORDER[incoming.phase]||0) < (PHASE_ORDER[ACTIVE.phase]||0)) return;
     if(incoming.phase === ACTIVE.phase) ownedFields(ACTIVE).forEach(f=>{ incoming[f] = clone(ACTIVE[f]); });
+    const mineR = ACTIVE.ratings && ACTIVE.ratings[MY_IDENTITY];
+    if(mineR != null){ incoming.ratings = incoming.ratings || {}; incoming.ratings[MY_IDENTITY] = mineR; } // my own rating is always newest here
     if(roundContent(incoming) === roundContent(ACTIVE)) return; // nothing new → no redraw at all
   }
   const phaseChanged = !sameRound || ACTIVE.phase !== incoming.phase;
@@ -748,14 +771,16 @@ function applyRoundSnapshot(rdata){
   // Redraw only when something on THIS person's screen actually changes —
   // e.g. Lars typing the answer changes nothing on Tore's waiting screen.
   if(visibleChanged && (phaseChanged || ownedFields(ACTIVE).length === 0)) render();
+  else updateRatingsUI();
 }
 // What this phone actually shows of a round (hidden answers/guesses excluded).
 function visibleContent(r){
   const c = JSON.parse(roundContent(r));
   const iAmOwner = r.ownerName === MY_IDENTITY;
-  if(!iAmOwner && (r.phase==='entry' || r.phase==='guessing')){ delete c.truth; delete c.wineNote; }
+  if(!iAmOwner && (r.phase==='entry' || r.phase==='guessing')){ delete c.truth; delete c.wineNote; delete c.wineType; }
   if(r.phase==='entry' || (iAmOwner && r.phase==='guessing')) delete c.guess;
-  if(!iAmOwner && r.phase==='review'){ delete c.truth; delete c.wineNote; delete c.judged; } // the guesser only sees "being reviewed"
+  if(!iAmOwner && r.phase==='review'){ delete c.truth; delete c.wineNote; delete c.judged; delete c.wineType; }
+  delete c.ratings; // ratings update their own little line, never the whole screen // the guesser only sees "being reviewed"
   return canonical(c);
 }
 
@@ -816,7 +841,7 @@ function subscribeRounds(){
     const next = snap.docs.map(d=>clone(d.data()));
     if(canonical(next.map(r=>roundContent(r))) === canonical(HISTORY.map(r=>roundContent(r)))) return;
     HISTORY = next;
-    if(ownedFields(ACTIVE).length === 0) render();
+    if(VIEW !== 'game' || !ACTIVE) render(); // history isn't shown on a wine's own screens
   }, ()=>{});
 }
 
@@ -1044,7 +1069,7 @@ function newRound(){
 function createRoundLocal(){
   const others = otherParticipants(MY_IDENTITY);
   ACTIVE = { id: uid(), phase:'entry', date: todayISO(), createdAt: Date.now(), ownerName: MY_IDENTITY,
-    guesserName: others.length===1 ? others[0] : null, wineNote:'',
+    guesserName: others.length===1 ? others[0] : null, wineNote:'', wineType:'',
     truth:{land:'',region:'',appellation:'',drue1:'',drue2:'',aargang:'',type:''},
     guess:{land:'',region:'',appellation:'',drue1:'',drue2:'',aargang:'',type:''},
     judged:{} };
@@ -1080,7 +1105,7 @@ function goToGuessing(){
     return;
   }
   ACTIVE.phase='guessing'; RULES_OPEN=false;
-  patchRoundNow({phase:'guessing', truth:ACTIVE.truth, wineNote:ACTIVE.wineNote, guesserName:ACTIVE.guesserName});
+  patchRoundNow({phase:'guessing', truth:ACTIVE.truth, wineNote:ACTIVE.wineNote, guesserName:ACTIVE.guesserName, wineType:ACTIVE.wineType||''});
   render();
 }
 function sendGuess(){
@@ -1166,6 +1191,61 @@ function setAargangGuess(val){
   markDirty('guess.aargang', val);
   flushPendingChanges();
   if(wasCustom) render();
+}
+
+
+/* ================= VINTYPE + VURDERING ================= */
+const WINE_TYPES = ['Bobler','Hvid','Orange','Rosé','Rød','Restsød/Sød'];
+function setWineType(t){
+  if(!ACTIVE) return;
+  ACTIVE.wineType = ACTIVE.wineType===t ? '' : t;
+  markDirty('wineType', ACTIVE.wineType); queueSave();
+  document.querySelectorAll('#wtype-chips .chip-pick').forEach(el=>el.classList.toggle('selected', el.dataset.t===ACTIVE.wineType));
+}
+function wineTypeTag(r){ return r && r.wineType ? `<div class="wtype-tag">${esc(r.wineType)}</div>` : ''; }
+
+// Score 0,0-5,0 in steps of 0,1 (51 positions across the full slider width).
+const RATE_MAX = 50; // slider units = tenths
+function rateToPos(v){ return Math.round(Math.max(0, Math.min(5, v))*10); }
+function posToRate(p){ return Math.max(0, Math.min(RATE_MAX, Math.round(+p)))/10; }
+function fmtRate(v){ return (v==null || v==='') ? '–' : Number(v).toFixed(1).replace('.', ','); }
+function myRating(){ return ACTIVE && ACTIVE.ratings && ACTIVE.ratings[MY_IDENTITY] != null ? ACTIVE.ratings[MY_IDENTITY] : null; }
+function canRate(r){ return !!r && !!MY_IDENTITY && (r.ownerName===MY_IDENTITY || r.guesserName===MY_IDENTITY); }
+function setMyRating(v){
+  if(!ACTIVE || !canRate(ACTIVE)) return;
+  ACTIVE.ratings = ACTIVE.ratings || {};
+  ACTIVE.ratings[MY_IDENTITY] = v;
+  markDirty('ratings.'+MY_IDENTITY, v); queueSave();
+  const el = document.getElementById('rate-val'); if(el) el.textContent = fmtRate(v);
+  const h = document.getElementById('rate-hint'); if(h) h.textContent = 'Gemt';
+}
+function onRateInput(pos){ setMyRating(posToRate(pos)); }
+function nudgeRate(d){
+  const cur = myRating() ?? 4, v = Math.round(Math.max(0, Math.min(5, cur + d))*10)/10;
+  const s = document.getElementById('rate-slider'); if(s) s.value = rateToPos(v);
+  setMyRating(v);
+}
+function ratingsOthersHtml(r){
+  const names = [r.ownerName, r.guesserName].filter((n,i,a)=>n && a.indexOf(n)===i && n!==MY_IDENTITY);
+  return names.map(n=>{ const v = r.ratings && r.ratings[n]; return `${esc(n)}: <b>${v!=null ? fmtRate(v) : '…'}</b>`; }).join(' · ');
+}
+function updateRatingsUI(){ const el = document.getElementById('rate-others'); if(el && ACTIVE) el.innerHTML = ratingsOthersHtml(ACTIVE); }
+function ratingCardHtml(r){
+  const others = ratingsOthersHtml(r);
+  if(!canRate(r)) return others ? `<div class="card rate-card"><div class="eyebrow">Score for vinen</div><div class="rate-others">${others}</div></div>` : '';
+  const mine = myRating();
+  const ticks = [0,1,2,3,4,5].map(v=>`<span style="left:${(rateToPos(v)/RATE_MAX*100).toFixed(2)}%">${v}</span>`).join('');
+  return `<div class="card rate-card">
+    <div class="eyebrow">Din score for vinen</div>
+    <div class="rate-val" id="rate-val">${fmtRate(mine)}</div>
+    <div class="rate-hint" id="rate-hint">${mine!=null ? 'Gemt' : 'Træk for at give en score (0,0–5,0)'}</div>
+    <div class="rate-wrap">
+      <input type="range" class="rate-slider" id="rate-slider" min="0" max="${RATE_MAX}" step="1" value="${rateToPos(mine ?? 4)}" oninput="onRateInput(this.value)" aria-label="Score 0 til 5">
+    </div>
+    <div class="rate-ticks">${ticks}</div>
+    <div class="rate-fine"><button class="btn btn-secondary btn-sm" onclick="nudgeRate(-0.1)">−0,1</button><button class="btn btn-secondary btn-sm" onclick="nudgeRate(0.1)">+0,1</button></div>
+    ${others ? `<div class="rate-others" id="rate-others">${others}</div>` : `<div class="rate-others" id="rate-others"></div>`}
+  </div>`;
 }
 
 /* ================= RENDER: GAME ================= */
@@ -1278,6 +1358,10 @@ function renderEntry(){
       <div class="field">
         <div class="field-label"><span class="txt">Vinens navn <span style="color:var(--text-faint);font-weight:400;text-transform:none;">(egne noter, tæller ikke)</span></span></div>
         <input type="text" placeholder="fx Domaine X, Cuvée Y" value="${esc(ACTIVE.wineNote)}" oninput="updNote(this.value)">
+      </div>
+      <div class="field">
+        <div class="field-label"><span class="txt">Vintype <span style="color:var(--text-faint);font-weight:400;text-transform:none;">(ses ikke af gætteren)</span></span></div>
+        <div class="chips" id="wtype-chips">${WINE_TYPES.map(t=>`<div class="chip-pick ${ACTIVE.wineType===t?'selected':''}" data-t="${t}" onclick="setWineType('${t}')">${t}</div>`).join('')}</div>
       </div>
       ${truthFields}
       <div class="field">
@@ -1455,6 +1539,7 @@ function renderReview(isOwner){
     ${renderPhaseTrack('review')}
     <div class="eyebrow">Trin 3 · Din gennemgang</div>
     <h2>${wineTag()}</h2>
+    ${wineTypeTag(ACTIVE)}
     <p class="sub">Bedømmelsen er foreslået ud fra ${esc(gen(ACTIVE.guesserName))} bud — tjek den igennem, og ret hvis noget er forkert.</p>
     <div class="live-score"><span>Score</span><span class="n" id="live-score-n">${effectiveScore(ACTIVE)} / ${MAX_SCORE}</span></div>
     ${rows || '<div class="empty">Ingen kategorier besvaret.</div>'}
@@ -1554,6 +1639,7 @@ function renderResult(){
     ${renderPhaseTrack('result')}
     <div class="eyebrow center-text" style="display:block;">Resultat</div>
     <h2 class="center-text">${wineTag()}${r.wineNote?` — ${esc(r.wineNote)}`:''}</h2>
+    <div class="center-text">${wineTypeTag(r)}</div>
     <p class="sub center-text">${esc(r.guesserName)} gættede blindt.</p>
     <div style="display:flex;align-items:center;justify-content:center;gap:18px;margin:6px 0 18px;">
       ${bottleSvg()}
@@ -1563,6 +1649,7 @@ function renderResult(){
       </div>
     </div>
     <div class="card" style="padding:6px;">${resultRowsHtml(r)}</div>
+    ${ratingCardHtml(r)}
     <div class="toolbar">
       <button class="btn btn-primary btn-block" onclick="dismissResult(); newRound();">Servér næste vin →</button>
       <button class="btn btn-secondary btn-block" onclick="endDay()">🍾 Det var dagens sidste flaske</button>
@@ -1691,8 +1778,11 @@ function renderHistDetail(r){
       <div style="font-family:var(--fnum),sans-serif;font-size:0.62rem;color:var(--text-dim);">${pts}p</div>
     </div>`;
   }).join('');
+  const extra = [r.wineType ? 'Vintype: '+esc(r.wineType) : '',
+    r.ratings && Object.keys(r.ratings).length ? 'Score: '+Object.entries(r.ratings).filter(([,v])=>v!=null&&v!=='').map(([n,v])=>esc(n)+' '+fmtRate(v)).join(' · ') : ''].filter(Boolean).join(' &nbsp;|&nbsp; ');
   return `
   <div class="hist-detail">
+    ${extra ? `<div class="hint" style="padding-top:10px;">${extra}</div>` : ''}
     <div style="padding-top:10px;">${rows}</div>
     <div class="toolbar">
       <button class="btn btn-secondary btn-sm" onclick="exportCSV([findHist('${r.id}')])">↓ CSV</button>
@@ -1718,7 +1808,7 @@ async function deleteHist(id){
 /* ================= EXPORT ================= */
 function buildRows(list){
   const allCats = [...CATEGORIES, {id:'aargang', label:'Årgang', points:2}];
-  const header = ['Dato','Vinholder','Vin nr.','Vinnavn','Blindsmager', ...allCats.flatMap(c=>[c.label+' facit', c.label+' gæt', c.label+' point']), 'Total','Maks'];
+  const header = ['Dato','Vinholder','Vin nr.','Vinnavn','Blindsmager', ...allCats.flatMap(c=>[c.label+' facit', c.label+' gæt', c.label+' point']), 'Total','Maks','Vintype','Vurdering medbringer','Vurdering gætter'];
   const rows=[header];
   list.forEach(r=>{
     const cells = allCats.flatMap(c=>{
@@ -1726,7 +1816,8 @@ function buildRows(list){
       const pts = j==='good'?(c.id==='aargang'?AARGANG_POINTS_FULL:c.points):(j==='mid'?AARGANG_POINTS_NEAR:0);
       return [r.truth[c.id]||'', r.guess[c.id]||'', pts];
     });
-    rows.push([r.date||'', r.ownerName||'', r.ownerIndex||'', r.wineNote||'', r.guesserName||'', ...cells, r.score, MAX_SCORE]);
+    const rt = r.ratings||{};
+    rows.push([r.date||'', r.ownerName||'', r.ownerIndex||'', r.wineNote||'', r.guesserName||'', ...cells, r.score, MAX_SCORE, r.wineType||'', rt[r.ownerName]!=null ? fmtRate(rt[r.ownerName]) : '', rt[r.guesserName]!=null ? fmtRate(rt[r.guesserName]) : '']);
   });
   return rows;
 }

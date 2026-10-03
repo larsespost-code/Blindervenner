@@ -663,7 +663,7 @@ function renderError(msg){
     Kunne ikke hente data.<br><span style="color:var(--text-faint);font-size:1rem">${esc(msg)}</span><br><button class="btn" onclick="load()">Prøv igen</button></div>`;
 }
 
-const APP_VERSION = '9 · 3. okt 2026';
+const APP_VERSION = '10 · 3. okt 2026';
 const TABS = [
   {id:'smagninger', l:'Smagninger', i:'<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>'},
   {id:'vine',       l:'Vinene',     i:'<path d="M8 3h8l-.7 8.2c-.3 3-2.1 4.7-3.3 5.2V21M9 21h6"/>'},
@@ -1360,7 +1360,7 @@ window.addEventListener('resize', ()=>{ if(narrow() !== lastNarrow){ lastNarrow 
      Scroller man op, glider den frem igen; øverst på siden står den på sin normale plads. */
   const bar = document.querySelector('.topbar');
   const SHOW_AFTER = 30;
-  const HIDE_AFTER = 140, HOLD_MS = 2500;   // skal scrolles så langt ned og ligge så længe, før den gemmes igen
+  const HIDE_AFTER = 60, HOLD_MS = 1000;   // skal scrolles så langt ned og ligge så længe, før den gemmes igen
   let lastY = window.scrollY, up = 0, down = 0, pinnedAt = 0, touching = false, ticking = false;
   window.BAR_QUIET_UNTIL = 0;
   const setH = ()=> document.documentElement.style.setProperty('--barh', bar.offsetHeight + 'px');
@@ -1373,12 +1373,14 @@ window.addEventListener('resize', ()=>{ if(narrow() !== lastNarrow){ lastNarrow 
     if(y <= 2){ unpin(); return; }
     if(Date.now() < window.BAR_QUIET_UNTIL) return;
     if(d > 0){ up = 0; down += d;
-      if(bar.classList.contains('pinned') && down > HIDE_AFTER && Date.now() - pinnedAt > HOLD_MS && !touching && !bar.contains(document.activeElement)) unpin(); }
+      if(bar.classList.contains('pinned') && down > HIDE_AFTER && Date.now() - pinnedAt > HOLD_MS && !touching) unpin(); }
     else if(d < 0){ up -= d; down = 0; if(up > SHOW_AFTER && y > bar.offsetHeight) pin(); }
   }
   window.addEventListener('scroll', ()=>{ if(!ticking){ ticking = true; requestAnimationFrame(update); } }, {passive:true});
   bar.addEventListener('touchstart', ()=>{ touching = true; pinnedAt = Date.now(); }, {passive:true});
   bar.addEventListener('touchend', ()=>{ touching = false; pinnedAt = Date.now(); }, {passive:true});
+  bar.addEventListener('touchcancel', ()=>{ touching = false; }, {passive:true});
+  window.addEventListener('touchend', ()=>{ touching = false; }, {passive:true});
   bar.addEventListener('pointerdown', ()=>{ pinnedAt = Date.now(); });
   window.addEventListener('resize', setH);
   if(window.ResizeObserver) new ResizeObserver(setH).observe(bar);

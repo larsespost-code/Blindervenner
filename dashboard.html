@@ -489,7 +489,7 @@ function normalize(list){
     });
     const date = parseDate(r.date) || (r.createdAt ? new Date(r.createdAt).toISOString().slice(0,10) : '');
     return {
-      id: r.id || ('w'+i), date,
+      id: r.id || ('w'+i), wid: r.wineId || r.id || ('w'+i), date,
       owner: String(r.ownerName||'').trim(), guesser: String(r.guesserName||'').trim(),
       nr: r.ownerIndex || '', name: String(r.wineNote||'').trim() || 'Unavngiven vin',
       cats, score: (typeof r.score === 'number' && !isNaN(r.score)) ? r.score : score, possible,
@@ -558,6 +558,24 @@ function canonicalize(list){
   });
   return list;
 }
+
+/* ============================================================ vine vs. gæt
+   Hver række er ét gæt. En vin med tre gættere er tre rækker med samme wid —
+   tæller man vine, vintyper eller vurderinger, tælles hver vin kun én gang. */
+// One object per wine: the sheet has a row per guess, so a wine blinded by three is three rows.
+function wineGroups(L){
+  const m = new Map();
+  L.forEach(w=>{ if(!m.has(w.wid)) m.set(w.wid, []); m.get(w.wid).push(w); });
+  return [...m.values()].map(rows=>{
+    rows = rows.slice().sort((a,b)=>a.guesser.localeCompare(b.guesser,'da'));
+    const f = rows[0];
+    return { ...f, rows, total: rows.reduce((a,w)=>a+w.score,0), seq: Math.max(...rows.map(w=>w.seq)),
+      guessers: rows.map(w=>w.guesser) };
+  });
+}
+function guessersLine(g){ return g.rows.map(w=>`${pnameHTML(w.guesser)} <b>${w.score}</b>`).join('<span class="gsep">·</span>'); }
+function uniqWines(L){ const seen = new Set(); return L.filter(w=>{ if(seen.has(w.wid)) return false; seen.add(w.wid); return true; }); }
+function nWines(L){ return new Set(L.map(w=>w.wid)).size; }
 
 /* ============================================================ filters */
 function evenings(list){ return [...new Set(list.map(w=>w.date))].sort(); }
@@ -663,12 +681,11 @@ function renderError(msg){
     Kunne ikke hente data.<br><span style="color:var(--text-faint);font-size:1rem">${esc(msg)}</span><br><button class="btn" onclick="load()">Prøv igen</button></div>`;
 }
 
-const APP_VERSION = '13 · 3. okt 2026';
+const APP_VERSION = '14 · 3. okt 2026';
 const TABS = [
   {id:'smagninger', l:'Smagninger', i:'<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>'},
   {id:'vine',       l:'Vinene',     i:'<path d="M8 3h8l-.7 8.2c-.3 3-2.1 4.7-3.3 5.2V21M9 21h6"/>'},
-  {id:'en',         l:'1:1',        i:'<circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M3 20c0-3 2.2-5 5-5s5 2 5 5M11 20c0-3 2.2-5 5-5s5 2 5 5"/>'},
-  {id:'overblik',   l:'Overblik',   i:'<path d="M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-4H4zM14 7h6V4h-6z"/>'},
+  {id:'en',         l:'Overblik',        i:'<circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M3 20c0-3 2.2-5 5-5s5 2 5 5M11 20c0-3 2.2-5 5-5s5 2 5 5"/>'},
 ];
 function renderNav(){
   document.getElementById('bnav').innerHTML = ALL.length ? TABS.map(t=>`<button data-tab="${t.id}" class="${UI.tab===t.id?'on':''}" ${UI.tab===t.id?'aria-current="page"':''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${t.i}</svg>${t.l}</button>`).join('') : '';
@@ -686,9 +703,8 @@ function render(){
   let body;
   if(!L.length) body = `<div class="state">Ingen vine matcher filtrene. <br><button class="btn" onclick="resetFilters()">Nulstil filtre</button></div>${T==='vine'?secTop10():''}`;
   else if(T==='smagninger') body = secTypes(B) + secLastEvening() + secEvenings(B) + secArchive(L);
-  else if(T==='vine')       body = secTop10() + secHardest(L) + secGeo(L);
-  else if(T==='en')         body = secStanding(L, B) + secCategories(L) + secKings(L);
-  else                      body = secOverview(L, B) + secTrend(L);
+  else if(T==='vine')       body = secTypeSplit(B) + secTop10() + secHardest(L) + secGeo(L);
+  else                      body = secOverview(L, B) + secStanding(L, B) + secTrend(L) + secCategories(L) + secKings(L);
   root.innerHTML = scopeNoteHTML() + body + `<div class="ver">Version ${APP_VERSION}</div>` + (UI.sheet ? sheetHTML() : '');
   document.body.classList.toggle('sheet-open', !!UI.sheet);
   bindAfterRender();
@@ -801,14 +817,24 @@ function secOverview(L, B){
       {l:'Højeste score', n: best ? `${best.score}<span style="font-size:0.45em;color:var(--text-faint)"> p</span>` : '–', s: best ? `<span class="linkish" data-wine="${esc(best.id)}" title="${esc(best.name)}">${esc(best.name)}</span>` : ''},
       {l:'Seneste aften', n: lastEv ? fmtDate(lastEv,false) : '–', s: lastEv ? `Se ${L.filter(w=>w.date===lastEv).length} vine →` : '', ev:lastEv},
     ];
-    kpiHTML = `<div class="card hero-duel"><span class="eyebrow">Gennemsnit pr. vin</span>
+    // Three or more players: a ranked list (the side-by-side duel layout only works for two).
+    const rankHTML = ()=>{ const R = S.slice().sort((a,b)=>b.a-a.a || b.tot-a.tot); const solo = R.length>1 && fmt1(R[0].a)!==fmt1(R[1].a);
+      return `<div class="card hero-duel"><span class="eyebrow">Gennemsnit pr. vin</span>
+        <div class="rk-list">${R.map((x,i)=>`<div class="rk-row ${i===0&&solo?'lead':''}">
+          <span class="rk-n">${i+1}</span>
+          <div class="rk-who">${pnameHTML(x.p)}<span class="s">${x.n} vine · ${x.tot} point i alt</span></div>
+          <b class="rk-avg">${fmt1(x.a)}</b>
+          <span class="rk-bar"><i style="width:${x.a/MAX*100}%;background:${colorOf(x.p)}"></i></span></div>`).join('')}</div>
+        <div class="card-note">Point pr. vin i snit som gætter, ud af ${MAX} mulige.</div>
+      </div>`; };
+    kpiHTML = (S.length > 2 ? rankHTML() : `<div class="card hero-duel"><span class="eyebrow">Gennemsnit pr. vin</span>
         <div class="hp-grid" style="--np:${S.length}">${S.map(s=>`<div class="hp">${pnameHTML(s.p)}<b>${fmt1(s.a)}</b><span class="s">point pr. vin · ${s.n} vine</span></div>`).join('')}</div>
         <div class="hero-total"><span class="eyebrow">Samlet antal point</span>
           <div class="splitbar" style="margin-top:10px">${S.map(s=>`<i style="flex:${s.tot||0.001};background:${colorOf(s.p)}" data-tip="${esc(tipRow(colorOf(s.p), s.tot+' point', s.p))}"></i>`).join('')}</div>
           <div class="row2">${S.map(s=>`<span>${esc(s.p)} <b>${s.tot}</b></span>`).join('')}</div>
         </div>
-      </div>
-      <div class="grid g-kpi4" style="margin-top:14px">${k.map(x=>`<div class="card kpi ${x.ev?'clickable':''}" ${x.ev?`tabindex="0" data-evening="${x.ev}"`:''}><div class="l">${x.l}</div><div class="n">${x.n}</div><div class="s">${x.s}</div></div>`).join('')}</div>`;
+      </div>`) + `
+      `;
   }
   return `<section class="section fade-in"><div class="sec-head"><span class="sec-num">${num()}</span><h2>Overblik</h2>${single?`<span class="sec-sub">${pnameHTML(sp[0])} som gætter</span>`:''}</div>
     ${kpiHTML}
@@ -851,14 +877,10 @@ function secStanding(L, B){
   if(W.ties) notes.push(`${W.ties} ${W.ties===1?'aften':'aftener'} endte uafgjort`);
   if(W.solo) notes.push(`${W.solo} ${W.solo===1?'aften':'aftener'} gættede kun den ene af jer`);
   const rule = esc(`<div class='tt'>Vundne aftener</div>Aftenens vinder er den, der fik flest point pr. vin i snit som gætter.`);
-  return `<section class="section"><div class="sec-head"><span class="sec-num">${num()}</span><h2>Stillingen i detaljer</h2><span class="sec-sub">Den, der har klaret sig bedst, står med grønt</span></div>
-    <div class="card"><div class="stand" style="--np:${S.length}">
-      <div class="h"></div>${S.map(s=>`<div class="h" style="color:${colorOf(s.p)}">${esc(s.p)}</div>`).join('')}
-      <div class="c lbl">Gns. pr. vin</div>${S.map(s=>col(s,L2,fmt1(s.a),'')).join('')}
-      <div class="c lbl" data-tip="${rule}" tabindex="0">Vundne aftener <span style="color:var(--text-faint);font-weight:400">ⓘ</span></div>${S.map(s=>col(s,L4,s.wins,`af ${W.total} aftener`)).join('')}
-      <div class="c lbl">Bedste vin</div>${S.map(s=>s.best?`<div class="c"><span class="big">${s.best.score}<span style="font-size:0.55em;color:var(--text-faint)"> p</span></span><span class="small linkish" data-wine="${esc(s.best.id)}" title="${esc(s.best.name)}">${esc(s.best.name)}</span></div>`:`<div class="c">–</div>`).join('')}
+  return `<section class="section" style="margin-top:0">
+    <div class="card">
+    <div class="best-list" style="margin-top:0"><div class="best-h">Bedste vin</div>${S.map(s=>`<div class="best-row" ${s.best?`tabindex="0" data-wine="${esc(s.best.id)}"`:''}>${pnameHTML(s.p)}<span class="best-nm">${s.best?esc(s.best.name):'–'}</span><span class="best-sc">${s.best?s.best.score+'<small> p</small>':''}</span></div>`).join('')}</div>
     </div>
-    ${notes.length?`<div class="stand-note">${notes.join(' · ')}</div>`:''}</div>
   </section>`;
 }
 
@@ -962,17 +984,16 @@ function secCategories(L){
         <span class="tr"><i style="width:${r.v*100}%;background:${colorOf(p)}"></i>${r.o.map(x=>`<b class="tick" style="left:calc(${x.v*100}% - 1px)"></b>`).join('')}</span>
 </div>`).join('')}
       <div class="legend" style="margin-top:10px"><span><span class="kb" style="background:${colorOf(p)}"></span>${esc(p)}</span>${others.length?`<span><span class="kb" style="background:#1E2D32;width:3px"></span>${others.map(esc).join(', ')} til sammenligning</span>`:''}</div>
-      <div class="card-note">${note}</div></div>
-      <div class="card" style="margin-top:14px"><div class="card-title">Point pr. vin</div>${pointsChart(L, sp)}</div></section>`;
+      <div class="card-note">${note}</div></div></section>`;
   }
   const top = CATS.map(c=>({c, v:hitRate(L,c.id), n:L.filter(w=>w.cats[c.id].applicable).length})).filter(x=>x.v!=null).sort((a,b)=>b.v-a.v).slice(0,5);
-  return head + `<div class="grid g2">
+  return head + `<div>
       <div class="card"><div class="card-title"><span>Pointfrekvens pr. kategori</span><span class="sec-sub" style="font-family:var(--fb);text-transform:none;letter-spacing:0;color:var(--text-faint)">bedst øverst</span></div>
         <div class="legend legend-top">${sp.map(p=>`<span><span class="kb" style="background:${colorOf(p)}"></span>${esc(p)}</span>`).join('')}</div>
-        ${catsSorted(bp, sp).map(c=>`<div class="hbar-row nov"><span class="nm">${c.label} <span style="color:var(--text-faint)">${c.max}p</span></span><span class="tr pairbars">${sp.map(p=>{ const v = hitRate(bp[p], c.id); return `<i class="hit" style="width:${(v||0)*100}%;background:${colorOf(p)};border-radius:0 3px 3px 0" data-tip="${esc(`<div class='tt'>${c.label}</div>`+tipRow(colorOf(p), v==null?'–':pct(v), p))}"></i>`; }).join('')}</span></div>`).join('')}
+        ${catsSorted(bp, sp).map(c=>`<div class="freq-row"><div class="freq-nm">${c.label} <span>${c.max}p</span></div>${sp.map(p=>{ const v = hitRate(bp[p], c.id);
+          return `<div class="pbl" data-tip="${esc(`<div class='tt'>${c.label}</div>`+tipRow(colorOf(p), v==null?'–':pct(v), p))}"><span class="pbl-n">${esc(p)}</span><span class="pbl-t"><i style="width:${(v||0)*100}%;background:${colorOf(p)}"></i></span><em>${v==null?'–':pct(v)}</em></div>`; }).join('')}</div>`).join('')}
         <div class="card-note">${note}</div>
       </div>
-      <div class="card"><div class="card-title">Point pr. vin</div>${pointsChart(L, sp)}</div>
     </div>
     <div class="card" style="margin-top:14px"><div class="card-title">Her får vi oftest point</div>
       ${top.map((x,i)=>`<div class="hbar-row" style="grid-template-columns:28px minmax(90px,140px) 1fr 54px"><span style="font-family:var(--fnum);font-weight:800;color:var(--accent)">${i+1}.</span><span class="nm">${x.c.label}</span><span class="tr"><i class="hit" style="width:${x.v*100}%;background:var(--accent-2)" data-tip="${esc(`<div class='tt'>${x.c.label}</div>`+tipRow('#4F6563', pct(x.v), `af ${x.n} vine med facit`))}"></i></span><span class="v">${pct(x.v)}</span></div>`).join('')}
@@ -1021,14 +1042,10 @@ function secGeo(L){
   const switcher = `<div class="mini-seg"><button data-ui="geo" data-v="land" class="${UI.geo==='land'?'on':''}">Lande</button><button data-ui="geo" data-v="drue" class="${UI.geo==='drue'?'on':''}">Druer</button></div>`;
   const tap = both ? ' Tryk på en række for at se fordelingen mellem jer.' : '';
   return `<section class="section"><div class="sec-head"><span class="sec-num">${num()}</span><h2>Geografi og druer</h2>${switcher}</div>
-    <div class="grid g2">
+    <div>
       <div class="card"><div class="card-title"><span>Når det var facit</span></div>
         ${truthRows.length ? truthRows.map(r=>rowHTML(r,'t')).join('') : '<div class="empty">Ingen data.</div>'}
         <div class="card-note">Hvor mange gange ${word} blev gættet rigtigt ud af de gange, det var facit.${tap}${both?'':' Tryk for at filtrere.'}</div>
-      </div>
-      <div class="card"><div class="card-title"><span>${both?'Når I gættede det':'Når '+esc(sp[0])+' gættede det'}</span></div>
-        ${guessRows.length ? guessRows.map(r=>rowHTML(r,'g')).join('') : '<div class="empty">Ingen gæt endnu.</div>'}
-        <div class="card-note">Hvor mange gange gættet var forkert ud af de gange, ${word} kunne gættes. Flest fejlgæt øverst.${tap}</div>
       </div>
     </div></section>`;
 }
@@ -1071,14 +1088,14 @@ function secVintage(L){
 /* ============================================================ 8. sværeste vine */
 function secHardest(L){
   const sp = scopePlayers();
-  const sorted = L.slice().sort((a,b)=> a.score-b.score || b.date.localeCompare(a.date));
-  const ranked = competitionRank(sorted, w=>w.score).filter(r=>r.rank<=10);
+  const sorted = wineGroups(L).sort((a,b)=> a.total-b.total || b.date.localeCompare(a.date));
+  const ranked = competitionRank(sorted, w=>w.total).filter(r=>r.rank<=10);
   const shown = ranked.slice(0,5);
   return `<section class="section"><div class="sec-head"><span class="sec-num">${num()}</span><h2>De sværeste vine</h2><span class="sec-sub">${sp.length===1?`Top 5 · der hvor ${esc(sp[0])} scorede færrest point`:'Top 5 · laveste scorer'}</span></div>
     <div class="card"><ol class="top10">${shown.map(({rank,item:w})=>`<li tabindex="0" data-wine="${esc(w.id)}">
       <span class="rk">${rank}.</span>
-      <div style="min-width:0"><div class="nm">${esc(w.name)}</div><div class="sub">${pnameHTML(w.guesser)} gættede · ${fmtDate(w.date)}</div></div>
-      <span class="sc" style="color:var(--bad)">${w.score}<small> p</small></span></li>`).join('')}</ol>
+      <div style="min-width:0"><div class="nm">${esc(w.name)}</div><div class="sub">${fmtDate(w.date)} · ${guessersLine(w)}</div></div>
+      <span class="sc" style="color:var(--bad)">${w.total}<small> p</small></span></li>`).join('')}</ol>
       </div></section>`;
 }
 
@@ -1138,28 +1155,32 @@ function secRecords(L, B){
 /* ============================================================ 11. vinarkiv */
 function secArchive(L){
   return `<section class="section"><div class="sec-head"><span class="sec-num">${num()}</span><h2>Vinarkiv</h2><span class="sec-sub">${L.length} vine</span></div>
-    <div class="card"><div class="arch-tools"><input class="search" id="arch-q" type="search" placeholder="Søg på vin, land, drue…" value="${esc(UI.archiveQ)}" autocomplete="off">${narrow()?`<select class="sel" id="arch-sort" aria-label="Sortér">${[['date:-1','Nyeste'],['date:1','Ældste'],['score:-1','Flest point'],['score:1','Færrest point'],['name:1','Navn'],['land:1','Land'],['drue:1','Drue']].map(([v,l])=>`<option value="${v}" ${v===UI.archiveSort.key+':'+UI.archiveSort.dir?'selected':''}>${l}</option>`).join('')}</select>`:''}</div>
+    <div class="card"><div class="arch-tools"><input class="search" id="arch-q" type="search" placeholder="Søg på vin, land, drue…" value="${esc(UI.archiveQ)}" autocomplete="off">${narrow()?`<select class="sel" id="arch-sort" aria-label="Sortér">${[['date:-1','Nyeste'],['date:1','Ældste'],['score:-1','Flest point'],['score:1','Færrest point'],['rating:-1','Højeste vurdering'],['rating:1','Laveste vurdering'],['vtype:1','Vintype'],['name:1','Navn'],['land:1','Land'],['drue:1','Drue']].map(([v,l])=>`<option value="${v}" ${v===UI.archiveSort.key+':'+UI.archiveSort.dir?'selected':''}>${l}</option>`).join('')}</select>`:''}</div>
       <div id="arch-table">${archiveTable(L)}</div></div></section>`;
 }
 function archiveTable(L){
   const q = norm(UI.archiveQ);
-  let rows = L.filter(w=> !q || [w.name, w.owner, w.guesser, ...CATS.map(c=>w.cats[c.id].t), ...CATS.map(c=>w.cats[c.id].g)].some(s=>norm(s).includes(q)));
+  let rows = wineGroups(L).filter(g=> !q || [g.name, g.owner, ...g.guessers, ...CATS.map(c=>g.cats[c.id].t), ...g.rows.flatMap(w=>CATS.map(c=>w.cats[c.id].g))].some(s=>norm(s).includes(q)));
   const {key, dir} = UI.archiveSort;
-  const val = w => key==='date' ? w.date + String(w.seq).padStart(6,'0') : key==='score' ? w.score : key==='name' ? norm(w.name) : key==='land' ? norm(w.cats.land.t) : key==='drue' ? norm(w.cats.drue1.t) : key==='guesser' ? norm(w.guesser) : key==='owner' ? norm(w.owner) : key==='aargang' ? String(w.cats.aargang.t) : '';
-  rows = rows.slice().sort((a,b)=>{ const x = val(a), y = val(b); return (x<y?-1:x>y?1:0)*dir; });
+  const val = w => key==='date' ? w.date + String(w.seq).padStart(6,'0') : key==='score' ? w.total : key==='name' ? norm(w.name) : key==='land' ? norm(w.cats.land.t) : key==='drue' ? norm(w.cats.drue1.t) : key==='guesser' ? norm(w.guessers.join(' ')) : key==='owner' ? norm(w.owner) : key==='aargang' ? String(w.cats.aargang.t) : key==='vtype' ? String(w.vtype ? VTYPES.findIndex(t=>t.id===w.vtype) : 99).padStart(2,'0') + String(w.date) : '';
+  rows = rows.slice().sort((a,b)=>{
+    if(key==='rating'){ const x = ratingAvg(a), y = ratingAvg(b); if(x==null || y==null) return (x==null) - (y==null); return (x-y)*dir; } // unrated wines last
+    const x = val(a), y = val(b); return (x<y?-1:x>y?1:0)*dir; });
   const th = (k,l,cls='')=>`<th class="sortable ${cls} ${key===k?'sorted':''}" data-sort="${k}">${l}${key===k?(dir>0?' ▲':' ▼'):''}</th>`;
   if(!rows.length) return `<div class="empty">Ingen vine matcher “${esc(UI.archiveQ)}”.</div>`;
+  const facts = w => [w.cats.drue1.t, w.cats.land.t, w.cats.aargang.t].filter(Boolean).map(esc).join(' · ');
   if(narrow()) return `<ul class="wlist">${rows.map(w=>`<li class="wcard" tabindex="0" data-wine="${esc(w.id)}">
-      <span class="wn">${esc(w.name)}</span><span class="wsc">${w.score}<small> p</small></span>
-      <span class="meta">${fmtDate(w.date)} · ${pnameHTML(w.guesser)} gættede · medbragt af ${esc(w.owner)}</span>
-      <span class="pills">${typeChip(w)}${ratingTxt(w)}</span>
-      <span class="pills">${catCell(w,'land')}${catCell(w,'drue1')}${catCell(w,'aargang')}</span></li>`).join('')}</ul>
-    <div class="card-note">Grøn = ramt, gul = delvist, rød = forkert. Tryk for facit og gæt.</div>`;
-  return `<div class="tbl-wrap"><table class="tbl"><thead><tr>${th('date','Dato')}${th('name','Vin')}${th('land','Land')}${th('drue','Drue')}${th('aargang','Årgang')}${th('owner','Medbragt')}${th('guesser','Gætter')}${th('score','Point','num')}</tr></thead>
-    <tbody>${rows.map(w=>`<tr tabindex="0" data-wine="${esc(w.id)}"><td class="dim" style="white-space:nowrap">${fmtDate(w.date)}</td><td>${esc(w.name)}</td>
-      <td>${catCell(w,'land')}</td><td>${catCell(w,'drue1')}</td><td>${catCell(w,'aargang')}</td><td class="dim">${esc(w.owner)}</td><td>${pnameHTML(w.guesser)}</td>
-      <td class="num" style="font-family:var(--fnum);font-size:0.62rem;color:var(--accent-2)">${w.score}</td></tr>`).join('')}</tbody></table></div>
-    <div class="card-note">Grøn = ramt, gul = delvist (årgang ±1), rød = forkert. Klik på en vin for facit og gæt.</div>`;
+      <span class="wn">${esc(w.name)}</span><span class="wsc">${w.total}<small> p</small></span>
+      <span class="meta">${fmtDate(w.date)} · medbragt af ${esc(w.owner)}${facts(w)?' · '+facts(w):''}</span>
+      <span class="pills gline">${guessersLine(w)}</span>
+      ${(w.vtype||ratingAvg(w)!=null)?`<span class="pills">${typeChip(w)}${ratingTxt(w)}</span>`:''}</li>`).join('')}</ul>
+    <div class="card-note">Tallet til højre er gætterens point. Tryk for facit og gæt.</div>`;
+  return `<div class="tbl-wrap"><table class="tbl"><thead><tr>${th('date','Dato')}${th('name','Vin')}${th('vtype','Type')}${th('land','Land')}${th('drue','Drue')}${th('aargang','Årgang')}${th('owner','Medbragt')}${th('guesser','Gætter')}${th('rating','★ Vurdering','num')}${th('score','Point','num')}</tr></thead>
+    <tbody>${rows.map(w=>`<tr tabindex="0" data-wine="${esc(w.id)}"><td class="dim" style="white-space:nowrap">${fmtDate(w.date)}</td><td>${esc(w.name)}</td><td>${typeChip(w)||'<span class="dim">–</span>'}</td>
+      <td>${esc(w.cats.land.t)||'<span class="dim">–</span>'}</td><td>${esc(w.cats.drue1.t)||'<span class="dim">–</span>'}</td><td>${esc(w.cats.aargang.t)||'<span class="dim">–</span>'}</td><td class="dim">${esc(w.owner)}</td><td class="gline">${guessersLine(w)}</td>
+      <td class="num">${ratingAvg(w)!=null ? fmtR(ratingAvg(w)) : '<span class="dim">–</span>'}</td>
+      <td class="num" style="font-family:var(--fnum);font-weight:800">${w.total}</td></tr>`).join('')}</tbody></table></div>
+    <div class="card-note">Klik på en vin for facit og gæt.</div>`;
 }
 function catCell(w, cid){ const c = w.cats[cid]; if(!c.applicable) return '<span class="dim">–</span>'; return `<span class="pill ${c.j==='good'?'good':c.j==='mid'?'mid':'bad'}" title="Gæt: ${esc(c.g||'(tomt)')}">${esc(c.t)}</span>`; }
 
@@ -1225,7 +1246,7 @@ document.getElementById('modal-body').addEventListener('click', e=>{
   const t = e.target;
   const w = t.closest('[data-wine]'); if(w){ openWine(w.dataset.wine, w.dataset.from); return; }
   const b = t.closest('[data-evening]'); if(b){ openEvening(b.dataset.evening); return; }
-  const f = t.closest('[data-evfilter]'); if(f){ closeModal(); F.period = 'd'+f.dataset.evfilter; setTab('overblik'); }
+  const f = t.closest('[data-evfilter]'); if(f){ closeModal(); F.period = 'd'+f.dataset.evfilter; setTab('en'); }
 });
 document.getElementById('modal-body').addEventListener('keydown', e=>{
   if(e.key!=='Enter' && e.key!==' ') return; const el = e.target.closest('[data-wine]'); if(el){ e.preventDefault(); el.click(); }
@@ -1261,6 +1282,7 @@ function parseRating(v){
   const n = typeof v==='number' ? v : parseFloat(String(v).replace(',', '.'));
   return isNaN(n) ? null : Math.max(0, Math.min(5, n));
 }
+function fmtR(v){ return v==null ? '–' : fmt1(v); }
 function readExtras(r){
   let type = '', ratings = {};
   const walk = (o, pre, depth)=>{
@@ -1282,6 +1304,21 @@ function hasRatings(L){ return L.some(w=>Object.keys(w.ratings).length); }
 function typeChip(w){ const t = vtOf(w.vtype); return w.vtype ? `<span class="tchip"><i style="background:${t.c}"></i>${t.l}</span>` : ''; }
 function ratingTxt(w){ const a = ratingAvg(w); if(a==null) return ''; return `<span class="rate">★ <b>${fmt1(a)}</b>${PLAYERS.length>1?' · '+PLAYERS.map(p=>{ const v = ratingOf(w,p); return v==null?'':`${esc(p)} ${fmt1(v)}`; }).filter(Boolean).join(' · '):''}</span>`; }
 
+function secTypeSplit(B){
+  const L = uniqWines(B);
+  const groups = [...VTYPES, VT_UNKNOWN].map(t=>({t, n:L.filter(w=>w.vtype===t.id).length})).filter(g=>g.n).sort((a,b)=>b.n-a.n);
+  if(!L.length) return '';
+  const mx = Math.max(...groups.map(g=>g.n));
+  return `<section class="section fade-in"><div class="sec-head"><span class="sec-num">${num()}</span><h2>Vinene fordelt på type</h2><span class="sec-sub">${L.length} vine i alt</span></div>
+    <div class="card">
+      <div class="typebar" style="margin-bottom:16px">${groups.map(g=>`<i style="flex:${g.n};background:${g.t.c}"></i>`).join('')}</div>
+      ${groups.map(g=>`<div class="ts-row ${g.t.id?'clickable':''} ${F.vtype===g.t.id&&g.t.id?'sel':''}" ${g.t.id?`tabindex="0" data-vtype="${g.t.id}"`:''}>
+        <span class="ts-nm"><span class="tsw" style="background:${g.t.c}"></span>${g.t.l}</span>
+        <span class="ts-bar"><i style="width:${g.n/mx*100}%;background:${g.t.c}"></i></span>
+        <span class="ts-v"><b>${g.n}</b> · ${pct(g.n/L.length)}</span></div>`).join('')}
+      <div class="card-note">${groups.some(g=>g.t.id)?'Tryk på en type for at filtrere.':''}</div>
+    </div></section>`;
+}
 function secTypes(L){
   const anyType = L.some(w=>w.vtype), anyRate = hasRatings(L);
   const groups = [...VTYPES, VT_UNKNOWN].map(t=>({t, ws:L.filter(w=>w.vtype===t.id)})).filter(g=>g.ws.length);
@@ -1334,7 +1371,7 @@ root.addEventListener('click', e=>{
   const t = e.target;
   const fb = t.closest('[data-f]:not(select)'); if(fb){ setFilter(fb.dataset.f, fb.dataset.v); return; }
   const ub = t.closest('[data-ui]'); if(ub){ UI[ub.dataset.ui] = ub.dataset.v; render(); return; }
-  const so = t.closest('[data-sort]'); if(so){ const k = so.dataset.sort; UI.archiveSort = { key:k, dir: UI.archiveSort.key===k ? -UI.archiveSort.dir : (k==='date'||k==='score'?-1:1) }; document.getElementById('arch-table').innerHTML = archiveTable(filtered()); return; }
+  const so = t.closest('[data-sort]'); if(so){ const k = so.dataset.sort; UI.archiveSort = { key:k, dir: UI.archiveSort.key===k ? -UI.archiveSort.dir : (k==='date'||k==='score'||k==='rating'?-1:1) }; document.getElementById('arch-table').innerHTML = archiveTable(filtered()); return; }
   const go = t.closest('[data-geo-open]'); if(go){ UI.geoOpen = UI.geoOpen === go.dataset.geoOpen ? null : go.dataset.geoOpen; render(); return; }
   const wn = t.closest('[data-wine]'); if(wn){ openWine(wn.dataset.wine); return; }
   const vt = t.closest('[data-vtype]'); if(vt){ setFilter('vtype', F.vtype===vt.dataset.vtype ? 'all' : vt.dataset.vtype); return; }
@@ -1514,7 +1551,8 @@ body.sheet-open .app{z-index:170}
 .wcard .wsc small{font-size:12px;color:var(--text-faint);font-weight:600}
 .evrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;padding:12px 2px;border-bottom:1px solid var(--border);cursor:pointer;font-family:var(--fb)}
 .evrow .d{font-weight:700;color:var(--text)}
-.evrow .per{grid-column:1/-1;display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--text-dim)}
+.evrow .per{grid-column:1/-1;display:flex;flex-direction:column;gap:3px;font-size:14px;color:var(--text-dim)}
+.evrow .per>span,.last-ev .per>span{display:grid;grid-template-columns:minmax(96px,auto) auto 1fr;gap:8px;align-items:baseline}
 .evrow .per b{color:var(--text)}
 @media(max-width:760px){
   .recs{grid-auto-flow:column;grid-template-columns:none!important;grid-auto-columns:84%;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px 16px 12px 2px;margin-right:-16px;-webkit-overflow-scrolling:touch}
@@ -1536,7 +1574,7 @@ body.sheet-open .app{z-index:170}
 .kpi.clickable .s,.last-ev .go{color:#1E2D32;font-weight:700;text-decoration:underline;text-underline-offset:3px}
 .last-ev{cursor:pointer;padding:20px}
 .last-ev .date{font-family:var(--fd);font-weight:800;font-stretch:112%;font-size:clamp(30px,8.5vw,44px);letter-spacing:-.03em;line-height:1.05;margin:6px 0 12px;color:var(--text)}
-.last-ev .per{display:flex;gap:18px;flex-wrap:wrap;font-family:var(--fb);font-size:15px;color:var(--text-dim);margin-bottom:12px}
+.last-ev .per{display:flex;flex-direction:column;gap:6px;font-family:var(--fb);font-size:15px;color:var(--text-dim);margin-bottom:14px}
 .last-ev .per b{font-family:var(--fnum);font-weight:900;font-stretch:112%;font-size:22px;color:var(--text)}
 .readout{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px;min-height:30px;margin:2px 0 6px;font-family:var(--fb);font-size:15px;color:var(--text-dim)}
 .readout .d{font-weight:800;color:var(--text)}
@@ -1656,5 +1694,41 @@ if(window.ResizeObserver)new ResizeObserver(f).observe(document.body);f()})();
   }, {passive:true});
 })();
 </script>
+<style id="stats-extra">
+.ts-row{display:grid;grid-template-columns:minmax(110px,150px) 1fr auto;gap:12px;align-items:center;padding:8px 0;font-family:var(--fb)}
+.ts-row.clickable{cursor:pointer}.ts-row.sel .ts-nm{text-decoration:underline}
+.ts-nm{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--text);font-weight:600}
+.ts-bar{height:14px;border-radius:3px;background:rgba(30,45,50,.06);overflow:hidden}
+.ts-bar i{display:block;height:100%;border-radius:3px;box-shadow:inset 0 0 0 1px rgba(30,45,50,.15)}
+.ts-v{font-size:14px;color:var(--text-dim);white-space:nowrap;font-variant-numeric:tabular-nums}.ts-v b{color:var(--text)}
+.rk-list{margin-top:8px}
+.rk-row{display:grid;grid-template-columns:24px minmax(0,1fr) auto;column-gap:12px;row-gap:8px;align-items:center;padding:13px 0;border-bottom:1px solid var(--border)}
+.rk-row:last-child{border-bottom:none}
+.rk-n{font-family:var(--fnum);font-weight:800;font-size:18px;color:var(--text-faint)}
+.rk-who{display:flex;flex-direction:column;gap:2px;min-width:0;font-family:var(--fb);font-size:17px}
+.rk-who .s{font-size:13.5px;color:var(--text-faint)}
+.rk-avg{font-family:var(--fnum);font-weight:900;font-stretch:112%;font-size:34px;line-height:1;font-variant-numeric:tabular-nums;color:var(--text)}
+.rk-row.lead .rk-avg,.rk-row.lead .rk-n{color:var(--good)}
+.rk-bar{grid-column:2/4;height:8px;border-radius:4px;background:rgba(30,45,50,.07);overflow:hidden}
+.rk-bar i{display:block;height:100%;border-radius:4px}
+.gline{line-height:1.6}.gline .pname{white-space:nowrap}.gline b{margin-left:4px}.gsep{margin:0 7px;color:var(--text-faint)}
+.wcard .pills.gline{font-size:14px;gap:0}
+.best-list{margin-top:18px}
+.best-h{font-family:var(--fm);font-size:12px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--text-dim);padding-bottom:8px;border-bottom:1.5px solid #1E2D32}
+.best-row{display:grid;grid-template-columns:minmax(90px,auto) minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;font-family:var(--fb)}
+.best-row:last-child{border-bottom:none}
+.best-nm{font-size:15px;color:var(--text);line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.best-sc{font-family:var(--fnum);font-weight:900;font-stretch:112%;font-size:22px;white-space:nowrap}
+.best-sc small{font-size:12px;color:var(--text-faint);font-weight:600}
+.freq-row{padding:10px 0;border-bottom:1px solid var(--border)}
+.freq-row:last-of-type{border-bottom:none}
+.freq-nm{font-family:var(--fb);font-weight:600;font-size:15px;margin-bottom:6px;color:var(--text)}
+.freq-nm span{color:var(--text-faint);font-weight:400}
+.pbl{display:grid;grid-template-columns:76px 1fr 44px;gap:8px;align-items:center;height:22px;font-family:var(--fb)}
+.pbl-n{font-size:13px;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pbl-t{position:relative;height:14px;background:rgba(30,45,50,.06);border-radius:3px;overflow:hidden}
+.pbl-t i{position:absolute;left:0;top:0;bottom:0;border-radius:3px}
+.pbl em{font-style:normal;font-size:13px;color:var(--text);text-align:right;font-variant-numeric:tabular-nums}
+</style>
 </body>
 </html>

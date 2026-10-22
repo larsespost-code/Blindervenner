@@ -2180,9 +2180,6 @@ function renderDay(){
   CONFIG.participants.forEach(p=>people[p]={points:0, bottles:0});
   rounds.forEach(r=>{ const g=r.guesserName; if(!g) return; people[g]=people[g]||{points:0,bottles:0}; people[g].points+=r.score||0; people[g].bottles++; });
   const ranked = Object.entries(people).sort((a,b)=>b[1].points-a[1].points || b[1].bottles-a[1].bottles);
-  const top = ranked.length ? ranked[0][1].points : 0;
-  const winners = ranked.filter(([,d])=>d.points===top && d.bottles>0).map(([n])=>n);
-  const winnerLine = winners.length===1 ? `🏆 ${esc(winners[0])} vinder dagen` : `🤝 Uafgjort mellem ${winners.map(esc).join(' og ')}`;
   const scoreRows = ranked.map(([n,d])=>`
     <div class="lb-row"><div class="lb-name">${esc(n)}<div class="lb-sub">${d.bottles} flaske${d.bottles===1?'':'r'} gættet</div></div><div class="lb-score">${d.points}p</div></div>`).join('');
   const avgRows = ranked.map(([n,d])=>`
@@ -2192,10 +2189,8 @@ function renderDay(){
   return `
   <div class="fade-in">
     <div class="eyebrow center-text" style="display:block;">Dagens resultat</div>
-    <h2 class="center-text" style="font-size:1.2rem;">${winnerLine}</h2>
     <div class="card"><div class="eyebrow">Samlet score</div>${scoreRows}</div>
-    <div class="card"><div class="eyebrow">Pointgennemsnit pr. flaske</div>${avgRows}
-      <div class="hint">Til sammenligning, når I ikke har gættet lige mange flasker — tæller ikke med i dagens vinder.</div></div>
+    <div class="card"><div class="eyebrow">Pointgennemsnit pr. flaske</div>${avgRows}</div>
     <div class="card"><div class="eyebrow">Dagens flasker</div>${wines}</div>
     ${continueEveningHtml()}
     <button class="btn btn-ghost btn-block" onclick="switchView('game')">Tilbage til start</button>

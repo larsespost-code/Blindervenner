@@ -1486,7 +1486,6 @@ function renderWaitingToGuess(){
 }
 function renderIdle(){
   if(WAITING_TO_GUESS) return renderWaitingToGuess();
-  const rounds = HISTORY.length;
   const others = otherParticipants(MY_IDENTITY);
   const canStart = others.length>0;
   return `
@@ -1496,14 +1495,12 @@ function renderIdle(){
     <h2>Klar til blindsmagning?</h2>
     <p class="sub">${canStart ? 'Du indtaster vinen i hemmelighed — din medsmager gætter blindt og scorer point.' : 'Tilføj mindst én medsmager under deltager-ikonet, før I kan starte.'}</p>
     <button class="btn btn-primary btn-block" ${canStart?'':'disabled'} onclick="newRound()">Start ny vin →</button>
-    ${rounds>0 ? `
     <button class="btn btn-secondary btn-block" style="margin-top:10px;" onclick="switchView('day')">📅 Dagens resultat</button>
-    ` : ''}
-    ${(rounds>0 || SHEET) ? `<div class="nav-tiles">
-      ${rounds>0 ? `<button type="button" class="nav-tile" onclick="switchView('history')"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4h4"/><path d="M12 8v4l3 2"/></svg><span>Se historik</span></button>
-      <a class="nav-tile" href="https://larsespost-code.github.io/Blindervenner/dashboard.html" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Se analyse</span></a>` : ''}
+    <div class="nav-tiles">
+      <button type="button" class="nav-tile" onclick="switchView('history')"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4h4"/><path d="M12 8v4l3 2"/></svg><span>Se historik</span></button>
+      <a class="nav-tile" href="https://larsespost-code.github.io/Blindervenner/dashboard.html" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Se analyse</span></a>
       ${SHEET ? `<button type="button" class="nav-tile" onclick="copyShareLink()"><svg viewBox="0 0 24 24"><path d="M21 3 10 14"/><path d="M21 3l-7 18-4-7-7-4z"/></svg><span>Send link til din medsmager</span></button>` : ''}
-    </div>` : ''}
+    </div>
     ${USE_DB ? '' : `<div class="sync-note">⚠ Kører kun lokalt på denne telefon — ingen delt forbindelse fundet.</div>`}
   </div>`;
 }

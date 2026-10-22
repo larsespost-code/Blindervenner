@@ -416,7 +416,11 @@ select.year-select,select.sel{border:1.5px solid #1E2D32;border-radius:8px;paddi
 .pick-chips{gap:8px}
 .card > .field + .field{border-top:1px solid rgba(30,45,50,.09);padding-top:16px}
 .pick-chips .chip-pick{font-size:15px;padding:9px 14px;line-height:1.15;-webkit-appearance:none;appearance:none;cursor:pointer}
-.chip-pick.chip-more{background:transparent;border-style:dashed;color:var(--text-dim)}
+.chip-pick.chip-more{background:rgba(202,153,84,.14);border:1.5px solid rgba(202,153,84,.75);color:#6B4E1F;font-weight:600}
+.chip-pick.chip-more .cm{font-size:1.15em;line-height:0;margin-left:2px}
+.chip-link{border:0;background:transparent;padding:9px 6px;font-family:var(--fb);font-size:15px;font-weight:600;color:var(--accent);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.req{color:#B5643A;font-weight:900;margin-left:2px}
+.req-note{font-family:var(--fb);font-size:13px;color:var(--text-faint);text-align:right;margin:-6px 0 6px}
 .chip-pick .ck{font-size:.85em;margin-left:2px;opacity:.85}
 .pick-chips .chip-pick.chip-chosen{padding-right:16px}
 .chip-pick.chip-other{background:transparent;border-style:dashed;color:var(--text-dim)}
@@ -1533,9 +1537,10 @@ function renderEntry(){
       <div class="field-label"><span class="txt">Hvem gætter blindt?</span></div>
       <div class="chips">${others.map(p=>`<div class="chip-pick ${ACTIVE.guesserName===p?'selected':''}" onclick="setGuesser('${esc(p)}')">${esc(p)}</div>`).join('')}</div>
     </div>` : '';
+  const REQ = ['land','region','drue1'];
   const truthFields = CATEGORIES.map(c=>`
     <div class="field">
-      <div class="field-label"><span class="txt">${c.label}</span><span class="pts">${c.points}p</span></div>
+      <div class="field-label"><span class="txt">${c.label}${REQ.includes(c.id) ? ' <span class="req" title="Skal udfyldes">•</span>' : ''}</span><span class="pts">${c.points}p</span></div>
       ${pickerHtml('truth', c.id)}
     </div>`).join('');
 
@@ -1546,6 +1551,7 @@ function renderEntry(){
     <h2>${wineTag()}</h2>
     <p class="sub">Udfyld felterne. Når du klikker ”Send”, bliver det ${esc(gen(ACTIVE.guesserName||'din medsmager'))} tur til at gætte.</p>
     <div class="card">
+      <div class="req-note"><span class="req">•</span> skal udfyldes</div>
       ${pickGuesser}
       <div class="field">
         <div class="field-label"><span class="txt">Vinens navn <span style="color:var(--text-faint);font-weight:400;text-transform:none;">(dette er ikke pointgivende, men bare for at kunne genkende vinen)</span></span></div>
@@ -1635,38 +1641,68 @@ function typicalGrapes(o){
   if(l){ const out = []; landRegions(l).forEach(x=>(VINDATA.typiske[x]||[]).forEach(g=>{ if(!out.includes(g)) out.push(g); })); return out; }
   return [];
 }
-// The choices for a field: {chips:[…] shown as buttons, groups:[{title,items}] for the sheet}
+// Long lists show the best-known first. The order is fixed — the same whatever is in the
+// glass — so it never hints at the answer. Only your own grape choice reorders (see below).
+const FAME = {
+  'Frankrig':['Bourgogne','Bordeaux','Champagne','Rhône','Loire','Alsace','Beaujolais','Languedoc'],
+  'Italien':['Piemonte','Toscana','Veneto','Sicilia','Alto Adige','Puglia','Friuli-Venezia Giulia','Campania'],
+  'Spanien':['Rioja','Castilla y León','Catalunya','Galicia','Andalucía','Navarra','Aragón','Castilla-La Mancha'],
+  'Tyskland':['Mosel','Rheingau','Pfalz','Rheinhessen','Nahe','Baden','Franken','Ahr'],
+  'Portugal':['Douro','Alentejo','Vinho Verde','Dão','Bairrada','Madeira','Lisboa','Tejo'],
+  'New Zealand':['Marlborough','Central Otago','Hawke’s Bay','Wairarapa','Canterbury','Nelson','Gisborne','Auckland'],
+  'Bourgogne':['Chablis AOC','Meursault AOC','Gevrey-Chambertin AOC','Vosne-Romanée AOC','Pommard AOC','Volnay AOC','Chassagne-Montrachet AOC','Pouilly-Fuissé AOC'],
+  'Bordeaux':['Pauillac AOC','Margaux AOC','Saint-Émilion AOC','Pomerol AOC','Saint-Julien AOC','Saint-Estèphe AOC','Sauternes AOC','Graves AOC'],
+  'California':['Napa Valley AVA','Sonoma Coast AVA','Russian River Valley AVA','Paso Robles AVA','Central Coast AVA','Santa Ynez Valley AVA','Santa Maria Valley AVA','Oakville AVA'],
+  'Western Cape':['Stellenbosch WO','Swartland WO','Paarl WO','Franschhoek WO','Constantia WO','Elgin WO','Walker Bay WO','Western Cape WO'],
+};
+const TOP_N = 8;
+const byFame = (key, list)=>{ const f = FAME[key] || []; return [...f.filter(x=>list.includes(x)), ...list.filter(x=>!f.includes(x))]; };
+// Help both ways: the grape you have chosen puts the countries and regions where it is typical first.
+function chosenGrape(o){ for(const id of ['drue1','drue2']){ const g = GRAPE_BY.get(vkey(o[id]||'')); if(g) return g[0]; } return null; }
+const fameRank = r => { const l = REGION_LAND[vkey(r)], f = (l && FAME[l]) || []; const i = f.indexOf(r); return i < 0 ? 99 : i; };
+const grapeRegions = g => Object.keys(VINDATA.typiske).filter(r=>(VINDATA.typiske[r]||[]).includes(g)).sort((a,b)=>fameRank(a)-fameRank(b));
+const firstThese = (list, these)=> [...list.filter(x=>these.includes(x)), ...list.filter(x=>!these.includes(x))];
+// The choices for a field:
+//   chips  – shown as buttons (null = only the sheet button)
+//   top    – how many to show before "Flere"
+//   sheet  – label of the button that opens the sheet (null = none)
+//   groups – [{title, items}] for the sheet
 function pickChoices(kind, id){
-  const o = ansObj(kind), l = knownLand(o), r = knownRegion(o);
-  const byRegion = regs => regs.map(x=>({ title:x, items:VINDATA.appellationer[x]||[] })).filter(g=>g.items.length);
-  if(id==='land') return { chips: VINDATA.lande, groups:[{ title:'Lande', items:VINDATA.lande }] };
+  const o = ansObj(kind), l = knownLand(o), r = knownRegion(o), g = chosenGrape(o), gR = g ? grapeRegions(g) : [];
+  const byRegion = regs => regs.map(x=>({ title:x, items:byFame(x, VINDATA.appellationer[x]||[]) })).filter(x=>x.items.length);
+  const allRegions = VINDATA.lande.map(x=>({ title:x, items:byFame(x, landRegions(x)) }));
+  if(id==='land'){
+    const gl = [...new Set(gR.map(x=>REGION_LAND[vkey(x)]).filter(Boolean))];
+    return { chips: firstThese(VINDATA.lande, gl), top:99, sheet:null, groups:[] };
+  }
   if(id==='region'){
-    const groups = VINDATA.lande.map(x=>({ title:x, items:landRegions(x) }));
-    return { chips: l ? landRegions(l) : null, groups: l ? [{ title:l, items:landRegions(l) }, ...groups.filter(g=>g.title!==l)] : groups };
+    const lead = g ? [{ title:'Typisk for '+g, items:gR }] : [];
+    if(l) return { chips: firstThese(byFame(l, landRegions(l)), gR), top: TOP_N, sheet:null, groups:[] };
+    return { chips: gR.length ? gR : null, top: TOP_N, sheet: gR.length ? 'Alle regioner' : 'Vælg region', groups: lead.concat(allRegions) };
   }
   if(id==='appellation'){
     const all = byRegion(Object.values(VINDATA.regioner).flat());
-    if(r) return { chips: VINDATA.appellationer[r] || [], groups: byRegion([r]).concat(all.filter(g=>g.title!==r)) };
-    if(l){ const mine = byRegion(landRegions(l)); const flat = mine.flatMap(g=>g.items);
-      return { chips: flat.length <= CHIP_MAX ? flat : null, groups: mine.concat(all.filter(g=>!landRegions(l).includes(g.title))) }; }
-    return { chips:null, groups: all };
+    if(r) return { chips: byFame(r, VINDATA.appellationer[r] || []), top: TOP_N, sheet:null, groups:[] };
+    if(l){ const mine = byRegion(landRegions(l)); const flat = mine.flatMap(x=>x.items);
+      return { chips: flat.length <= 12 ? flat : null, top: TOP_N, sheet: 'Vælg appellation', groups: mine.concat(all.filter(x=>!landRegions(l).includes(x.title))) }; }
+    return { chips:null, top: TOP_N, sheet: 'Vælg appellation', groups: all };
   }
   if(id==='drue1' || id==='drue2'){
     const typ = typicalGrapes(o), where = r || l;
-    const known = v => { const g = GRAPE_BY.get(vkey(v)); return !!(g && g[3]); };
+    const known = v => { const x = GRAPE_BY.get(vkey(v)); return !!(x && x[3]); };
     const typKnown = typ.filter(known);
     const chips = (typKnown.length ? typKnown : (r ? typ : [])).slice(0, 5);
-    const rest = VINDATA.druer.map(g=>g[0]).filter(x=>!typ.includes(x));
-    return { chips, more:true, groups: (typ.length ? [{ title:'Typisk for '+where, items:typ }] : [])
+    const rest = VINDATA.druer.map(x=>x[0]).filter(x=>!typ.includes(x));
+    return { chips, top: 99, sheet: chips.length ? 'Alle druer' : 'Vælg drue', groups: (typ.length ? [{ title:'Typisk for '+where, items:typ }] : [])
       .concat([{ title:'Kendte druer', items:rest.filter(known) }, { title:'Flere druer', items:rest.filter(x=>!known(x)) }]) };
   }
   if(id==='type'){
-    const mine = VINDATA.betegnelser.filter(b=>!b[1] || b[1]===l).map(b=>b[0]).filter((x,i,a)=>a.indexOf(x)===i);
+    const mine = VINDATA.betegnelser.filter(x=>!x[1] || x[1]===l).map(x=>x[0]).filter((x,i,arr)=>arr.indexOf(x)===i);
     const groups = [{ title: l ? 'Til '+l+' og generelle' : 'Generelle', items: mine }];
-    VINDATA.lande.filter(x=>x!==l).forEach(x=>{ const it = VINDATA.betegnelser.filter(b=>b[1]===x).map(b=>b[0]); if(it.length) groups.push({ title:x, items:it }); });
-    return { chips: l ? mine : mine.filter(x=>!VINDATA.betegnelser.some(b=>b[0]===x && b[1])), more:true, groups };
+    VINDATA.lande.filter(x=>x!==l).forEach(x=>{ const it = VINDATA.betegnelser.filter(y=>y[1]===x).map(y=>y[0]); if(it.length) groups.push({ title:x, items:it }); });
+    return { chips: l ? mine : mine.filter(x=>!VINDATA.betegnelser.some(y=>y[0]===x && y[1])), top: 99, sheet:'Flere', groups };
   }
-  return { chips:[], groups:[] };
+  return { chips:[], top:99, sheet:null, groups:[] };
 }
 function isKnownValue(id, v){
   if(!v) return true;
@@ -1681,32 +1717,34 @@ const sameChoice = (id, a, b)=> vkey(a)===vkey(b) || ((id==='drue1'||id==='drue2
 function chipBtn(kind, id, v, on, extra){
   return `<button type="button" class="chip-pick ${on?'selected':''} ${extra||''}" data-k="${kind}" data-id="${id}" data-v="${esc(v)}" onclick="pickChip(this)">${esc(dispLabel(id, v))}${on?' <span class="ck">✓</span>':''}</button>`;
 }
+const PICK_MORE = {}; // "guess.region" → true when "Flere" has been opened inline
+let PICK_ROUND = null;
 function pickerHtml(kind, id){
-  const o = ansObj(kind), v = o[id] || '', c = pickChoices(kind, id);
-  const custom = PICK_CUSTOM[kind+'.'+id] || (v && !isKnownValue(id, v));
-  const chips = c.chips;
-  let html = '';
+  if(ACTIVE && PICK_ROUND !== ACTIVE.id){ PICK_ROUND = ACTIVE.id; [PICK_CUSTOM, PICK_OPEN, PICK_MORE].forEach(m=>Object.keys(m).forEach(k=>delete m[k])); }
+  const o = ansObj(kind), v = o[id] || '', c = pickChoices(kind, id), key = kind+'.'+id;
+  const custom = PICK_CUSTOM[key] || (v && !isKnownValue(id, v));
   // Chosen: show just the choice and "Skift" — the page stays short and the answer is obvious.
-  if(v && !custom && !PICK_OPEN[kind+'.'+id]){
+  if(v && !custom && !PICK_OPEN[key]){
     const shown = (id==='drue1'||id==='drue2') && GRAPE_BY.get(vkey(v)) ? GRAPE_BY.get(vkey(v))[0] : v;
-    return `<div class="chips pick-chips">${chipBtn(kind, id, shown, true, 'chip-chosen')}<button type="button" class="chip-pick chip-more" data-k="${kind}" data-id="${id}" onclick="pickReopen(this)">Skift</button></div>`;
+    return `<div class="chips pick-chips">${chipBtn(kind, id, shown, true, 'chip-chosen')}<button type="button" class="chip-link" data-k="${kind}" data-id="${id}" onclick="pickReopen(this)">Skift</button></div>`;
   }
-  if(chips){
-    let list = chips.slice();
+  let html = '';
+  if(c.chips){
+    let list = c.chips.slice();
     if(v && !custom && !list.some(x=>sameChoice(id,x,v))) list = [GRAPE_BY.get(vkey(v)) ? GRAPE_BY.get(vkey(v))[0] : v, ...list]; // chosen in the sheet: show it first
-    html += list.map(x=>chipBtn(kind, id, x, !custom && v && sameChoice(id,x,v))).join('');
-    if(c.more) html += `<button type="button" class="chip-pick chip-more" data-k="${kind}" data-id="${id}" onclick="openPickSheet(this.dataset.k,this.dataset.id)">${id==='type'?'Flere …':(chips.length?'Alle druer …':'Vælg drue …')}</button>`;
-  } else {
-    const label = { region:'Vælg region …', appellation:'Vælg appellation …' }[id] || 'Vælg …';
-    if(v && !custom) html += chipBtn(kind, id, v, true);
-    html += `<button type="button" class="chip-pick chip-more" data-k="${kind}" data-id="${id}" onclick="openPickSheet(this.dataset.k,this.dataset.id)">${v && !custom ? 'Skift …' : label}</button>`;
-  }
-  html += `<button type="button" class="chip-pick chip-other ${custom && v ? 'selected' : ''} ${custom && !v ? 'open' : ''}" data-k="${kind}" data-id="${id}" onclick="pickOther(this)">${custom && v ? 'Andet: '+esc(v) : 'Andet …'}</button>`;
+    const cut = !PICK_MORE[key] && list.length > c.top + 2;
+    const shownList = cut ? list.slice(0, c.top) : list;
+    html += shownList.map(x=>chipBtn(kind, id, x, !custom && v && sameChoice(id,x,v))).join('');
+    if(cut) html += `<button type="button" class="chip-pick chip-more" data-k="${kind}" data-id="${id}" onclick="pickMore(this)">Flere (${list.length - c.top}) <span class="cm">›</span></button>`;
+  } else if(v && !custom) html += chipBtn(kind, id, v, true);
+  if(c.sheet) html += `<button type="button" class="chip-pick chip-more" data-k="${kind}" data-id="${id}" onclick="openPickSheet(this.dataset.k,this.dataset.id)">${c.sheet} <span class="cm">›</span></button>`;
+  html += `<button type="button" class="chip-pick chip-other ${custom && v ? 'selected' : ''} ${custom && !v ? 'open' : ''}" data-k="${kind}" data-id="${id}" onclick="pickOther(this)">${custom && v ? '✎ '+esc(v) : '✎ Andet'}</button>`;
   const cat = CATEGORIES.find(x=>x.id===id) || {};
   const input = custom ? `<input type="text" class="pick-input" id="pick-in-${kind}-${id}" placeholder="Skriv selv · ${esc(cat.ph||'')}" value="${esc(v)}" data-k="${kind}" data-id="${id}" oninput="pickTyped(this)">` : '';
-  const empty = chips && !chips.length && id==='appellation' ? `<div class="hint" style="margin:0 0 6px;">Ingen appellationer på listen for ${esc(knownRegion(o)||'')} — vælg "Andet …" eller spring over.</div>` : '';
+  const empty = c.chips && !c.chips.length && id==='appellation' ? `<div class="hint" style="margin:0 0 6px;">Ingen appellationer på listen for ${esc(knownRegion(o)||'')} — vælg "Andet" eller spring over.</div>` : '';
   return `${empty}<div class="chips pick-chips">${html}</div>${input}`;
 }
+function pickMore(el){ PICK_MORE[el.dataset.k+'.'+el.dataset.id] = true; render(); }
 // Keep land → region → appellation consistent when one of them changes.
 function pickApply(kind, id, v){
   const o = ansObj(kind);
@@ -1747,7 +1785,7 @@ function pickTyped(el){
   const kind = el.dataset.k, id = el.dataset.id;
   ansSet(kind, id, el.value);
   const b = el.parentNode.querySelector(`.chip-other[data-id="${id}"]`) || el.previousElementSibling && el.previousElementSibling.querySelector('.chip-other');
-  if(b){ b.classList.toggle('selected', !!el.value); b.textContent = el.value ? 'Andet: '+el.value : 'Andet …'; }
+  if(b){ b.classList.toggle('selected', !!el.value); b.textContent = el.value ? '✎ '+el.value : '✎ Andet'; }
 }
 
 // ---- the sheet that slides up from the bottom (search + groups)
@@ -1768,6 +1806,8 @@ function openPickSheet(kind, id){
       <div class="psheet-list" id="psheet-list"></div>
     </div>`;
   drawPickSheet();
+  fitPickSheet();
+  if(window.visualViewport){ visualViewport.addEventListener('resize', fitPickSheet); visualViewport.addEventListener('scroll', fitPickSheet); }
   document.body.classList.add('psheet-open');
   requestAnimationFrame(()=>el.classList.add('show'));
 }
@@ -1793,7 +1833,16 @@ function pickFromSheet(v){
     const inp = document.getElementById('pick-in-'+kind+'-'+id); if(inp) inp.focus(); return; }
   PICK_CUSTOM[kind+'.'+id] = false; PICK_OPEN[kind+'.'+id] = false; pickApply(kind, id, v); render();
 }
+// With the keyboard up (searching), the sheet sits right on top of it and uses all the height left.
+function fitPickSheet(){
+  const sh = document.querySelector('#psheet .psheet'); if(!sh) return;
+  const vv = window.visualViewport; if(!vv){ sh.style.bottom = '0px'; return; }
+  const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+  sh.style.bottom = kb + 'px';
+  sh.style.maxHeight = kb > 80 ? (vv.height - 12) + 'px' : '';
+}
 function closePickSheet(){
+  if(window.visualViewport){ visualViewport.removeEventListener('resize', fitPickSheet); visualViewport.removeEventListener('scroll', fitPickSheet); }
   const el = document.getElementById('psheet'); PSHEET = null;
   document.body.classList.remove('psheet-open');
   if(el){ el.classList.remove('show'); setTimeout(()=>{ if(!PSHEET) el.innerHTML = ''; }, 260); }

@@ -478,8 +478,8 @@ body.psheet-open{overflow:hidden}
       <div class="brand-name">Blindervenner</div>
     </div>
     <div class="topbar-actions">
-      <div class="icon-btn" id="btn-settings" title="Deltagere">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.2"/><path d="M4.5 20c1.4-3.6 4.4-5.5 7.5-5.5s6.1 1.9 7.5 5.5"/></svg>
+      <div class="icon-btn" id="btn-settings" title="Regler" aria-label="Regler">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.6"/><circle cx="12" cy="17.2" r=".6" fill="currentColor"/></svg>
       </div>
     </div>
   </div>
@@ -1518,14 +1518,14 @@ function wineTag(){ return `${esc(gen(ACTIVE.ownerName))} ${ACTIVE.ownerIndex ||
 
 function renderWaiting(kind){
   const msg = kind==='entry' ? `${esc(ACTIVE.ownerName)} indtaster vinen i hemmelighed` : `${esc(ACTIVE.guesserName||'Din medsmager')} gætter blindt lige nu`;
-  const sub = kind==='entry' ? 'Skærmen skifter automatisk til dig, når det er din tur til at gætte.' : 'Følg med — I ser resultatet sammen, så snart buddet er sendt.';
+  const sub = kind==='entry' ? 'Skærmen skifter automatisk til dig, når det er din tur til at gætte.' : '';
   const rows = CATEGORIES.map(c=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed var(--border);"><span>${c.label}</span><span style="color:var(--text-faint);">${c.points}p</span></div>`).join('');
   return `
   <div class="fade-in center-text">
     ${renderPhaseTrack(kind)}
     <div class="hero-icon pulse"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" fill="#4F6563"/><circle cx="12" cy="12" r="8" stroke="#CA9954" stroke-width="1.4" stroke-dasharray="3 4"/></svg></div>
     <h2>${msg}</h2>
-    <p class="sub">${sub}</p>
+    ${sub ? `<p class="sub">${sub}</p>` : ''}
     <div class="card card-flat" style="text-align:left;">
       <div class="eyebrow" style="margin-bottom:12px;">Kategorier i spil</div>
       ${rows}
@@ -1604,7 +1604,6 @@ function renderGuessing(){
     ${renderPhaseTrack('guessing')}
     <div class="eyebrow">Trin 2 · Blindsmager: ${esc(ACTIVE.guesserName)}</div>
     <h2>${wineTag()}</h2>
-    <p class="sub">Gæt løs — ingen ved siden af er forkert at prøve. Tryk "Send bud" når du er klar.</p>
     <div class="card">
       ${fields}
       <div class="field">
@@ -1990,7 +1989,7 @@ function renderReview(isOwner){
     <div class="eyebrow">Trin 3 · Din gennemgang</div>
     <h2>${wineTag()}</h2>
     ${wineTypeTag(ACTIVE)}
-    <p class="sub">Bedømmelsen er foreslået ud fra ${esc(gen(ACTIVE.guesserName))} bud — tjek den igennem, og ret hvis noget er forkert.</p>
+    <p class="sub">Bedømmelsen er foreslået ud fra ${esc(gen(ACTIVE.guesserName))} bud — tjek den igennem og ret, hvis noget er forkert.</p>
     <div class="live-score"><span>Score</span><span class="n" id="live-score-n">${effectiveScore(ACTIVE)} / ${MAX_SCORE}</span></div>
     ${rows || '<div class="empty">Ingen kategorier besvaret.</div>'}
     ${skipped.length ? `<div class="hint" style="margin:4px 0 14px;">Ikke besvaret (0 point): ${skipped.map(c=>c.label).join(', ')}</div>` : ''}
@@ -2116,6 +2115,7 @@ function renderNextStep(r){
     <button class="btn btn-secondary btn-block" style="margin-top:10px;" onclick="nextGuess()">🕶️ Jeg skal gætte den næste vin</button>
     <button class="btn btn-secondary btn-block" style="margin-top:10px;" onclick="endDay()">🍾 Det var aftenens sidste vin</button>
     <button class="btn btn-ghost btn-block" style="margin-top:14px;" onclick="RATED_DONE.delete(ACTIVE.id); render();">← Se resultatet igen</button>
+    <a class="btn btn-ghost btn-block" href="https://larsespost-code.github.io/Blindervenner/dashboard.html" target="_blank" rel="noopener" style="text-decoration:none;margin-top:6px;">📊 Se statistik</a>
   </div>`;
 }
 function nextServe(){ dismissResult(); newRound(); }

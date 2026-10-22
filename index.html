@@ -419,6 +419,10 @@ select.year-select,select.sel{border:1.5px solid #1E2D32;border-radius:8px;paddi
 .chip-pick.chip-more{background:rgba(202,153,84,.14);border:1.5px solid rgba(202,153,84,.75);color:#6B4E1F;font-weight:600}
 .chip-pick.chip-more .cm{font-size:1.15em;line-height:0;margin-left:2px}
 .chip-link{border:0;background:transparent;padding:9px 6px;font-family:var(--fb);font-size:15px;font-weight:600;color:var(--accent);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.nav-tiles{display:flex;gap:10px;margin-top:22px}
+.nav-tile{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:8px;padding:14px 6px 12px;background:var(--bg-2);border:var(--line);border-radius:var(--r-sm);color:var(--text);text-decoration:none;font-family:var(--fb);font-size:13.5px;font-weight:600;line-height:1.25;text-align:center;cursor:pointer}
+.nav-tile svg{width:24px;height:24px;fill:none;stroke:#CA9954;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nav-tile:active{transform:scale(.97)}
 .req{color:#B5643A;font-weight:900;margin-left:2px}
 .req-note{font-family:var(--fb);font-size:13px;color:var(--text-faint);text-align:right;margin:-6px 0 6px}
 .chip-pick .ck{font-size:.85em;margin-left:2px;opacity:.85}
@@ -1483,8 +1487,6 @@ function renderWaitingToGuess(){
 function renderIdle(){
   if(WAITING_TO_GUESS) return renderWaitingToGuess();
   const rounds = HISTORY.length;
-  const today = HISTORY.filter(r=>r.date===todayISO()).length;
-  const avg = rounds ? (HISTORY.reduce((a,r)=>a+(Number(r.score)||0),0)/rounds).toFixed(1).replace('.',',') : '0';
   const others = otherParticipants(MY_IDENTITY);
   const canStart = others.length>0;
   return `
@@ -1495,16 +1497,13 @@ function renderIdle(){
     <p class="sub">${canStart ? 'Du indtaster vinen i hemmelighed — din medsmager gætter blindt og scorer point.' : 'Tilføj mindst én medsmager under deltager-ikonet, før I kan starte.'}</p>
     <button class="btn btn-primary btn-block" ${canStart?'':'disabled'} onclick="newRound()">Start ny vin →</button>
     ${rounds>0 ? `
-    <div class="stats-row">
-      <div class="stat-box"><div class="stat-num">${rounds}</div><div class="stat-lbl">Vine i alt</div></div>
-      <div class="stat-box"><div class="stat-num">${today}</div><div class="stat-lbl">I dag</div></div>
-      <div class="stat-box"><div class="stat-num">${avg}p</div><div class="stat-lbl">Snit-score</div></div>
-    </div>
     <button class="btn btn-secondary btn-block" style="margin-top:10px;" onclick="switchView('day')">📅 Dagens resultat</button>
-    <button class="btn btn-ghost btn-block" onclick="switchView('history')" style="margin-top:6px;">Se historik →</button>
-    <a class="btn btn-ghost btn-block" href="https://larsespost-code.github.io/Blindervenner/dashboard.html" target="_blank" rel="noopener" style="text-decoration:none;">Se analyse →</a>
     ` : ''}
-    ${SHEET ? `<button class="btn btn-ghost btn-block" onclick="copyShareLink()" style="margin-top:6px;">📨 Send link til din medsmager</button>` : ''}
+    ${(rounds>0 || SHEET) ? `<div class="nav-tiles">
+      ${rounds>0 ? `<button type="button" class="nav-tile" onclick="switchView('history')"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4h4"/><path d="M12 8v4l3 2"/></svg><span>Se historik</span></button>
+      <a class="nav-tile" href="https://larsespost-code.github.io/Blindervenner/dashboard.html" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Se analyse</span></a>` : ''}
+      ${SHEET ? `<button type="button" class="nav-tile" onclick="copyShareLink()"><svg viewBox="0 0 24 24"><path d="M21 3 10 14"/><path d="M21 3l-7 18-4-7-7-4z"/></svg><span>Send link til din medsmager</span></button>` : ''}
+    </div>` : ''}
     ${USE_DB ? '' : `<div class="sync-note">⚠ Kører kun lokalt på denne telefon — ingen delt forbindelse fundet.</div>`}
   </div>`;
 }

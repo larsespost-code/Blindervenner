@@ -413,6 +413,33 @@ select.year-select,select.sel{border:1.5px solid #1E2D32;border-radius:8px;paddi
 .center-text .wtype-tag{display:inline-block}
 .rate-card{text-align:center}
 .reveal{margin:0 0 20px;text-align:center}
+.pick-chips{gap:8px}
+.pick-chips .chip-pick{font-size:15px;padding:9px 14px;line-height:1.15;-webkit-appearance:none;appearance:none;cursor:pointer}
+.chip-pick.chip-more{background:transparent;border-style:dashed;color:var(--text-dim)}
+.chip-pick .ck{font-size:.85em;margin-left:2px;opacity:.85}
+.pick-chips .chip-pick.chip-chosen{padding-right:16px}
+.chip-pick.chip-other{background:transparent;border-style:dashed;color:var(--text-dim)}
+.chip-pick.chip-other.open{border-style:solid;color:var(--text)}
+.chip-pick.chip-other.selected{background:var(--accent);color:var(--on-accent);border-style:solid}
+input.pick-input{margin-top:10px}
+#psheet .psheet-bg{position:fixed;inset:0;background:rgba(30,45,50,.38);opacity:0;transition:opacity .22s ease;z-index:200}
+#psheet .psheet{position:fixed;left:0;right:0;bottom:0;max-width:560px;margin:0 auto;max-height:82vh;display:flex;flex-direction:column;background:var(--surface);border-top:1.5px solid #1E2D32;border-radius:18px 18px 0 0;padding:8px 16px calc(14px + env(safe-area-inset-bottom,0px));transform:translateY(100%);transition:transform .26s cubic-bezier(.22,.8,.25,1);z-index:201;box-shadow:0 -10px 30px rgba(30,45,50,.18)}
+#psheet.show .psheet-bg{opacity:1}#psheet.show .psheet{transform:none}
+.psheet-grab{width:44px;height:4px;border-radius:9px;background:rgba(30,45,50,.3);margin:2px auto 10px}
+.psheet-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;font-family:var(--fb);font-size:17px}
+.psheet-x{border:0;background:transparent;font-size:18px;color:var(--text-dim);padding:4px 8px;cursor:pointer}
+.psheet-q{width:100%;margin-bottom:10px}
+.psheet-seg{display:flex;border:1.5px solid #1E2D32;border-radius:10px;overflow:hidden;margin-bottom:8px}
+.psheet-seg button{flex:1;border:0;background:var(--surface);padding:8px;font-family:var(--fb);font-weight:600;font-size:14px;color:var(--text-dim);cursor:pointer}
+.psheet-seg button.on{background:#1E2D32;color:var(--on-accent)}
+.psheet-list{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;margin:0 -4px;padding:0 4px}
+.pgroup{position:sticky;top:0;background:var(--surface);font-family:var(--fm);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);padding:12px 2px 6px;z-index:1}
+.prow{display:flex;align-items:baseline;justify-content:space-between;gap:10px;width:100%;text-align:left;border:0;border-bottom:1px solid var(--border);background:transparent;padding:12px 2px;font-family:var(--fb);font-size:16px;color:var(--text);cursor:pointer}
+.prow small{font-size:12.5px;color:var(--text-faint);text-align:right}
+.prow.on{font-weight:800;color:var(--accent)}
+.prow.on span::before{content:'✓ '}
+.prow-other{color:var(--text-dim);border-bottom:0;font-style:italic}
+body.psheet-open{overflow:hidden}
 .reveal-kicker{font-family:var(--fm);font-size:12px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
 .reveal-label{position:relative;background:#F8F4EE;border:1.5px solid #1E2D32;border-radius:14px;padding:26px 20px 22px;box-shadow:0 0 0 5px #F8F4EE,0 0 0 6.5px #CA9954,0 14px 30px rgba(30,45,50,.12)}
 .reveal-type{display:inline-block;font-family:var(--fm);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-dim);border-bottom:1px solid #CA9954;padding-bottom:4px;margin-bottom:12px}
@@ -1296,11 +1323,8 @@ function aargangSelectHtml(value, kind){
   const updater = kind==='truth' ? 'updTruth' : 'updGuess';
   const showCustom = customAargang[kind] || (!!value && !isYearOrNV(value));
   let opts = `<option value=""${!value?' selected':''}>— vælg årgang —</option>`;
-  opts += `<optgroup label="Seneste årgange">` + [2025,2024,2023,2022,2021].map(y=>`<option value="${y}"${String(value)===String(y)?' selected':''}>${y}</option>`).join('') + `</optgroup>`;
   opts += `<option value="NV"${value==='NV'?' selected':''}>NV (ikke-vintage)</option>`;
-  let older='';
-  for(let y=2020;y>=1970;y--){ older += `<option value="${y}"${String(value)===String(y)?' selected':''}>${y}</option>`; }
-  opts += `<optgroup label="Ældre årgange">${older}</optgroup>`;
+  for(let y=new Date().getFullYear(); y>=1950; y--){ opts += `<option value="${y}"${String(value)===String(y)?' selected':''}>${y}</option>`; }
   opts += `<option value="__custom__"${showCustom?' selected':''}>Andet (skriv selv)…</option>`;
   const customInput = showCustom
     ? `<input type="text" placeholder="fx 12 år, Hors d'Age, VVO" value="${esc(isYearOrNV(value)?'':value)}" oninput="${updater}('aargang', this.value)" style="margin-top:8px;">`
@@ -1511,7 +1535,7 @@ function renderEntry(){
   const truthFields = CATEGORIES.map(c=>`
     <div class="field">
       <div class="field-label"><span class="txt">${c.label}</span><span class="pts">${c.points}p</span></div>
-      <input type="text" placeholder="${c.ph}" value="${esc(ACTIVE.truth[c.id])}" oninput="updTruth('${c.id}', this.value)">
+      ${pickerHtml('truth', c.id)}
     </div>`).join('');
 
   return `
@@ -1561,7 +1585,7 @@ function renderGuessing(){
   const fields = CATEGORIES.map(c=>`
     <div class="field">
       <div class="field-label"><span class="txt">${c.label}</span><span class="pts">${c.points}p</span></div>
-      <input type="text" placeholder="${c.ph}" value="${esc(ACTIVE.guess[c.id])}" oninput="updGuess('${c.id}', this.value)">
+      ${pickerHtml('guess', c.id)}
     </div>`).join('');
 
   return `
@@ -1580,6 +1604,194 @@ function renderGuessing(){
     ${rulesToggleHtml()}
     <button class="btn btn-primary btn-block" onclick="sendGuess()">Send bud →</button>
   </div>`;
+}
+
+/* ================= VÆLGERE (knapper, "Andet …" og ark med søgning) =================
+   Hvert felt viser knapper for de oplagte valg. Valgene afhænger af hinanden:
+   land → regioner → appellationer, og region/land → typiske druer øverst.
+   Lange lister (fx alle druer) åbner et ark fra bunden med søgefelt.
+   "Andet …" giver altid et tekstfelt. Værdien gemmes som tekst som hidtil,
+   så sammenligning, regneark og statistik er uændret. */
+const VINDATA = {"lande":["Australien","Danmark","Frankrig","Italien","New Zealand","Portugal","Spanien","Sydafrika","Tyskland","USA","Østrig"],"regioner":{"Australien":["New South Wales","South Australia","Tasmania","Victoria","Western Australia"],"Danmark":["Bornholm","Fyn","Jylland","Sjælland"],"Frankrig":["Alsace","Beaujolais","Bordeaux","Bourgogne","Champagne","Corse","Jura","Languedoc","Loire","Provence","Rhône","Roussillon","Savoie","Sud-Ouest"],"Italien":["Abruzzo","Alto Adige","Campania","Emilia-Romagna","Friuli-Venezia Giulia","Lazio","Liguria","Lombardia","Marche","Piemonte","Puglia","Sardegna","Sicilia","Toscana","Trentino","Umbria","Veneto"],"New Zealand":["Auckland","Canterbury","Central Otago","Gisborne","Hawke’s Bay","Marlborough","Nelson","Northland","Wairarapa"],"Portugal":["Alentejo","Algarve","Bairrada","Douro","Dão","Lisboa","Madeira","Península de Setúbal","Tejo","Vinho Verde"],"Spanien":["Andalucía","Aragón","Castilla y León","Castilla-La Mancha","Catalunya","Galicia","Murcia","Navarra","Rioja","Valencia"],"Sydafrika":["Western Cape"],"Tyskland":["Ahr","Baden","Franken","Hessische Bergstraße","Mittelrhein","Mosel","Nahe","Pfalz","Rheingau","Rheinhessen","Saale-Unstrut","Sachsen","Württemberg"],"USA":["California","New York","Oregon","Virginia","Washington"],"Østrig":["Burgenland","Niederösterreich","Steiermark","Wien"]},"appellationer":{"Abruzzo":["Montepulciano d’Abruzzo DOC","Trebbiano d’Abruzzo DOC"],"Ahr":["Ahr Qualitätswein"],"Alentejo":["Alentejo DOC"],"Alsace":["Alsace AOC","Alsace Grand Cru AOC","Crémant d’Alsace AOC"],"Aragón":["Calatayud DO","Campo de Borja DO","Cariñena DO"],"Baden":["Baden Qualitätswein"],"Bairrada":["Bairrada DOC"],"South Australia":["Barossa Valley GI","Clare Valley GI","Coonawarra GI","Eden Valley GI","McLaren Vale GI"],"Beaujolais":["Beaujolais AOC","Brouilly AOC","Chiroubles AOC","Fleurie AOC","Morgon AOC","Moulin-à-Vent AOC"],"Castilla y León":["Bierzo DO","Ribera del Duero DO","Rueda DO","Toro DO"],"Bordeaux":["Barsac AOC","Bordeaux AOC","Graves AOC","Margaux AOC","Pauillac AOC","Pomerol AOC","Saint-Estèphe AOC","Saint-Julien AOC","Saint-Émilion AOC","Sauternes AOC"],"Bourgogne":["Bourgogne AOC","Chablis AOC","Chambertin AOC","Chassagne-Montrachet AOC","Corton AOC","Gevrey-Chambertin AOC","Meursault AOC","Pommard AOC","Pouilly-Fuissé AOC","Volnay AOC","Vosne-Romanée AOC"],"Campania":["Fiano di Avellino DOCG","Greco di Tufo DOCG","Taurasi DOCG"],"Canterbury":["Canterbury GI","Waipara Valley GI"],"Niederösterreich":["Carnuntum DAC","Kamptal DAC","Kremstal DAC","Thermenregion DAC","Traisental DAC","Wachau DAC","Weinviertel DAC"],"Central Otago":["Central Otago GI"],"Champagne":["Champagne AOC","Coteaux Champenois AOC"],"Western Cape":["Constantia WO","Elgin WO","Franschhoek WO","Paarl WO","Robertson WO","Stellenbosch WO","Swartland WO","Walker Bay WO","Wellington WO","Western Cape WO"],"Douro":["Douro DOC","Porto DOC"],"Dão":["Dão DOC"],"Emilia-Romagna":["Lambrusco di Sorbara DOC","Romagna Sangiovese DOC"],"New York":["Finger Lakes AVA","Seneca Lake AVA"],"Franken":["Franken Qualitätswein"],"Friuli-Venezia Giulia":["Collio DOC","Friuli Colli Orientali DOC"],"Gisborne":["Gisborne GI"],"Hawke’s Bay":["Hawke’s Bay GI"],"New South Wales":["Hunter GI"],"Andalucía":["Jerez-Xérès-Sherry DO","Manzanilla-Sanlúcar de Barrameda DO"],"Murcia":["Jumilla DO"],"Jura":["Arbois AOC","Château-Chalon AOC","Côtes du Jura AOC"],"Languedoc":["Corbières AOC","Minervois AOC","Pic Saint-Loup AOC"],"Lisboa":["Bucelas DOC","Colares DOC"],"Loire":["Chinon AOC","Muscadet Sèvre et Maine AOC","Pouilly-Fumé AOC","Quarts de Chaume Grand Cru AOC","Sancerre AOC","Saumur-Champigny AOC","Vouvray AOC"],"Lombardia":["Franciacorta DOCG","Valtellina Superiore DOCG"],"Madeira":["Madeira DOP"],"Marche":["Conero DOCG","Verdicchio dei Castelli di Jesi DOC"],"Western Australia":["Margaret River GI"],"Marlborough":["Marlborough GI"],"Burgenland":["Mittelburgenland DAC","Neusiedlersee DAC"],"Victoria":["Mornington Peninsula GI","Yarra Valley GI"],"Mosel":["Mosel Qualitätswein"],"Nahe":["Nahe Qualitätswein"],"California":["Alexander Valley AVA","Central Coast AVA","Napa Valley AVA","Oakville AVA","Paso Robles AVA","Russian River Valley AVA","Rutherford AVA","Santa Maria Valley AVA","Santa Ynez Valley AVA","Sonoma Coast AVA","Stags Leap District AVA"],"Navarra":["Navarra DO"],"Nelson":["Nelson GI"],"Oregon":["Dundee Hills AVA","Eola-Amity Hills AVA","Willamette Valley AVA"],"Catalunya":["Cava DO","Penedès DO","Priorat DOQ"],"Península de Setúbal":["Palmela DOC","Setúbal DOC"],"Pfalz":["Pfalz Qualitätswein"],"Piemonte":["Barbaresco DOCG","Barbera d’Asti DOCG","Barolo DOCG","Dogliani DOCG","Gavi DOCG","Moscato d’Asti DOCG"],"Provence":["Bandol AOC","Cassis AOC","Côtes de Provence AOC"],"Puglia":["Primitivo di Manduria DOC","Salice Salentino DOC"],"Rheingau":["Rheingau Qualitätswein"],"Rheinhessen":["Rheinhessen Qualitätswein"],"Rhône":["Châteauneuf-du-Pape AOC","Condrieu AOC","Cornas AOC","Crozes-Hermitage AOC","Côte-Rôtie AOC","Gigondas AOC","Hermitage AOC","Saint-Joseph AOC"],"Rioja":["Rioja DOCa"],"Roussillon":["Banyuls AOC","Collioure AOC","Muscat de Rivesaltes AOC"],"Galicia":["Rías Baixas DO"],"Sardegna":["Cannonau di Sardegna DOC","Vermentino di Gallura DOCG"],"Sicilia":["Etna DOC","Marsala DOC","Sicilia DOC"],"Sjælland":["Dons BOB"],"Sud-Ouest":["Cahors AOC","Gaillac AOC","Madiran AOC"],"Tasmania":["Tasmania GI"],"Tejo":["DoTejo DOC"],"Toscana":["Bolgheri DOC","Brunello di Montalcino DOCG","Chianti Classico DOCG","Chianti DOCG","Vino Nobile di Montepulciano DOCG"],"Umbria":["Montefalco Sagrantino DOCG","Orvieto DOC"],"Castilla-La Mancha":["Valdepeñas DO"],"Valencia":["Valencia DO"],"Veneto":["Amarone della Valpolicella DOCG","Prosecco DOC","Soave DOC","Valpolicella DOC"],"Vinho Verde":["Vinho Verde DOC"],"Wairarapa":["Wairarapa GI"],"Washington":["Columbia Valley AVA","Red Mountain AVA","Walla Walla Valley AVA"],"Wien":["Wiener Gemischter Satz DAC"]},"druer":[["Aglianico","rød",[]],["Airén","hvid",[]],["Albariño","hvid",["Alvarinho"]],["Alicante Bouschet","rød",[]],["Aligoté","hvid",[]],["Altesse","hvid",[]],["Antão Vaz","hvid",[]],["Arinto","hvid",[]],["Baga","rød",[]],["Barbera","rød",[]],["Blaufränkisch","rød",["Lemberger"]],["Bual","hvid",[]],["Cabernet Franc","rød",[]],["Cabernet Sauvignon","rød",[]],["Carignan","rød",["Cariñena","Mazuelo"]],["Carricante","hvid",[]],["Castelão","rød",[]],["Chardonnay","hvid",[]],["Chenin Blanc","hvid",[]],["Cinsault","rød",[]],["Colombard","hvid",[]],["Corvina","rød",[]],["Dolcetto","rød",[]],["Elbling","hvid",[]],["Encruzado","hvid",[]],["Fernão Pires","hvid",[]],["Fiano","hvid",[]],["Friulano","hvid",[]],["Frühburgunder","rød",[]],["Gamay","rød",[]],["Garganega","hvid",[]],["Gewürztraminer","hvid",[]],["Glera","hvid",[]],["Godello","hvid",[]],["Graciano","rød",[]],["Grechetto","hvid",[]],["Greco","hvid",[]],["Grenache","rød",["Cannonau","Garnacha"]],["Grillo","hvid",[]],["Grüner Veltliner","hvid",[]],["Jacquère","hvid",[]],["Lagrein","rød",[]],["Lambrusco","rød",[]],["Loureiro","hvid",[]],["Macabeo","hvid",["Macabeu","Viura"]],["Malbec","rød",["Côt"]],["Malvasia","hvid",[]],["Maria Gomes","hvid",[]],["Marsanne","hvid",[]],["Melon de Bourgogne","hvid",["Muscadet"]],["Mencía","rød",[]],["Merlot","rød",[]],["Meunier","rød",[]],["Mondeuse","rød",[]],["Montepulciano","rød",[]],["Moscatel de Setúbal","hvid",[]],["Mourvèdre","rød",["Monastrell","Mataró"]],["Muscat","hvid",["Moscatel","Moscato Bianco","Muskateller"]],["Müller-Thurgau","hvid",[]],["Nebbiolo","rød",[]],["Negra Mole","rød",[]],["Negroamaro","rød",[]],["Nerello Mascalese","rød",[]],["Nero d’Avola","rød",[]],["Niellucciu","rød",[]],["Ortega","hvid",[]],["Palomino","hvid",[]],["Parellada","hvid",[]],["Pedro Ximénez","hvid",[]],["Pigato","hvid",[]],["Pinot Blanc","hvid",["Weißburgunder"]],["Pinot Gris","hvid",["Grauburgunder","Pinot Grigio","Ruländer"]],["Pinot Noir","rød",["Spätburgunder","Pinot Nero","Blauburgunder"]],["Pinotage","rød",[]],["Poulsard","rød",[]],["Regent","rød",[]],["Riesling","hvid",[]],["Rondinella","rød",[]],["Rondo","rød",[]],["Rotgipfler","hvid",[]],["Roussanne","hvid",[]],["Sagrantino","rød",[]],["Sangiovese","rød",[]],["Sauvignon Blanc","hvid",[]],["Savagnin","hvid",[]],["Sciaccarellu","rød",[]],["Sercial","hvid",[]],["Silvaner","hvid",[]],["Solaris","hvid",[]],["Syrah","rød",["Shiraz"]],["Sémillon","hvid",["Semillon"]],["Tannat","rød",[]],["Tempranillo","rød",["Aragonez","Tinta Roriz"]],["Teroldego","rød",[]],["Tinta Negra","rød",[]],["Touriga Franca","rød",[]],["Touriga Nacional","rød",[]],["Trebbiano","hvid",["Ugni Blanc"]],["Trincadeira","rød",[]],["Trollinger","rød",[]],["Trousseau","rød",[]],["Verdejo","hvid",[]],["Verdelho","hvid",[]],["Verdicchio","hvid",[]],["Vermentino","hvid",["Rolle"]],["Viognier","hvid",[]],["Welschriesling","hvid",[]],["Xarel·lo","hvid",[]],["Zierfandler","hvid",[]],["Zinfandel","rød",["Primitivo"]],["Zweigelt","rød",[]]],"typiske":{"Abruzzo":["Montepulciano","Trebbiano"],"Ahr":["Frühburgunder","Pinot Noir"],"Alentejo":["Alicante Bouschet","Antão Vaz","Tempranillo","Trincadeira"],"Algarve":["Arinto","Negra Mole"],"Alsace":["Gewürztraminer","Muscat","Pinot Gris","Riesling"],"Alto Adige":["Gewürztraminer","Lagrein","Pinot Gris"],"Aragón":["Grenache","Tempranillo"],"Auckland":["Chardonnay","Merlot"],"Baden":["Pinot Gris","Pinot Noir","Pinot Blanc"],"Bairrada":["Baga","Maria Gomes"],"South Australia":["Cabernet Sauvignon","Grenache","Syrah","Riesling"],"Beaujolais":["Chardonnay","Gamay"],"Castilla y León":["Godello","Mencía","Tempranillo","Sauvignon Blanc","Verdejo"],"Bordeaux":["Cabernet Franc","Cabernet Sauvignon","Merlot","Sauvignon Blanc","Sémillon"],"Bornholm":["Rondo","Solaris"],"Bourgogne":["Aligoté","Chardonnay","Pinot Noir"],"Western Cape":["Chenin Blanc","Colombard","Syrah","Chardonnay","Pinot Noir","Sauvignon Blanc","Cabernet Sauvignon","Pinotage","Muscat","Sémillon","Merlot","Grenache"],"Burgenland":["Blaufränkisch","Welschriesling","Zweigelt"],"California":["Chardonnay","Pinot Noir","Syrah","Cabernet Sauvignon","Merlot","Zinfandel"],"Campania":["Aglianico","Fiano","Greco"],"Canterbury":["Pinot Noir","Riesling"],"Niederösterreich":["Blaufränkisch","Zweigelt","Grüner Veltliner","Riesling","Pinot Noir","Rotgipfler","Zierfandler"],"Castilla-La Mancha":["Airén","Tempranillo"],"Catalunya":["Carignan","Grenache","Macabeo","Parellada","Xarel·lo"],"Central Otago":["Pinot Gris","Pinot Noir"],"Champagne":["Chardonnay","Meunier","Pinot Noir"],"Corse":["Niellucciu","Sciaccarellu","Vermentino"],"Douro":["Tempranillo","Touriga Franca","Touriga Nacional"],"Dão":["Encruzado","Touriga Nacional"],"Emilia-Romagna":["Lambrusco","Sangiovese"],"New York":["Cabernet Franc","Riesling"],"Franken":["Riesling","Silvaner"],"Friuli-Venezia Giulia":["Friulano","Pinot Gris","Sauvignon Blanc"],"Fyn":["Ortega","Rondo","Solaris"],"Galicia":["Albariño","Godello","Mencía"],"Gisborne":["Chardonnay","Gewürztraminer"],"Hawke’s Bay":["Cabernet Sauvignon","Chardonnay","Merlot","Syrah"],"Hessische Bergstraße":["Riesling","Pinot Noir"],"New South Wales":["Sémillon","Syrah"],"Andalucía":["Muscat","Palomino","Pedro Ximénez"],"Murcia":["Mourvèdre"],"Jura":["Chardonnay","Pinot Noir","Poulsard","Savagnin","Trousseau"],"Jylland":["Ortega","Rondo","Solaris"],"Languedoc":["Carignan","Grenache","Mourvèdre","Syrah"],"Lazio":["Malvasia","Trebbiano"],"Liguria":["Pigato","Vermentino"],"Lisboa":["Arinto","Castelão","Fernão Pires"],"Loire":["Cabernet Franc","Chenin Blanc","Melon de Bourgogne","Sauvignon Blanc"],"Lombardia":["Chardonnay","Nebbiolo","Pinot Noir"],"Madeira":["Bual","Malvasia","Sercial","Tinta Negra","Verdelho"],"Marche":["Montepulciano","Verdicchio"],"Western Australia":["Cabernet Sauvignon","Chardonnay","Sauvignon Blanc"],"Marlborough":["Pinot Noir","Sauvignon Blanc"],"Mittelrhein":["Riesling"],"Victoria":["Chardonnay","Pinot Noir"],"Mosel":["Elbling","Riesling"],"Nahe":["Riesling","Silvaner"],"Navarra":["Grenache","Tempranillo"],"Nelson":["Pinot Noir","Sauvignon Blanc"],"Northland":["Chardonnay","Syrah"],"Oregon":["Chardonnay","Pinot Noir"],"Península de Setúbal":["Castelão","Moscatel de Setúbal"],"Pfalz":["Riesling","Pinot Noir","Pinot Blanc"],"Piemonte":["Barbera","Dolcetto","Muscat","Nebbiolo"],"Provence":["Cinsault","Grenache","Mourvèdre","Syrah"],"Puglia":["Negroamaro","Zinfandel"],"Rheingau":["Riesling","Pinot Noir"],"Rheinhessen":["Riesling","Silvaner","Pinot Noir"],"Rhône":["Grenache","Marsanne","Mourvèdre","Roussanne","Syrah","Viognier"],"Rioja":["Grenache","Graciano","Tempranillo","Macabeo"],"Roussillon":["Carignan","Grenache","Macabeo"],"Saale-Unstrut":["Müller-Thurgau","Pinot Blanc"],"Sachsen":["Müller-Thurgau","Riesling"],"Sardegna":["Grenache","Vermentino"],"Savoie":["Altesse","Jacquère","Mondeuse"],"Sicilia":["Carricante","Grillo","Nerello Mascalese","Nero d’Avola"],"Sjælland":["Regent","Rondo","Solaris"],"Steiermark":["Muscat","Sauvignon Blanc","Welschriesling"],"Sud-Ouest":["Malbec","Merlot","Tannat"],"Tasmania":["Chardonnay","Pinot Noir"],"Tejo":["Arinto","Fernão Pires","Trincadeira"],"Toscana":["Cabernet Sauvignon","Merlot","Sangiovese"],"Trentino":["Pinot Gris","Teroldego"],"Umbria":["Grechetto","Sagrantino"],"Valencia":["Mourvèdre","Muscat"],"Veneto":["Corvina","Garganega","Glera","Rondinella"],"Vinho Verde":["Albariño","Arinto","Loureiro"],"Virginia":["Cabernet Franc","Viognier"],"Wairarapa":["Pinot Noir","Sauvignon Blanc"],"Washington":["Cabernet Sauvignon","Merlot","Riesling","Syrah"],"Wien":["Grüner Veltliner","Riesling","Pinot Blanc"],"Württemberg":["Blaufränkisch","Riesling","Trollinger"]},"betegnelser":[["Amontillado","Spanien"],["Auslese","Tyskland"],["Auslese","Østrig"],["Beerenauslese","Tyskland"],["Beerenauslese","Østrig"],["Blanc de Blancs",""],["Blanc de Noirs",""],["Brut",""],["Brut Nature",""],["Classico","Italien"],["Colheita","Portugal"],["Crianza","Spanien"],["Crémant","Frankrig"],["Demi-Sec",""],["Eiswein","Tyskland"],["Extra Brut",""],["Extra Dry",""],["Federspiel","Østrig"],["Fino","Spanien"],["Garrafeira","Portugal"],["Gran Reserva","Spanien"],["Gran Selezione","Italien"],["Grand Cru","Frankrig"],["Grosses Gewächs","Tyskland"],["Kabinett","Tyskland"],["LBV","Portugal"],["Manzanilla","Spanien"],["Oloroso","Spanien"],["Premier Cru","Frankrig"],["Prädikatswein","Tyskland"],["Qualitätswein","Tyskland"],["Reserva","Portugal"],["Reserva","Spanien"],["Reserve","Østrig"],["Riserva","Italien"],["Sec",""],["Smaragd","Østrig"],["Spätlese","Tyskland"],["Steinfeder","Østrig"],["Superiore","Italien"],["Trockenbeerenauslese","Tyskland"],["Trockenbeerenauslese","Østrig"],["Vino de Pago","Spanien"]]};
+const CHIP_MAX = 14;
+const PICK_CUSTOM = {}; // "truth.region" → true while "Andet …" is open
+const PICK_OPEN = {};   // "truth.land" → true while a chosen field shows all its choices again
+// Buttons show appellations without the system suffix ("Chablis", not "Chablis AOC"); the full name is what is saved.
+const dispLabel = (id, v)=> id==='appellation' ? String(v).replace(/\s+(AOC|AOP|DOCG|DOCa|DOC|DOQ|DOP|DO|DAC|AVA|GI|WO|BOB|Qualitätswein)$/,'') : v;
+const vkey = v => norm(v);
+const GRAPE_BY = new Map(); VINDATA.druer.forEach(g=>[g[0], ...(g[2]||[])].forEach(n=>GRAPE_BY.set(vkey(n), g)));
+const REGION_LAND = {}; Object.entries(VINDATA.regioner).forEach(([l,rs])=>rs.forEach(r=>REGION_LAND[vkey(r)] = l));
+const APP_REGION = {}; Object.entries(VINDATA.appellationer).forEach(([r,as])=>as.forEach(a=>APP_REGION[vkey(a)] = r));
+const findIn = (list, v)=> list.find(x=>vkey(x)===vkey(v));
+const ansObj = kind => kind==='truth' ? ACTIVE.truth : ACTIVE.guess;
+const ansSet = (kind, id, v)=> kind==='truth' ? updTruth(id, v) : updGuess(id, v);
+function knownLand(o){ return findIn(VINDATA.lande, o.land||''); }
+function knownRegion(o){ const r = Object.values(VINDATA.regioner).flat().find(x=>vkey(x)===vkey(o.region||'')); return r || null; }
+function landRegions(l){ return VINDATA.regioner[l] || []; }
+function typicalGrapes(o){
+  const r = knownRegion(o), l = knownLand(o);
+  if(r) return VINDATA.typiske[r] || [];
+  if(l){ const out = []; landRegions(l).forEach(x=>(VINDATA.typiske[x]||[]).forEach(g=>{ if(!out.includes(g)) out.push(g); })); return out; }
+  return [];
+}
+// The choices for a field: {chips:[…] shown as buttons, groups:[{title,items}] for the sheet}
+function pickChoices(kind, id){
+  const o = ansObj(kind), l = knownLand(o), r = knownRegion(o);
+  const byRegion = regs => regs.map(x=>({ title:x, items:VINDATA.appellationer[x]||[] })).filter(g=>g.items.length);
+  if(id==='land') return { chips: VINDATA.lande, groups:[{ title:'Lande', items:VINDATA.lande }] };
+  if(id==='region'){
+    const groups = VINDATA.lande.map(x=>({ title:x, items:landRegions(x) }));
+    return { chips: l ? landRegions(l) : null, groups: l ? [{ title:l, items:landRegions(l) }, ...groups.filter(g=>g.title!==l)] : groups };
+  }
+  if(id==='appellation'){
+    const all = byRegion(Object.values(VINDATA.regioner).flat());
+    if(r) return { chips: VINDATA.appellationer[r] || [], groups: byRegion([r]).concat(all.filter(g=>g.title!==r)) };
+    if(l){ const mine = byRegion(landRegions(l)); const flat = mine.flatMap(g=>g.items);
+      return { chips: flat.length <= CHIP_MAX ? flat : null, groups: mine.concat(all.filter(g=>!landRegions(l).includes(g.title))) }; }
+    return { chips:null, groups: all };
+  }
+  if(id==='drue1' || id==='drue2'){
+    const typ = typicalGrapes(o), where = r || l;
+    const all = VINDATA.druer.map(g=>g[0]);
+    return { chips: typ.slice(0, 10), more:true, groups: (typ.length ? [{ title:'Typisk for '+where, items:typ }] : []).concat([{ title:'Alle druer', items:all }]) };
+  }
+  if(id==='type'){
+    const mine = VINDATA.betegnelser.filter(b=>!b[1] || b[1]===l).map(b=>b[0]).filter((x,i,a)=>a.indexOf(x)===i);
+    const groups = [{ title: l ? 'Til '+l+' og generelle' : 'Generelle', items: mine }];
+    VINDATA.lande.filter(x=>x!==l).forEach(x=>{ const it = VINDATA.betegnelser.filter(b=>b[1]===x).map(b=>b[0]); if(it.length) groups.push({ title:x, items:it }); });
+    return { chips: l ? mine : mine.filter(x=>!VINDATA.betegnelser.some(b=>b[0]===x && b[1])), more:true, groups };
+  }
+  return { chips:[], groups:[] };
+}
+function isKnownValue(id, v){
+  if(!v) return true;
+  if(id==='land') return !!findIn(VINDATA.lande, v);
+  if(id==='region') return !!REGION_LAND[vkey(v)];
+  if(id==='appellation') return !!APP_REGION[vkey(v)];
+  if(id==='drue1' || id==='drue2') return GRAPE_BY.has(vkey(v));
+  if(id==='type') return VINDATA.betegnelser.some(b=>vkey(b[0])===vkey(v));
+  return false;
+}
+const sameChoice = (id, a, b)=> vkey(a)===vkey(b) || ((id==='drue1'||id==='drue2') && GRAPE_BY.get(vkey(a)) && GRAPE_BY.get(vkey(a))===GRAPE_BY.get(vkey(b)));
+function chipBtn(kind, id, v, on, extra){
+  return `<button type="button" class="chip-pick ${on?'selected':''} ${extra||''}" data-k="${kind}" data-id="${id}" data-v="${esc(v)}" onclick="pickChip(this)">${esc(dispLabel(id, v))}${on?' <span class="ck">✓</span>':''}</button>`;
+}
+function pickerHtml(kind, id){
+  const o = ansObj(kind), v = o[id] || '', c = pickChoices(kind, id);
+  const custom = PICK_CUSTOM[kind+'.'+id] || (v && !isKnownValue(id, v));
+  const chips = c.chips;
+  let html = '';
+  // Chosen: show just the choice and "Skift" — the page stays short and the answer is obvious.
+  if(v && !custom && !PICK_OPEN[kind+'.'+id]){
+    const shown = (id==='drue1'||id==='drue2') && GRAPE_BY.get(vkey(v)) ? GRAPE_BY.get(vkey(v))[0] : v;
+    return `<div class="chips pick-chips">${chipBtn(kind, id, shown, true, 'chip-chosen')}<button type="button" class="chip-pick chip-more" data-k="${kind}" data-id="${id}" onclick="pickReopen(this)">Skift</button></div>`;
+  }
+  if(chips){
+    let list = chips.slice();
+    if(v && !custom && !list.some(x=>sameChoice(id,x,v))) list = [GRAPE_BY.get(vkey(v)) ? GRAPE_BY.get(vkey(v))[0] : v, ...list]; // chosen in the sheet: show it first
+    html += list.map(x=>chipBtn(kind, id, x, !custom && v && sameChoice(id,x,v))).join('');
+    if(c.more) html += `<button type="button" class="chip-pick chip-more" data-k="${kind}" data-id="${id}" onclick="openPickSheet(this.dataset.k,this.dataset.id)">${id==='type'?'Flere …':(chips.length?'Alle druer …':'Vælg drue …')}</button>`;
+  } else {
+    const label = { region:'Vælg region …', appellation:'Vælg appellation …' }[id] || 'Vælg …';
+    if(v && !custom) html += chipBtn(kind, id, v, true);
+    html += `<button type="button" class="chip-pick chip-more" data-k="${kind}" data-id="${id}" onclick="openPickSheet(this.dataset.k,this.dataset.id)">${v && !custom ? 'Skift …' : label}</button>`;
+  }
+  html += `<button type="button" class="chip-pick chip-other ${custom && v ? 'selected' : ''} ${custom && !v ? 'open' : ''}" data-k="${kind}" data-id="${id}" onclick="pickOther(this)">${custom && v ? 'Andet: '+esc(v) : 'Andet …'}</button>`;
+  const cat = CATEGORIES.find(x=>x.id===id) || {};
+  const input = custom ? `<input type="text" class="pick-input" id="pick-in-${kind}-${id}" placeholder="Skriv selv · ${esc(cat.ph||'')}" value="${esc(v)}" data-k="${kind}" data-id="${id}" oninput="pickTyped(this)">` : '';
+  const empty = chips && !chips.length && id==='appellation' ? `<div class="hint" style="margin:0 0 6px;">Ingen appellationer på listen for ${esc(knownRegion(o)||'')} — vælg "Andet …" eller spring over.</div>` : '';
+  return `${empty}<div class="chips pick-chips">${html}</div>${input}`;
+}
+// Keep land → region → appellation consistent when one of them changes.
+function pickApply(kind, id, v){
+  const o = ansObj(kind);
+  ansSet(kind, id, v);
+  if(id==='land'){
+    const l = knownLand(o);
+    if(l && o.region && REGION_LAND[vkey(o.region)] && REGION_LAND[vkey(o.region)]!==l){ ansSet(kind,'region',''); PICK_CUSTOM[kind+'.region'] = false; }
+    if(l && o.appellation && APP_REGION[vkey(o.appellation)] && REGION_LAND[vkey(APP_REGION[vkey(o.appellation)])]!==l){ ansSet(kind,'appellation',''); }
+  }
+  if(id==='region' && v){
+    const l = REGION_LAND[vkey(v)];
+    if(l && !o.land){ ansSet(kind,'land',l); PICK_CUSTOM[kind+'.land'] = false; } // picked a region first → the country follows
+    if(o.appellation && APP_REGION[vkey(o.appellation)] && vkey(APP_REGION[vkey(o.appellation)])!==vkey(v)) ansSet(kind,'appellation','');
+  }
+  if(id==='appellation' && v){
+    const r = APP_REGION[vkey(v)];
+    if(r && !o.region){ ansSet(kind,'region',r); PICK_CUSTOM[kind+'.region'] = false; }
+    if(r && !o.land && REGION_LAND[vkey(r)]){ ansSet(kind,'land',REGION_LAND[vkey(r)]); PICK_CUSTOM[kind+'.land'] = false; }
+  }
+}
+function pickReopen(el){ PICK_OPEN[el.dataset.k+'.'+el.dataset.id] = true; render(); }
+function pickChip(el){
+  const kind = el.dataset.k, id = el.dataset.id, v = el.dataset.v, o = ansObj(kind);
+  if(el.classList.contains('chip-chosen')){ PICK_OPEN[kind+'.'+id] = true; render(); return; } // tap the choice to change it
+  PICK_CUSTOM[kind+'.'+id] = false; PICK_OPEN[kind+'.'+id] = false;
+  pickApply(kind, id, sameChoice(id, o[id]||'', v) ? '' : v); // tap again to deselect
+  render();
+}
+function pickOther(el){
+  const kind = el.dataset.k, id = el.dataset.id, o = ansObj(kind);
+  const key = kind+'.'+id, open = PICK_CUSTOM[key] || (o[id] && !isKnownValue(id, o[id]));
+  if(open && !o[id]){ PICK_CUSTOM[key] = false; render(); return; } // close an empty "Andet"
+  if(!open && isKnownValue(id, o[id]||'')) ansSet(kind, id, '');
+  PICK_CUSTOM[key] = true; render();
+  const inp = document.getElementById('pick-in-'+kind+'-'+id); if(inp){ inp.focus(); const n = inp.value.length; try{ inp.setSelectionRange(n,n); }catch(e){} }
+}
+function pickTyped(el){
+  const kind = el.dataset.k, id = el.dataset.id;
+  ansSet(kind, id, el.value);
+  const b = el.parentNode.querySelector(`.chip-other[data-id="${id}"]`) || el.previousElementSibling && el.previousElementSibling.querySelector('.chip-other');
+  if(b){ b.classList.toggle('selected', !!el.value); b.textContent = el.value ? 'Andet: '+el.value : 'Andet …'; }
+}
+
+// ---- the sheet that slides up from the bottom (search + groups)
+let PSHEET = null; // {kind, id, q, color}
+function openPickSheet(kind, id){
+  const wt = (ACTIVE && ACTIVE.wineType) || '';
+  PSHEET = { kind, id, q:'', color: kind==='truth' && (id==='drue1'||id==='drue2') ? (wt==='Rød' ? 'rød' : (wt==='Hvid' ? 'hvid' : '')) : '' };
+  let el = document.getElementById('psheet');
+  if(!el){ el = document.createElement('div'); el.id = 'psheet'; document.body.appendChild(el); }
+  const titles = { land:'Vælg land', region:'Vælg region', appellation:'Vælg appellation', drue1:'Vælg dominerende drue', drue2:'Vælg yderligere drue', type:'Vælg betegnelse' };
+  const grapes = id==='drue1' || id==='drue2';
+  el.innerHTML = `<div class="psheet-bg" onclick="closePickSheet()"></div>
+    <div class="psheet" role="dialog" aria-modal="true" aria-label="${titles[id]||'Vælg'}">
+      <div class="psheet-grab"></div>
+      <div class="psheet-head"><b>${titles[id]||'Vælg'}</b><button type="button" class="psheet-x" onclick="closePickSheet()" aria-label="Luk">✕</button></div>
+      <input type="search" class="psheet-q" placeholder="Søg …" autocomplete="off" oninput="PSHEET.q=this.value; drawPickSheet()">
+      ${grapes ? `<div class="psheet-seg">${[['','Alle'],['rød','Rød'],['hvid','Hvid']].map(([c,l])=>`<button type="button" data-c="${c}" class="${PSHEET.color===c?'on':''}" onclick="PSHEET.color=this.dataset.c; drawPickSheet()">${l}</button>`).join('')}</div>` : ''}
+      <div class="psheet-list" id="psheet-list"></div>
+    </div>`;
+  drawPickSheet();
+  document.body.classList.add('psheet-open');
+  requestAnimationFrame(()=>el.classList.add('show'));
+}
+function drawPickSheet(){
+  if(!PSHEET) return;
+  const { kind, id } = PSHEET, q = vkey(PSHEET.q || ''), o = ansObj(kind), cur = o[id] || '';
+  const grapes = id==='drue1' || id==='drue2';
+  document.querySelectorAll('.psheet-seg button').forEach(b=>b.classList.toggle('on', !q && b.dataset.c===PSHEET.color)); /* a search looks in all colours */
+  const match = v => { if(!q) return true; const g = grapes && GRAPE_BY.get(vkey(v)); return [v, ...(g ? g[2] : [])].some(x=>vkey(x).includes(q)); };
+  const colorOk = v => { if(!grapes || !PSHEET.color || q) return true; /* searching looks in all colours */ const g = GRAPE_BY.get(vkey(v)); return !g || g[1]===PSHEET.color || g[1]==='begge'; };
+  const seen = new Set();
+  const groups = pickChoices(kind, id).groups.map(g=>({ title:g.title, items:g.items.filter(v=>match(v) && colorOk(v)) })).filter(g=>g.items.length);
+  const row = v => { const g = grapes && GRAPE_BY.get(vkey(v)); const sub = g && g[2].length ? `<small>${g[2].map(esc).join(' · ')}</small>` : (g ? `<small>${g[1]}</small>` : '');
+    return `<button type="button" class="prow ${sameChoice(id,cur,v)?'on':''}" data-v="${esc(v)}" onclick="pickFromSheet(this.dataset.v)"><span>${esc(dispLabel(id, v))}</span>${sub}</button>`; };
+  const html = groups.map(g=>`<div class="pgroup">${esc(g.title)}</div>` + g.items.map(row).join('')).join('')
+    || `<div class="hint" style="padding:18px 4px;">Ingen match på "${esc(PSHEET.q)}".</div>`;
+  document.getElementById('psheet-list').innerHTML = html
+    + `<button type="button" class="prow prow-other" onclick="pickFromSheet(null)"><span>Andet … (skriv selv${PSHEET.q ? ': '+esc(PSHEET.q) : ''})</span></button>`;
+}
+function pickFromSheet(v){
+  const { kind, id, q } = PSHEET; closePickSheet();
+  if(v===null){ PICK_CUSTOM[kind+'.'+id] = true; ansSet(kind, id, q || ''); render();
+    const inp = document.getElementById('pick-in-'+kind+'-'+id); if(inp) inp.focus(); return; }
+  PICK_CUSTOM[kind+'.'+id] = false; PICK_OPEN[kind+'.'+id] = false; pickApply(kind, id, v); render();
+}
+function closePickSheet(){
+  const el = document.getElementById('psheet'); PSHEET = null;
+  document.body.classList.remove('psheet-open');
+  if(el){ el.classList.remove('show'); setTimeout(()=>{ if(!PSHEET) el.innerHTML = ''; }, 260); }
 }
 
 /* ================= AUTO-JUDGING (suggestions) =================
@@ -1625,6 +1837,18 @@ function norm(s){
     .replace(/\b1er\b/g,'premier').replace(/\bgg\b/g,'grosses gewachs').replace(/\bst\b/g,'saint').replace(/\bste\b/g,'sainte')
     .replace(/\s+/g,' ').trim();
 }
+/* ================= VALGLISTER =================
+   Lande, regioner (ét niveau pr. land), appellationer, druer (én pr. drue med
+   lokale navne som synonymer), typiske druer pr. region og betegnelser.
+   Ligger i appen, så valgene er der med det samme. */
+// The local grape names count as the same grape when answers are compared.
+VINDATA.druer.forEach(([name,,syn])=>{
+  if(!syn || !syn.length) return;
+  const words = [name, ...syn].map(w=>w.toLowerCase());
+  const hit = SYNONYM_GROUPS.find(g=>g.some(w=>words.includes(String(w).toLowerCase())));
+  if(hit) words.forEach(w=>{ if(!hit.map(x=>String(x).toLowerCase()).includes(w)) hit.push(w); });
+  else SYNONYM_GROUPS.unshift(words);
+});
 const SYN = new Map();
 SYNONYM_GROUPS.forEach(g=>{ const key = norm(g[0]); g.forEach(w=>{ SYN.set(norm(w), key); SYN.set(norm(w).replace(/ /g,''), key); }); });
 function canonTerm(n){ return SYN.get(n) || SYN.get(n.replace(/ /g,'')) || n; }

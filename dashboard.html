@@ -930,7 +930,7 @@ function secTrend(L){
       <div class="mini-seg"><button data-ui="trend" data-v="evening" class="${UI.trend==='evening'?'on':''}">Pr. aften</button><button data-ui="trend" data-v="running" class="${UI.trend==='running'?'on':''}">Løbende gns.</button></div></div>
       ${ev.length < 2 ? `<div class="empty">Der skal være mindst to aftener for at vise en udvikling.</div>` : lineChart(ev, series)}
       <div class="legend" style="margin-top:8px">${sp.map(p=>`<span><span class="k" style="background:${colorOf(p)}"></span>${esc(p)}</span>`).join('')}</div>
-      <div class="card-note">${UI.trend==='evening'?'Hvert punkt er jeres gennemsnit som gætter den aften. Træk fingeren hen over grafen for at aflæse en aften.':'Gennemsnittet af alle vine til og med den aften – stiger linjen, bliver man bedre.'}</div>
+      <div class="card-note">${UI.trend==='evening'?'Træk fingeren hen over grafen for at aflæse en aften.':'Gennemsnittet af alle vine til og med den aften – stiger linjen, bliver man bedre.'}</div>
     </div></section>`;
 }
 function lineChart(xs, series){
@@ -1014,7 +1014,7 @@ function secCategories(L){
   }
   const top = CATS.map(c=>({c, v:hitRate(L,c.id), n:L.filter(w=>w.cats[c.id].applicable).length})).filter(x=>x.v!=null).sort((a,b)=>b.v-a.v).slice(0,5);
   return head + `<div>
-      <div class="card"><div class="card-title"><span>Pointfrekvens pr. kategori</span><span class="sec-sub" style="font-family:var(--fb);text-transform:none;letter-spacing:0;color:var(--text-faint)">bedst øverst</span></div>
+      <div class="card"><div class="card-title"><span>Pointfrekvens pr. kategori</span></div>
         <div class="legend legend-top">${sp.map(p=>`<span><span class="kb" style="background:${colorOf(p)}"></span>${esc(p)}</span>`).join('')}</div>
         ${catsSorted(bp, sp).map(c=>`<div class="freq-row"><div class="freq-nm">${c.label} <span>${c.max}p</span></div>${sp.map(p=>{ const v = hitRate(bp[p], c.id);
           return `<div class="pbl" data-tip="${esc(`<div class='tt'>${c.label}</div>`+tipRow(colorOf(p), v==null?'–':pct(v), p))}"><span class="pbl-n">${esc(p)}</span><span class="pbl-t"><i style="width:${(v||0)*100}%;background:${colorOf(p)}"></i></span><em>${v==null?'–':pct(v)}</em></div>`; }).join('')}</div>`).join('')}
@@ -1071,7 +1071,7 @@ function secGeo(L){
     <div>
       <div class="card"><div class="card-title"><span>Når det var facit</span></div>
         ${truthRows.length ? truthRows.map(r=>rowHTML(r,'t')).join('') : '<div class="empty">Ingen data.</div>'}
-        <div class="card-note">Hvor mange gange ${word} blev gættet rigtigt ud af de gange, det var facit.${tap}${both?'':' Tryk for at filtrere.'}</div>
+        <div class="card-note">Hvor mange gange ${word} blev gættet rigtigt ud af de gange, det var det korrekte svar.${tap}${both?'':' Tryk for at filtrere.'}</div>
       </div>
     </div></section>`;
 }
@@ -1117,7 +1117,7 @@ function secHardest(L){
   const sorted = wineGroups(L).sort((a,b)=> a.total-b.total || b.date.localeCompare(a.date));
   const ranked = competitionRank(sorted, w=>w.total).filter(r=>r.rank<=10);
   const shown = ranked.slice(0,5);
-  return `<section class="section"><div class="sec-head"><span class="sec-num">${num()}</span><h2>De sværeste vine</h2><span class="sec-sub">${sp.length===1?`Top 5 · der hvor ${esc(sp[0])} scorede færrest point`:'Top 5 · laveste scorer'}</span></div>
+  return `<section class="section"><div class="sec-head"><span class="sec-num">${num()}</span><h2>De sværeste vine</h2><span class="sec-sub">${sp.length===1?`Top 5 · der hvor ${esc(sp[0])} scorede færrest point`:'Top 5 · laveste score'}</span></div>
     <div class="card"><ol class="top10">${shown.map(({rank,item:w})=>`<li tabindex="0" data-wine="${esc(w.id)}">
       <span class="rk">${rank}.</span>
       <div style="min-width:0"><div class="nm">${esc(w.name)}</div><div class="sub">${fmtDate(w.date)} · ${guessersLine(w)}</div></div>

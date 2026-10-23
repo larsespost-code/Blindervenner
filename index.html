@@ -1713,12 +1713,17 @@ function pickChoices(kind, id){
   }
   return { chips:[], top:99, sheet:null, groups:[] };
 }
+// The host may tick several extra grapes (a Champagne, a Rhône blend); the guesser names one.
+// They are kept as one text, "Pinot Noir, Pinot Meunier", so the sheet and the statistics read it as before.
+const isMulti = (kind, id)=> kind==='truth' && id==='drue2';
+const splitMulti = v => String(v||'').split(/\s*,\s*/).filter(Boolean);
 function isKnownValue(id, v){
   if(!v) return true;
   if(id==='land') return !!findIn(VINDATA.lande, v);
   if(id==='region') return !!REGION_LAND[vkey(v)];
   if(id==='appellation') return !!APP_REGION[vkey(v)];
-  if(id==='drue1' || id==='drue2') return GRAPE_BY.has(vkey(v));
+  if(id==='drue1') return GRAPE_BY.has(vkey(v));
+  if(id==='drue2') return splitMulti(v).every(x=>GRAPE_BY.has(vkey(x)));
   if(id==='type') return VINDATA.betegnelser.some(b=>vkey(b[0])===vkey(v));
   return false;
 }
@@ -1732,6 +1737,16 @@ function pickerHtml(kind, id){
   if(ACTIVE && PICK_ROUND !== ACTIVE.id){ PICK_ROUND = ACTIVE.id; [PICK_CUSTOM, PICK_OPEN, PICK_MORE].forEach(m=>Object.keys(m).forEach(k=>delete m[k])); }
   const o = ansObj(kind), v = o[id] || '', c = pickChoices(kind, id), key = kind+'.'+id;
   const custom = PICK_CUSTOM[key] || (v && !isKnownValue(id, v));
+  if(isMulti(kind, id)){
+    const sel = splitMulti(v), isSel = x => sel.some(y=>sameChoice(id, x, y));
+    const main = ansObj(kind).drue1 || ''; // the dominant grape is not offered again here
+    const list = [...sel.filter(x=>GRAPE_BY.has(vkey(x)) && !(c.chips||[]).some(y=>sameChoice(id, x, y))).map(x=>GRAPE_BY.get(vkey(x))[0]), ...(c.chips||[]).filter(x=>!sameChoice(id, x, main) || isSel(x))];
+    let html = list.map(x=>chipBtn(kind, id, x, isSel(x))).join('');
+    if(c.sheet) html += `<button type="button" class="chip-pick chip-more" data-k="${kind}" data-id="${id}" onclick="openPickSheet(this.dataset.k,this.dataset.id)">${c.sheet} <span class="cm">›</span></button>`;
+    html += `<button type="button" class="chip-pick chip-other ${custom && v ? 'selected' : ''} ${custom && !v ? 'open' : ''}" data-k="${kind}" data-id="${id}" onclick="pickOther(this)">${custom && v ? '✎ '+esc(v) : '✎ Andet'}</button>`;
+    const input = custom ? `<input type="text" class="pick-input" id="pick-in-${kind}-${id}" placeholder="Skriv selv · adskil flere med komma" value="${esc(v)}" data-k="${kind}" data-id="${id}" oninput="pickTyped(this)">` : '';
+    return `<div class="hint" style="margin:0 0 8px;">Vælg gerne flere — gætteren får point for at ramme én af dem.</div><div class="chips pick-chips">${html}</div>${input}`;
+  }
   // Chosen: show just the choice and "Skift" — the page stays short and the answer is obvious.
   if(v && !custom && !PICK_OPEN[key]){
     const shown = (id==='drue1'||id==='drue2') && GRAPE_BY.get(vkey(v)) ? GRAPE_BY.get(vkey(v))[0] : v;
@@ -1777,16 +1792,23 @@ function pickApply(kind, id, v){
 function pickReopen(el){ PICK_OPEN[el.dataset.k+'.'+el.dataset.id] = true; render(); }
 function pickChip(el){
   const kind = el.dataset.k, id = el.dataset.id, v = el.dataset.v, o = ansObj(kind);
+  if(isMulti(kind, id)){ PICK_CUSTOM[kind+'.'+id] = false; multiToggle(kind, id, v); render(); return; }
   if(el.classList.contains('chip-chosen')){ PICK_OPEN[kind+'.'+id] = true; render(); return; } // tap the choice to change it
   PICK_CUSTOM[kind+'.'+id] = false; PICK_OPEN[kind+'.'+id] = false;
   pickApply(kind, id, sameChoice(id, o[id]||'', v) ? '' : v); // tap again to deselect
   render();
 }
+function multiToggle(kind, id, v){
+  const sel = splitMulti(ansObj(kind)[id]).filter(x=>GRAPE_BY.has(vkey(x)));
+  const i = sel.findIndex(x=>sameChoice(id, x, v));
+  if(i >= 0) sel.splice(i, 1); else sel.push(v);
+  ansSet(kind, id, sel.join(', '));
+}
 function pickOther(el){
   const kind = el.dataset.k, id = el.dataset.id, o = ansObj(kind);
   const key = kind+'.'+id, open = PICK_CUSTOM[key] || (o[id] && !isKnownValue(id, o[id]));
   if(open && !o[id]){ PICK_CUSTOM[key] = false; render(); return; } // close an empty "Andet"
-  if(!open && isKnownValue(id, o[id]||'')) ansSet(kind, id, '');
+  if(!open && isKnownValue(id, o[id]||'') && !isMulti(kind, id)) ansSet(kind, id, ''); // several grapes: keep them, write on after them
   PICK_CUSTOM[key] = true; render();
   const inp = document.getElementById('pick-in-'+kind+'-'+id); if(inp){ inp.focus(); const n = inp.value.length; try{ inp.setSelectionRange(n,n); }catch(e){} }
 }
@@ -1830,7 +1852,7 @@ function drawPickSheet(){
   const seen = new Set();
   const groups = pickChoices(kind, id).groups.map(g=>({ title:g.title, items:g.items.filter(v=>match(v) && colorOk(v)) })).filter(g=>g.items.length);
   const row = v => { const g = grapes && GRAPE_BY.get(vkey(v)); const sub = g && g[2].length ? `<small>${g[2].map(esc).join(' · ')}</small>` : (g ? `<small>${g[1]}</small>` : '');
-    return `<button type="button" class="prow ${sameChoice(id,cur,v)?'on':''}" data-v="${esc(v)}" onclick="pickFromSheet(this.dataset.v)"><span>${esc(dispLabel(id, v))}</span>${sub}</button>`; };
+    return `<button type="button" class="prow ${(isMulti(kind, id) ? splitMulti(cur).some(x=>sameChoice(id,x,v)) : sameChoice(id,cur,v))?'on':''}" data-v="${esc(v)}" onclick="pickFromSheet(this.dataset.v)"><span>${esc(dispLabel(id, v))}</span>${sub}</button>`; };
   const html = groups.map(g=>`<div class="pgroup">${esc(g.title)}</div>` + g.items.map(row).join('')).join('')
     || `<div class="hint" style="padding:18px 4px;">Ingen match på "${esc(PSHEET.q)}".</div>`;
   document.getElementById('psheet-list').innerHTML = html
@@ -1840,7 +1862,9 @@ function pickFromSheet(v){
   const { kind, id, q } = PSHEET; closePickSheet();
   if(v===null){ PICK_CUSTOM[kind+'.'+id] = true; ansSet(kind, id, q || ''); render();
     const inp = document.getElementById('pick-in-'+kind+'-'+id); if(inp) inp.focus(); return; }
-  PICK_CUSTOM[kind+'.'+id] = false; PICK_OPEN[kind+'.'+id] = false; pickApply(kind, id, v); render();
+  PICK_CUSTOM[kind+'.'+id] = false; PICK_OPEN[kind+'.'+id] = false;
+  if(isMulti(kind, id)){ if(!splitMulti(ansObj(kind)[id]).some(x=>sameChoice(id, x, v))) multiToggle(kind, id, v); render(); return; }
+  pickApply(kind, id, v); render();
 }
 // With the keyboard up (searching), the sheet sits right on top of it and uses all the height left.
 function fitPickSheet(){
@@ -1957,6 +1981,7 @@ function suggestVerdict(r, id){
   if(!answered(r,id)) return 'bad';
   if(id==='aargang') return yearVerdict(r.truth.aargang, r.guess.aargang);
   if(!String(r.truth[id]||'').trim()) return 'bad';
+  if(id==='drue2') return splitMulti(r.truth.drue2).some(t=>textMatch(t, r.guess.drue2)) ? 'good' : 'bad'; // one of the host's extra grapes
   return textMatch(r.truth[id], r.guess[id]) ? 'good' : 'bad';
 }
 function effJudge(r, id){ return (r.judged && r.judged[id]) || suggestVerdict(r, id); }

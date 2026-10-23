@@ -1378,10 +1378,19 @@ function secTypes(L){
 }
 
 /* ============================================================ ratings
-   Jeres stjerner (1–5). Begge rater hver vin, så fanen viser altid jer begge
+   Jeres ratings. Begge rater hver vin, så fanen viser altid jer begge
    side om side; Begge/Lars/Tore-knappen (hvem der gættede) gælder ikke her,
    men periode, land, drue, årgang og vintype gør. */
 const RATE_MIN_GROUP = 2; // a group needs this many rated wines to be shown
+// The rating scale: here stars 0–5 in tenths. (Vinholdet uses 1–100; only this line differs.)
+const RSCALE = { min:0, max:5, label:'1–5', unit:.5, bin:.1, eps:.05, tick:v=>fmt1(v), diff:d=>`${fmt1(d)} stjerne${Math.abs(d-1)<1e-9?'':'r'}` };
+// An axis zoomed to where the ratings actually are, on whole units of the scale.
+function rateAxis(vals){
+  const u = RSCALE.unit; let lo = Math.max(RSCALE.min, Math.floor((Math.min(...vals) - RSCALE.bin) / u) * u), hi = Math.min(RSCALE.max, Math.ceil((Math.max(...vals) + RSCALE.bin) / u) * u);
+  if(hi - lo < 2*u){ hi = Math.min(RSCALE.max, lo + 2*u); lo = Math.max(RSCALE.min, hi - 2*u); }
+  const step = (hi - lo) / u <= 5 ? u : 2*u, ticks = []; for(let t = Math.ceil(lo/step - 1e-9)*step; t <= hi + 1e-9; t += step) ticks.push(Math.round(t*100)/100);
+  return { lo, hi, ticks, x: v => (v - lo) / (hi - lo) * 100 };
+}
 const genName = n => /[sxzSXZ]$/.test(n) ? n+'’' : n+'s'; // Lars’ / Tores
 function raters(W){ return PLAYERS.filter(p=>W.some(w=>ratingOf(w,p)!=null)); }
 function rateDots(w, R){ return R.map(p=>`${pnameHTML(p)} <b>${fmtR(ratingOf(w,p))}</b>`).join('<span class="gsep">·</span>'); }
@@ -1395,7 +1404,7 @@ function secRateFav(W, R){
   const li = (w, i, gold) => `<li tabindex="0" data-wine="${esc(w.id)}">
       <span class="rk ${gold && i===0 ? 'gold' : ''}">${i+1}.</span>
       <div style="min-width:0"><div class="nm">${esc(w.name)}</div><div class="sub gline">${rateDots(w, R)}</div></div>
-      <span class="sc">${fmt1(ratingAvg(w))}<small> ★</small></span></li>`;
+      <span class="sc">${fmtR(ratingAvg(w))}<small> ★</small></span></li>`;
   const head = `<section class="section"><div class="sec-head"><span class="sec-num">${num()}</span><h2>Favoritter</h2><span class="sec-sub">Højeste gennemsnitlige rating</span></div>`;
   if(UI.rateAll || rated.length <= 10)
     return head + `<div class="card"><ol class="top10">${rated.map((w,i)=>li(w,i,true)).join('')}</ol>
@@ -1414,7 +1423,7 @@ function secRateBy(W, R){
       all: avg(g.ws.map(ratingAvg)),
       per: R.map(p=>{ const v = g.ws.map(w=>ratingOf(w,p)).filter(x=>x!=null); return { p, v: v.length ? avg(v) : null, n: v.length }; }) }))
     .sort((a,b)=> b.all-a.all || b.ws.length-a.ws.length || a.name.localeCompare(b.name,'da'));
-  const pos = v => Math.max(0, Math.min(100, (v-1)/4*100));
+  const ax = rows.length ? rateAxis(rows.flatMap(r=>r.per.map(x=>x.v)).filter(x=>x!=null)) : null, pos = v => Math.max(0, Math.min(100, ax.x(v)));
   const tipFor = r => esc(`<div class='tt'>${esc(r.name)} · ${r.ws.length} vine</div>` + r.per.map(x=>tipRow(colorOf(x.p), fmtR(x.v), x.p)).join(''));
   const row = r => `<div class="rb-row" data-tip="${tipFor(r)}"><span class="nm" title="${esc(r.name)}">${esc(r.name)}<small>${r.ws.length} vine</small></span>
       <span class="rb-track">${r.per.filter(x=>x.v!=null).map(x=>`<i style="left:${pos(x.v)}%;background:${colorOf(x.p)}"></i>`).join('')}</span>
@@ -1423,26 +1432,23 @@ function secRateBy(W, R){
   const switcher = `<div class="mini-seg">${opt('type','Type')}${opt('drue','Drue')}${opt('land','Land')}${opt('region','Region')}</div>`;
   return `<section class="section"><div class="sec-head"><span class="sec-num">${num()}</span><h2>Hvad I kan lide</h2></div>
     <div class="card"><div class="card-title" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span>Rating fordelt på</span>${switcher}</div>
-      ${rows.length ? `<div class="rb-scale"><span></span><span class="rb-ticks">${[1,2,3,4,5].map(t=>`<i style="left:${pos(t)}%">${t}</i>`).join('')}</span><span></span></div>${rows.map(row).join('')}`
+      ${rows.length ? `<div class="rb-scale"><span></span><span class="rb-ticks">${ax.ticks.map(t=>`<i style="left:${pos(t)}%">${RSCALE.tick(t)}</i>`).join('')}</span><span></span></div>${rows.map(row).join('')}`
         : `<div class="card-note">Endnu ingen ${key==='type'?'typer':key==='drue'?'druer':key==='land'?'lande':'regioner'} med mindst ${RATE_MIN_GROUP} ratede vine.</div>`}
-      <div class="card-note">Prikkerne er jeres gennemsnit på skalaen 1–5, bedst øverst. Kun grupper med mindst ${RATE_MIN_GROUP} vine.</div>
+      <div class="card-note">Prikkerne er jeres gennemsnit (skala ${RSCALE.label}), bedst øverst. Kun grupper med mindst ${RATE_MIN_GROUP} vine.</div>
     </div></section>`;
 }
 function secRatePeople(W, R){
   if(!R.length) return '';
   // One dot per wine on a shared scale, zoomed to where your ratings actually are (they are given in tenths).
   const all = W.flatMap(w=>R.map(p=>ratingOf(w,p))).filter(x=>x!=null);
-  let lo = Math.max(0, Math.floor((Math.min(...all) - .1) * 2) / 2), hi = Math.min(5, Math.ceil((Math.max(...all) + .1) * 2) / 2);
-  if(hi - lo < 1){ hi = Math.min(5, lo + 1); lo = Math.max(0, hi - 1); }
-  const step = hi - lo <= 2.5 ? .5 : 1, ticks = []; for(let t = Math.ceil(lo/step)*step; t <= hi + 1e-9; t += step) ticks.push(Math.round(t*10)/10);
-  const xp = v => (v - lo) / (hi - lo) * 100;
+  const { ticks, x: xp } = rateAxis(all);
   const strip = (p, mine) => {
     const stacks = new Map();
-    const dots = mine.slice().sort((a,b)=>a.v-b.v).map(x=>{ const k = Math.round(x.v*10); const n = stacks.get(k) || 0; stacks.set(k, n+1); return { ...x, n }; });
+    const dots = mine.slice().sort((a,b)=>a.v-b.v).map(x=>{ const k = Math.round(x.v / RSCALE.bin); const n = stacks.get(k) || 0; stacks.set(k, n+1); return { ...x, n }; });
     const maxN = Math.max(1, ...stacks.values()), gap = Math.min(11, 88 / maxN), H = Math.max(40, Math.min(100, maxN * gap + 12));
     const mean = avg(mine.map(x=>x.v));
-    return `<div class="rp-strip" style="height:${H}px"><b class="rp-mean" style="left:${xp(mean)}%"></b>${dots.map(x=>`<i style="left:${xp(x.v)}%;bottom:${4 + x.n*gap}px;background:${colorOf(p)}" data-tip="${esc(`<div class='tt'>${esc(x.w.name)}</div>`+tipRow(colorOf(p), fmt1(x.v)+' ★', p))}"></i>`).join('')}</div>
-      <div class="rp-ticks">${ticks.map(t=>`<i style="left:${xp(t)}%">${fmt1(t)}</i>`).join('')}</div>`;
+    return `<div class="rp-strip" style="height:${H}px"><b class="rp-mean" style="left:${xp(mean)}%"></b>${dots.map(x=>`<i style="left:${xp(x.v)}%;bottom:${4 + x.n*gap}px;background:${colorOf(p)}" data-tip="${esc(`<div class='tt'>${esc(x.w.name)}</div>`+tipRow(colorOf(p), fmtR(x.v)+' ★', p))}"></i>`).join('')}</div>
+      <div class="rp-ticks">${ticks.map(t=>`<i style="left:${xp(t)}%">${RSCALE.tick(t)}</i>`).join('')}</div>`;
   };
   const card = p => {
     const mine = W.map(w=>({ w, v: ratingOf(w,p) })).filter(x=>x.v!=null);
@@ -1450,7 +1456,7 @@ function secRatePeople(W, R){
     const oa = own.length ? avg(own.map(x=>x.v)) : null, xa = other.length ? avg(other.map(x=>x.v)) : null;
     const others = R.filter(x=>x!==p), otherLbl = others.length===1 ? `${esc(genName(others[0]))} vine` : 'De andres vine';
     return `<div class="card rp-card">
-      <div class="rp-head">${pnameHTML(p)}<span class="rp-big">${fmt1(avg(mine.map(x=>x.v)))}<small> ★ snit · ${mine.length} vine</small></span></div>
+      <div class="rp-head">${pnameHTML(p)}<span class="rp-big">${fmtR(avg(mine.map(x=>x.v)))}<small> ★ snit · ${mine.length} vine</small></span></div>
       ${strip(p, mine)}
       <div class="rp-own"><div><span>Egne vine</span><b>${fmtR(oa)}</b><small>${own.length} vine</small></div><div><span>${otherLbl}</span><b>${fmtR(xa)}</b><small>${other.length} vine</small></div></div>
     </div>`;
@@ -1459,11 +1465,11 @@ function secRatePeople(W, R){
   if(R.length >= 2){
     const both = W.map(w=>{ const v = R.map(p=>ratingOf(w,p)).filter(x=>x!=null); return v.length >= 2 ? { w, d: Math.max(...v) - Math.min(...v) } : null; }).filter(Boolean);
     if(both.length){
-      const md = avg(both.map(x=>x.d)), same = both.filter(x=>x.d < 0.05).length;
-      const worst = both.filter(x=>x.d >= 0.05).sort((a,b)=>b.d-a.d || b.w.date.localeCompare(a.w.date)).slice(0, 5);
+      const md = avg(both.map(x=>x.d)), same = both.filter(x=>x.d < RSCALE.eps).length;
+      const worst = both.filter(x=>x.d >= RSCALE.eps).sort((a,b)=>b.d-a.d || b.w.date.localeCompare(a.w.date)).slice(0, 5);
       agree = `<div class="card" style="margin-top:12px"><div class="card-title"><span>Enighed</span></div>
-        <div class="rp-agree"><div><b>${fmt1(md)}</b><span>stjerner fra hinanden i snit</span></div><div><b>${same}/${both.length}</b><span>vine med samme rating</span></div></div>
-        ${worst.length ? `<div class="card-note" style="margin:10px 0 4px">Mest uenige om</div><ol class="top10">${worst.map((x,i)=>`<li tabindex="0" data-wine="${esc(x.w.id)}"><span class="rk">${i+1}.</span><div style="min-width:0"><div class="nm">${esc(x.w.name)}</div><div class="sub gline">${rateDots(x.w, R)}</div></div><span class="sc">${fmt1(x.d)}<small> ★</small></span></li>`).join('')}</ol>` : ''}
+        <div class="rp-agree"><div><b>${fmtR(md)}</b><span>${RSCALE.max===5 ? 'stjerner fra hinanden i snit' : 'fra hinanden i snit (skala '+RSCALE.label+')'}</span></div><div><b>${same}/${both.length}</b><span>vine med samme rating</span></div></div>
+        ${worst.length ? `<div class="card-note" style="margin:10px 0 4px">Mest uenige om</div><ol class="top10">${worst.map((x,i)=>`<li tabindex="0" data-wine="${esc(x.w.id)}"><span class="rk">${i+1}.</span><div style="min-width:0"><div class="nm">${esc(x.w.name)}</div><div class="sub gline">${rateDots(x.w, R)}</div></div><span class="sc">${fmtR(x.d)}<small> ★</small></span></li>`).join('')}</ol>` : ''}
       </div>`;
     }
   }
@@ -1480,21 +1486,21 @@ function secRateScore(B, R){
     return { p, pts, slope, icpt }; }).filter(x=>x.pts.length);
   if(!per.length) return '';
   const ys = per.flatMap(x=>x.pts.map(q=>q.y)), xs = per.flatMap(x=>x.pts.map(q=>q.x));
-  const y0 = Math.max(0, Math.floor(Math.min(...ys) * 2) / 2 - .5), y1 = Math.min(5, Math.ceil(Math.max(...ys) * 2) / 2 + .5);
+  const ya = rateAxis(ys), y0 = Math.max(RSCALE.min, ya.lo - RSCALE.unit), y1 = Math.min(RSCALE.max, ya.hi + RSCALE.unit);
   const x1 = Math.max(12, Math.ceil(Math.max(...xs) / 4) * 4);
   const Wd = 340, Hd = 200, m = { l:30, r:10, t:10, b:28 }, iw = Wd-m.l-m.r, ih = Hd-m.t-m.b;
   const X = v => m.l + v / x1 * iw, Y = v => m.t + (1 - (v - y0) / (y1 - y0)) * ih;
-  const yt = []; for(let t = Math.ceil(y0*2)/2; t <= y1 + 1e-9; t += (y1 - y0 > 2.5 ? 1 : .5)) yt.push(t);
+  const yt = rateAxis([y0 + RSCALE.bin, y1 - RSCALE.bin]).ticks.filter(t=>t >= y0 && t <= y1);
   const xt = []; for(let t = 0; t <= x1; t += 4) xt.push(t);
   const svg = `<svg class="rs-chart" viewBox="0 0 ${Wd} ${Hd}" role="img" aria-label="Rating mod score">
-    ${yt.map(t=>`<line x1="${m.l}" x2="${Wd-m.r}" y1="${Y(t)}" y2="${Y(t)}" class="g"/><text x="${m.l-6}" y="${Y(t)+4}" text-anchor="end">${fmt1(t)}</text>`).join('')}
+    ${yt.map(t=>`<line x1="${m.l}" x2="${Wd-m.r}" y1="${Y(t)}" y2="${Y(t)}" class="g"/><text x="${m.l-6}" y="${Y(t)+4}" text-anchor="end">${RSCALE.tick(t)}</text>`).join('')}
     ${xt.map(t=>`<text x="${X(t)}" y="${Hd-10}" text-anchor="middle">${t}</text>`).join('')}
-    ${per.map(x=>x.pts.map(q=>`<circle cx="${X(q.x)}" cy="${Y(q.y)}" r="4.5" fill="${colorOf(x.p)}" fill-opacity=".75" data-tip="${esc(`<div class='tt'>${esc(q.w.name)}</div>`+tipRow(colorOf(x.p), `${q.x} p · ${fmt1(q.y)} ★`, x.p))}"/>`).join('')).join('')}
+    ${per.map(x=>x.pts.map(q=>`<circle cx="${X(q.x)}" cy="${Y(q.y)}" r="4.5" fill="${colorOf(x.p)}" fill-opacity=".75" data-tip="${esc(`<div class='tt'>${esc(q.w.name)}</div>`+tipRow(colorOf(x.p), `${q.x} p · ${fmtR(q.y)} ★`, x.p))}"/>`).join('')).join('')}
     ${per.filter(x=>x.slope!=null).map(x=>{ const a = Math.min(...x.pts.map(q=>q.x)), b = Math.max(...x.pts.map(q=>q.x)); const ya = x.icpt + x.slope*a, yb = x.icpt + x.slope*b;
       return `<line x1="${X(a)}" y1="${Y(Math.max(y0, Math.min(y1, ya)))}" x2="${X(b)}" y2="${Y(Math.max(y0, Math.min(y1, yb)))}" stroke="${colorOf(x.p)}" stroke-width="2.5" stroke-linecap="round"/>`; }).join('')}
   </svg>`;
   const say = x => { if(x.slope==null) return 'for få vine til en tendens'; const d = x.slope * 5;
-    return Math.abs(d) < 0.05 ? 'ingen forskel' : `${d > 0 ? '+' : '−'}${fmt1(Math.abs(d))} ★ pr. 5 point mere`; };
+    return Math.abs(d) < RSCALE.eps ? 'ingen forskel' : `${d > 0 ? '+' : '−'}${fmtR(Math.abs(d))} ★ pr. 5 point mere`; };
   return `<section class="section"><div class="sec-head"><span class="sec-num">${num()}</span><h2>Smager det bedre, når man gætter rigtigt?</h2></div>
     <div class="card">${svg}
       <div class="rs-legend">${per.map(x=>`<div>${pnameHTML(x.p)}<span>${say(x)}</span></div>`).join('')}</div>
@@ -1503,8 +1509,8 @@ function secRateScore(B, R){
 function ratingBars(w){
   const R = PLAYERS.filter(p=>ratingOf(w,p)!=null); if(!R.length) return '';
   const v = R.map(p=>ratingOf(w,p)), d = v.length >= 2 ? Math.max(...v) - Math.min(...v) : null;
-  return `<div class="rbars">${R.map(p=>`<div class="rbar">${pnameHTML(p)}<span class="tr"><i style="width:${ratingOf(w,p)/5*100}%;background:${colorOf(p)}"></i></span><b>${fmtR(ratingOf(w,p))}</b></div>`).join('')}
-    ${d!=null ? `<div class="rbar-d">${d < 0.05 ? 'Helt enige' : fmt1(d)+' stjerne'+(d===1?'':'r')+' fra hinanden'}</div>` : ''}</div>`;
+  return `<div class="rbars">${R.map(p=>`<div class="rbar">${pnameHTML(p)}<span class="tr"><i style="width:${ratingOf(w,p)/RSCALE.max*100}%;background:${colorOf(p)}"></i></span><b>${fmtR(ratingOf(w,p))}</b></div>`).join('')}
+    ${d!=null ? `<div class="rbar-d">${d < RSCALE.eps ? 'Helt enige' : RSCALE.diff(d)+' fra hinanden'}</div>` : ''}</div>`;
 }
 
 /* ============================================================ vin-detalje */

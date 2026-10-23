@@ -1589,7 +1589,9 @@ function confirmDiscardHtml(){
 }
 
 function renderGuessing(){
-  const fields = CATEGORIES.map(c=>`
+  // The guesser starts with the grape — what you taste first — then works out where it is from.
+  const GUESS_ORDER = ['drue1','drue2','land','region','appellation','type'];
+  const fields = GUESS_ORDER.map(id=>CATEGORIES.find(c=>c.id===id)).map(c=>`
     <div class="field">
       <div class="field-label"><span class="txt">${c.label}</span><span class="pts">${c.points}p</span></div>
       ${pickerHtml('guess', c.id)}
@@ -1641,7 +1643,7 @@ function typicalGrapes(o){
   return [];
 }
 // Long lists show the best-known first. The order is fixed — the same whatever is in the
-// glass — so it never hints at the answer. Only your own grape choice reorders (see below).
+// glass — so it never hints at the answer.
 const FAME = {
   'Frankrig':['Bourgogne','Bordeaux','Champagne','Rhône','Loire','Alsace','Beaujolais','Languedoc'],
   'Italien':['Piemonte','Toscana','Veneto','Sicilia','Alto Adige','Puglia','Friuli-Venezia Giulia','Campania'],
@@ -1662,30 +1664,26 @@ const FAME = {
 };
 const TOP_N = 8;
 const byFame = (key, list)=>{ const f = FAME[key] || []; return [...f.filter(x=>list.includes(x)), ...list.filter(x=>!f.includes(x))]; };
-// Help both ways: the grape you have chosen puts the countries and regions where it is typical first.
-function chosenGrape(o){ for(const id of ['drue1','drue2']){ const g = GRAPE_BY.get(vkey(o[id]||'')); if(g) return g[0]; } return null; }
-const fameRank = r => { const l = REGION_LAND[vkey(r)], f = (l && FAME[l]) || []; const i = f.indexOf(r); return i < 0 ? 99 : i; };
-const grapeRegions = g => Object.keys(VINDATA.typiske).filter(r=>(VINDATA.typiske[r]||[]).includes(g)).sort((a,b)=>fameRank(a)-fameRank(b));
-const firstThese = (list, these)=> [...list.filter(x=>these.includes(x)), ...list.filter(x=>!these.includes(x))];
+// The grape buttons before a country is chosen: a fixed set, the same every time, so it hints at nothing.
+const COMMON_GRAPES = ['Pinot Noir','Chardonnay','Cabernet Sauvignon','Riesling','Syrah','Nebbiolo','Sangiovese','Sauvignon Blanc','Merlot','Grenache','Tempranillo','Chenin Blanc'];
 // The choices for a field:
 //   chips  – shown as buttons (null = only the sheet button)
 //   top    – how many to show before "Flere"
 //   sheet  – label of the button that opens the sheet (null = none)
 //   groups – [{title, items}] for the sheet
 function pickChoices(kind, id){
-  const o = ansObj(kind), l = knownLand(o), r = knownRegion(o), g = chosenGrape(o), gR = g ? grapeRegions(g) : [];
+  // Only the geography narrows (land → region → appellation); a chosen grape never steers the rest, or it would hint.
+  const o = ansObj(kind), l = knownLand(o), r = knownRegion(o);
   // Big regions (Bourgogne) are split into their sub-areas in the sheet.
   const subAreas = x => Object.entries((VINDATA.omraader||{})[x] || {}).map(([t, items])=>({ title: x+' · '+t, items }));
   const byRegion = regs => regs.flatMap(x=> subAreas(x).length ? subAreas(x) : [{ title:x, items:byFame(x, VINDATA.appellationer[x]||[]) }]).filter(x=>x.items.length);
   const allRegions = VINDATA.lande.map(x=>({ title:x, items:byFame(x, landRegions(x)) }));
   if(id==='land'){
-    const gl = [...new Set(gR.map(x=>REGION_LAND[vkey(x)]).filter(Boolean))];
-    return { chips: firstThese(VINDATA.lande, gl), top:99, sheet:null, groups:[] };
+    return { chips: VINDATA.lande, top:99, sheet:null, groups:[] };
   }
   if(id==='region'){
-    const lead = g ? [{ title:'Typisk for '+g, items:gR }] : [];
-    if(l) return { chips: firstThese(byFame(l, landRegions(l)), gR), top: TOP_N, sheet:null, groups:[] };
-    return { chips: gR.length ? gR : null, top: TOP_N, sheet: gR.length ? 'Alle regioner' : 'Vælg region', groups: lead.concat(allRegions) };
+    if(l) return { chips: byFame(l, landRegions(l)), top: TOP_N, sheet:null, groups:[] };
+    return { chips: null, top: TOP_N, sheet: 'Vælg region', groups: allRegions };
   }
   if(id==='appellation'){
     const all = byRegion(Object.values(VINDATA.regioner).flat());
@@ -1701,7 +1699,8 @@ function pickChoices(kind, id){
     const typ = typicalGrapes(o), where = r || l;
     const known = v => { const x = GRAPE_BY.get(vkey(v)); return !!(x && x[3]); };
     const typKnown = typ.filter(known);
-    const chips = (typKnown.length ? typKnown : (r ? typ : [])).slice(0, 5);
+    // the guesser picks the grape before the country, so the buttons above never change under their finger
+    const chips = kind==='guess' || !typ.length ? COMMON_GRAPES : (typKnown.length ? typKnown : (r ? typ : [])).slice(0, 5);
     const rest = VINDATA.druer.map(x=>x[0]).filter(x=>!typ.includes(x));
     return { chips, top: 99, sheet: chips.length ? 'Alle druer' : 'Vælg drue', groups: (typ.length ? [{ title:'Typisk for '+where, items:typ }] : [])
       .concat([{ title:'Kendte druer', items:rest.filter(known) }, { title:'Flere druer', items:rest.filter(x=>!known(x)) }]) };

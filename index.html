@@ -1527,7 +1527,7 @@ function renderIdle(){
     <button class="btn btn-secondary btn-block" style="margin-top:10px;" onclick="switchView('day')">📅 Dagens resultat</button>
     <div class="nav-tiles">
       <button type="button" class="nav-tile" onclick="switchView('history')"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4h4"/><path d="M12 8v4l3 2"/></svg><span>Se historik</span></button>
-      <a class="nav-tile" href="https://larsespost-code.github.io/Blindervenner/dashboard.html" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Se analyse</span></a>
+      <a class="nav-tile" href="https://larsespost-code.github.io/Blindervenner/dashboard.html" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Se statistik</span></a>
       ${SHEET ? `<button type="button" class="nav-tile" onclick="copyShareLink()"><svg viewBox="0 0 24 24"><path d="M21 3 10 14"/><path d="M21 3l-7 18-4-7-7-4z"/></svg><span>Send link til din medsmager</span></button>` : ''}
     </div>
     ${USE_DB ? '' : `<div class="sync-note">⚠ Kører kun lokalt på denne telefon — ingen delt forbindelse fundet.</div>`}
@@ -2082,7 +2082,20 @@ function renderReviewWaiting(){
 const BOTTLE = { bottom: 292, neckBase: 104 };
 function bottleLevelY(score){ return BOTTLE.bottom - (BOTTLE.bottom - BOTTLE.neckBase) * Math.max(0, Math.min(1, score/MAX_SCORE)); }
 
-function bottleSvg(name){
+// The wine in the bottle has the colour of the wine in the glass (the host's Vintype).
+const WINE_COLORS = {
+  'Rød':         { top:'#A3283A', bottom:'#5C1020', surf:'#C9586A' },
+  'Hvid':        { top:'#F2E3A4', bottom:'#D6BE62', surf:'#FBF4D2' },
+  'Orange':      { top:'#D8A677', bottom:'#9C6B4A', surf:'#F1CFA6' },
+  'Rosé':        { top:'#F6B3BF', bottom:'#DD7A8A', surf:'#FCD9DF' },
+  'Bobler':      { top:'#F2E3A4', bottom:'#D6BE62', surf:'#FFFBEA', bubbles:true },
+  'Restsød/Sød': { top:'#E8B23A', bottom:'#A8700F', surf:'#F7D57A' },
+};
+function bottleSvg(name, wineType){
+  const col = WINE_COLORS[wineType] || WINE_COLORS.Orange;
+  // bubbles rise through the liquid only (clipped to the current fill level)
+  const bubbles = col.bubbles ? `<g clip-path="url(#level-clip)">${[[34,2.2,2.4,0],[46,1.6,3.1,1.1],[58,2.6,2.7,0.5],[70,1.8,3.4,1.9],[82,2.3,2.9,0.8],[94,1.7,3.2,2.3],[40,1.9,3.6,2.8],[64,1.5,2.5,1.5],[88,2.1,3.8,0.2],[52,1.8,3.3,2.6]]
+      .map(([x,r,d,b])=>`<circle cx="${x}" cy="300" r="${r}" fill="#FFFFFF" fill-opacity="0.85"><animate attributeName="cy" from="300" to="96" dur="${d}s" begin="-${b}s" repeatCount="indefinite"/></circle>`).join('')}</g>` : '';
   const body = 'M50 12 H78 V92 C78 108 108 118 108 150 V282 Q108 296 94 296 H34 Q20 296 20 282 V150 C20 118 50 108 50 92 Z';
   const ticks = [6,12,18,24].map(p=>{ const y=bottleLevelY(p).toFixed(1);
     return `<line x1="112" y1="${y}" x2="120" y2="${y}" stroke="rgba(30,45,50,0.35)" stroke-width="1"/><text x="124" y="${(+y+4).toFixed(1)}" fill="#6E5E9C" font-family="VT323" font-size="13">${p}</text>`; }).join('');
@@ -2091,12 +2104,14 @@ function bottleSvg(name){
     <defs>
       <clipPath id="bottle-clip"><path d="${body}"/></clipPath>
       <linearGradient id="wine-g" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#D8A677"/><stop offset="100%" stop-color="#9C6B4A"/>
+        <stop offset="0%" stop-color="${col.top}"/><stop offset="100%" stop-color="${col.bottom}"/>
       </linearGradient>
+      <clipPath id="level-clip"><rect id="wine-level" x="0" y="${BOTTLE.bottom}" width="150" height="0"/></clipPath>
     </defs>
     <g clip-path="url(#bottle-clip)">
       <rect id="wine-fill" x="0" y="${BOTTLE.bottom}" width="150" height="0" fill="url(#wine-g)"/>
-      <rect id="wine-surface" x="0" y="${BOTTLE.bottom}" width="150" height="3" fill="#F1CFA6" opacity="0.7"/>
+      ${bubbles}
+      <rect id="wine-surface" x="0" y="${BOTTLE.bottom}" width="150" height="3" fill="${col.surf}" opacity="0.7"/>
     </g>
     <path d="${body}" fill="none" stroke="#4F6563" stroke-width="2.2" style="filter:drop-shadow(0 0 6px rgba(30,45,50,.55));"/>
     <rect x="47" y="6" width="34" height="10" rx="2" fill="#CA9954" opacity="0.85"/>
@@ -2113,10 +2128,11 @@ function bottleSvg(name){
 // the round just landed in the history), it carries on from where it was.
 let BOTTLE_ANIM = null; // {id, t0, dur}
 function animateBottle(round){
-  const fill = document.getElementById('wine-fill'), surf = document.getElementById('wine-surface'), num = document.getElementById('score-count');
+  const fill = document.getElementById('wine-fill'), surf = document.getElementById('wine-surface'), num = document.getElementById('score-count'), lvl = document.getElementById('wine-level');
   if(!fill || !num) return;
   const target = round.score||0, endY = bottleLevelY(target);
   const set = (y, n)=>{ fill.setAttribute('y', y.toFixed(1)); fill.setAttribute('height', (BOTTLE.bottom - y + 10).toFixed(1));
+    if(lvl){ lvl.setAttribute('y', y.toFixed(1)); lvl.setAttribute('height', (BOTTLE.bottom - y + 10).toFixed(1)); }
     surf.setAttribute('y', (y-1).toFixed(1)); surf.style.opacity = (y < BOTTLE.bottom-1 ? 0.7 : 0); num.textContent = n; };
   // A rising fill level is not the kind of motion "reduce motion" guards against — keep it, just shorter.
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -2190,7 +2206,7 @@ function renderResult(){
   <div class="fade-in">
     <div class="eyebrow center-text" style="display:block;margin:4px 0 6px;">Resultat · ${wineTag()}</div>
     <div style="display:flex;align-items:center;justify-content:center;gap:18px;margin:4px 0 22px;">
-      ${bottleSvg(r.guesserName)}
+      ${bottleSvg(r.guesserName, r.wineType)}
       <div style="text-align:left;min-width:92px;">
         <div id="score-count" style="font-family:var(--fnum),monospace;font-size:2rem;color:var(--text);text-shadow:0 0 12px rgba(202,153,84,.55);">0</div>
         <div style="color:var(--text-faint);font-size:1.05rem;margin-top:6px;">af ${MAX_SCORE} point</div>

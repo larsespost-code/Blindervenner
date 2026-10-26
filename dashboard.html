@@ -413,8 +413,8 @@ html{overflow-x:clip}
    via Apps Script-webappen – samme kald som appen bruger ("sync").
    Kaldet læser kun; det ændrer intet i arket.
    ============================================================ */
-const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbyla01AQW2iYGt4-uJ7kI4QTu1mkJDnVvpElWs4Lof2MdstBK-nE4RuCeB2o00xzMPe-g/exec';
-const DEFAULT_KEY = '5144ab14747841ad8e946ae2';
+// No built-in key: the app's personal link stores the connection in this browser.
+const OK_BACKEND_URL = /^https:\/\/script\.google(usercontent)?\.com\//;
 
 const CATS = [
   {id:'land',        label:'Land',          short:'Land',   max:2},
@@ -457,13 +457,14 @@ function pnameHTML(n){ return `<span class="pname"><span class="dot" style="back
 
 /* ============================================================ data */
 function cfg(){
-  // Genbrug appens forbindelse, hvis den findes i samme browser – ellers standarden ovenfor.
-  try{ const c = JSON.parse(localStorage.getItem('vino_backend')||'null'); if(c && c.url && c.key) return c; }catch(e){}
-  return { url: DEFAULT_URL, key: DEFAULT_KEY };
+  // Genbrug appens forbindelse fra samme browser.
+  try{ const c = JSON.parse(localStorage.getItem('vino_backend')||'null'); if(c && c.url && c.key && OK_BACKEND_URL.test(c.url)) return c; }catch(e){}
+  return null;
 }
 
 async function fetchWines(){
   const c = cfg();
+  if(!c) throw new Error('Åbn statistikken fra Blindervenner-appen på en telefon, der er forbundet via dit personlige link.');
   const res = await fetch(c.url, { method:'POST', redirect:'follow',
     headers:{ 'Content-Type':'text/plain;charset=utf-8' },
     body: JSON.stringify({ k:c.key, op:'sync', paths:[], hist:'' }) });

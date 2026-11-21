@@ -475,6 +475,15 @@ body.psheet-open{overflow:hidden}
 .rate-fine .btn{min-width:64px}
 .rate-others{margin-top:12px;font-size:.95rem;color:var(--text-dim)}
 .taste-card{padding:20px 18px}
+.taste-tog{display:flex;align-items:center;gap:12px;width:100%;text-align:left;font:inherit;color:var(--text);background:var(--surface);border:1.5px dashed var(--border-strong);border-radius:var(--r,10px);padding:14px 16px;margin:0 0 14px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.taste-tog.open{border-style:solid;border-color:var(--border)}
+.taste-tog-ic{flex:none;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.4rem;line-height:1;background:var(--text);color:var(--bg)}
+.taste-tog-txt{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.taste-tog-txt b{font-size:1rem}
+.taste-tog-txt small{font-size:.8rem;color:var(--text-faint)}
+.taste-tog-chev{flex:none;color:var(--text-faint);font-size:.9rem}
+#taste-fold.taste-in{animation:tasteIn .28s ease-out}
+@keyframes tasteIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 .proeve-bar{margin:0 0 14px;padding:12px 14px;border:1.5px dashed var(--border-strong);border-radius:var(--r-sm,6px);font-size:.88rem;color:var(--text-dim);line-height:1.4}
 .proeve-bar b{color:var(--text)}
 .taste-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:4px}
@@ -1667,9 +1676,35 @@ function onTasteNote(el){
   el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px';
   const c = document.getElementById('taste-count'); if(c) c.textContent = d.note.length > TASTE_NOTE_MAX - 300 ? `${d.note.length} / ${TASTE_NOTE_MAX}` : '';
 }
+// Folded away by default: one tap on the button opens the three optional cards.
+function tasteHasContent(d){ return !!(d && (d.tags.length || d.note.trim() || Object.values(d.profile).some(v=>v))); }
+function tasteSummaryText(d){
+  const n = Object.values(d.profile).filter(v=>v).length, parts = [];
+  if(d.tags.length) parts.push(d.tags.length + (d.tags.length===1 ? ' smagsnote' : ' smagsnoter'));
+  if(n) parts.push(n + (n===1 ? ' profilnote' : ' profilnoter'));
+  if(d.note.trim()) parts.push('egne noter');
+  return parts.join(' · ');
+}
+function tasteToggleHtml(d){
+  const sum = tasteHasContent(d) ? tasteSummaryText(d) : 'Smag, duft, profil og egne noter';
+  return `<span class="taste-tog-ic" aria-hidden="true">${d.open ? '−' : '+'}</span>
+    <span class="taste-tog-txt"><b>${d.open ? 'Skjul smagsnoter' : 'Uddyb din bedømmelse'}</b><small>${d.open ? 'Det udfyldte bliver ikke slettet' : esc(sum) + ' · valgfrit'}</small></span>
+    <span class="taste-tog-chev" aria-hidden="true">${d.open ? '▴' : '▾'}</span>`;
+}
+function toggleTasting(){
+  const d = tasteDraft(); if(!d) return;
+  d.open = !d.open;
+  const box = document.getElementById('taste-fold'), btn = document.getElementById('taste-tog');
+  if(box) box.hidden = !d.open;
+  if(btn){ btn.innerHTML = tasteToggleHtml(d); btn.setAttribute('aria-expanded', d.open); btn.classList.toggle('open', d.open); }
+  if(d.open && box){ box.classList.remove('taste-in'); void box.offsetWidth; box.classList.add('taste-in'); setTimeout(()=>box.scrollIntoView({behavior:'smooth', block:'start'}), 60); }
+}
 function tastingHtml(r){
   const d = tasteDraft();
-  return `<div class="card taste-card">
+  if(d.open == null) d.open = tasteHasContent(d); // reopened with saved notes → already unfolded
+  return `<button type="button" class="taste-tog${d.open?' open':''}" id="taste-tog" aria-expanded="${d.open}" aria-controls="taste-fold" onclick="toggleTasting()">${tasteToggleHtml(d)}</button>
+  <div id="taste-fold" ${d.open ? '' : 'hidden'}>
+  <div class="card taste-card">
     <div class="taste-head"><div class="eyebrow">Hvad smager og dufter vinen af?</div><span class="taste-opt">Valgfrit</span></div>
     <div class="taste-sub">Tryk på det, du kan genkende – vælg gerne flere.</div>
     <div id="taste-tags">${tasteTagsInner(r)}</div>
@@ -1683,6 +1718,7 @@ function tastingHtml(r){
     <div class="taste-head"><div class="eyebrow">Dine egne noter</div><span class="taste-opt">Valgfrit</span></div>
     <textarea class="taste-note" id="taste-note" rows="3" maxlength="${TASTE_NOTE_MAX}" placeholder="Hvad lagde du mærke til? Hvordan udviklede vinen sig i glasset? Hvad kunne du særligt godt lide?" oninput="onTasteNote(this)">${esc(d.note)}</textarea>
     <div class="taste-count" id="taste-count"></div>
+  </div>
   </div>`;
 }
 // What gets saved: only what was actually filled in (sliders not touched are left out).

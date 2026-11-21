@@ -474,6 +474,45 @@ body.psheet-open{overflow:hidden}
 .rate-fine{display:flex;gap:10px;justify-content:center;margin-top:10px}
 .rate-fine .btn{min-width:64px}
 .rate-others{margin-top:12px;font-size:.95rem;color:var(--text-dim)}
+.taste-card{padding:20px 18px}
+.taste-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:4px}
+.taste-head .eyebrow{margin-bottom:0}
+.taste-opt{font-size:.72rem;color:var(--text-faint);letter-spacing:.04em;text-transform:uppercase}
+.taste-sub{font-size:.85rem;color:var(--text-faint);margin:2px 0 12px;line-height:1.4}
+.taste-seg{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px;align-items:center}
+.taste-seg .lbl{font-size:.8rem;color:var(--text-dim);margin-right:4px}
+.taste-seg button{font:inherit;font-size:.85rem;padding:7px 12px;border-radius:999px;background:var(--input,var(--bg-2));color:var(--text-dim);border:1.5px solid var(--border);cursor:pointer}
+.taste-seg button.on{background:var(--text);border-color:var(--text);color:var(--bg);font-weight:700}
+.taste-grp{margin-top:12px}
+.taste-grp-h{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint);margin-bottom:7px}
+.taste-chips{display:flex;flex-wrap:wrap;gap:7px}
+.tchip{font:inherit;font-size:.9rem;padding:8px 13px;border-radius:999px;background:var(--input,var(--bg-2));color:var(--text);border:1.5px solid var(--border);cursor:pointer;line-height:1.1;-webkit-tap-highlight-color:transparent;transition:background .12s,color .12s,border-color .12s}
+.tchip.on{background:var(--text);border-color:var(--text);color:var(--bg);font-weight:700}
+.tchip.on::before{content:'✓ ';font-weight:700}
+.taste-add{display:flex;gap:8px;margin-top:14px}
+.taste-add input{flex:1;min-width:0;font:inherit;font-size:16px;padding:9px 12px;border-radius:999px;background:transparent;color:var(--text);border:1.5px dashed var(--border-strong)}
+.taste-add input::placeholder{color:var(--text-faint)}
+.taste-add button{font:inherit;font-size:.9rem;padding:8px 14px;border-radius:999px;background:transparent;color:var(--text);border:1.5px solid var(--border-strong);cursor:pointer;white-space:nowrap}
+.tsl{padding:12px 0 6px;border-top:1px solid var(--border)}
+.tsl:first-of-type{border-top:0}
+.tsl-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}
+.tsl-name{font-size:.95rem;color:var(--text)}
+.tsl-word{font-size:.9rem;color:var(--text-faint);font-style:italic}
+.tsl.set .tsl-word{color:var(--text);font-style:normal;font-weight:700}
+.tsl-clear{font:inherit;font-size:.75rem;color:var(--text-faint);background:none;border:0;padding:2px 0 2px 8px;cursor:pointer;text-decoration:underline;visibility:hidden}
+.tsl.set .tsl-clear{visibility:visible}
+.tsl-track{position:relative;display:flex;gap:5px;height:34px;align-items:center;touch-action:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.tsl-seg{flex:1;height:10px;border-radius:5px;background:var(--bg-2);border:1px solid var(--border);transition:background .12s,height .12s}
+.tsl.set .tsl-seg.fill{background:var(--accent);border-color:var(--accent)}
+.tsl.set .tsl-seg.cur{height:20px;background:var(--text);border-color:var(--text)}
+.tsl:not(.set) .tsl-track::after{content:'Tryk for at angive';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:.72rem;color:var(--text-faint);pointer-events:none;background:var(--surface);padding:0 8px;white-space:nowrap}
+.tsl-ends{display:flex;justify-content:space-between;font-size:.75rem;color:var(--text-faint);margin-top:4px}
+.taste-note{width:100%;box-sizing:border-box;font:inherit;font-size:16px;line-height:1.45;padding:12px 14px;min-height:96px;border-radius:var(--r-sm,var(--radius));background:var(--input,var(--bg));color:var(--text);border:1.5px solid var(--border);resize:none;overflow:hidden}
+.taste-note:focus{outline:none;border-color:var(--text)}
+.taste-note::placeholder{color:var(--text-faint)}
+.taste-count{text-align:right;font-size:.72rem;color:var(--text-faint);margin-top:4px;min-height:1em}
+.taste-sum{margin-top:10px;font-size:.85rem;color:var(--text-dim);line-height:1.5}
+.taste-sum b{color:var(--text)}
 </style>
 <div class="app">
   <div class="topbar">
@@ -981,6 +1020,7 @@ function visibleContent(r){
   if(!iAmOwner && (r.phase==='entry' || r.phase==='guessing')){ delete c.truth; delete c.wineNote; delete c.wineType; }
   if(r.phase==='entry' || (iAmOwner && r.phase==='guessing')) delete c.guess;
   if(!iAmOwner && r.phase==='review'){ delete c.truth; delete c.wineNote; delete c.judged; delete c.wineType; }
+  delete c.tasting; // tasting notes are typed on this phone — never redraw over them
   delete c.ratings; // ratings update their own little line, never the whole screen // the guesser only sees "being reviewed"
   return canonical(c);
 }
@@ -1432,7 +1472,10 @@ function sendRating(){
     const s = document.getElementById('rate-slider');
     const v = myRating() ?? (s ? posToRate(s.value) : 4);
     ACTIVE.ratings = ACTIVE.ratings || {}; ACTIVE.ratings[MY_IDENTITY] = v;
-    markDirty('ratings.'+MY_IDENTITY, v); flushPendingChanges();
+    markDirty('ratings.'+MY_IDENTITY, v);
+    const t = tastingToSave(ACTIVE);
+    if(t){ ACTIVE.tasting = ACTIVE.tasting || {}; ACTIVE.tasting[MY_IDENTITY] = t; markDirty('tasting.'+MY_IDENTITY, t); }
+    flushPendingChanges();
   }
   RATED_DONE.add(ACTIVE.id);
   if(PENDING_DAY){ PENDING_DAY = false; IGNORED_ROUNDS.add(ACTIVE.id); ACTIVE = null; VIEW = 'day'; }
@@ -1466,7 +1509,189 @@ function ratingCardHtml(r){
     <div class="rate-fine"><button class="btn btn-secondary btn-sm" onclick="nudgeRate(-0.1)">−0,1</button><button class="btn btn-secondary btn-sm" onclick="nudgeRate(0.1)">+0,1</button></div>
     ${others ? `<div class="rate-others" id="rate-others">${others}</div>` : `<div class="rate-others" id="rate-others"></div>`}
   </div>
+  ${tastingHtml(r)}
   <button class="btn btn-primary btn-block" onclick="sendRating()">Send din bedømmelse →</button>`;
+}
+
+/* ================= SMAGSNOTER (valgfrit) ================= */
+// Tags, profile and notes are all optional — the score alone is enough.
+// Nothing here calls render(): chips, sliders and the note update their own
+// little piece of the screen, so typing never loses focus.
+const TASTE_TAGS = {
+  'Rød': {
+    'Frugt': ['Røde bær','Mørke bær','Kirsebær','Hindbær','Jordbær','Solbær','Blommer','Tørret frugt'],
+    'Blomster & urter': ['Viol','Roser'],
+    'Krydderier': ['Peber','Lakrids','Nellike','Kanel'],
+    'Øvrige noter': ['Vanilje','Egetræ','Tobak','Læder','Chokolade','Kaffe','Skovbund','Jordet','Mineralsk','Urtet','Røget']
+  },
+  'Hvid': {
+    'Frugt': ['Citrus','Citron','Lime','Grapefrugt','Grønt æble','Pære','Fersken','Abrikos','Tropisk frugt','Ananas'],
+    'Blomster & urter': ['Hvide blomster','Hyldeblomst','Græs','Urter'],
+    'Øvrige noter': ['Mineralsk','Saltet','Flint','Honning','Smør','Vanilje','Nødder','Brioche','Egetræ']
+  },
+  'Rosé': {
+    'Frugt': ['Jordbær','Hindbær','Kirsebær','Ribs','Citrus','Fersken','Melon'],
+    'Blomster & urter': ['Blomster','Urter'],
+    'Øvrige noter': ['Mineralsk','Saltet']
+  },
+  'Bobler': {
+    'Frugt': ['Citrus','Grønt æble','Pære'],
+    'Blomster & urter': ['Hvide blomster'],
+    'Gær & modning': ['Brioche','Toast','Gær','Mandler','Nødder'],
+    'Øvrige noter': ['Mineralsk','Saltet']
+  }
+};
+const TASTE_GROUP_ORDER = ['Frugt','Blomster & urter','Krydderier','Gær & modning','Øvrige noter'];
+const TASTE_PROFILE = [
+  { k:'syre',       name:'Syre',       words:['Lav','Blød','Frisk','Livlig','Høj'] },
+  { k:'fylde',      name:'Fylde',      words:['Let','Let til middel','Middel','Middelfyldig','Fyldig'] },
+  { k:'sodme',      name:'Sødme',      words:['Tør','Næsten tør','Halvtør','Halvsød','Sød'] },
+  { k:'tannin',     name:'Tannin',     words:['Blød','Let','Middel','Fast','Kraftig'], only:['Rød','Rosé','Orange'] },
+  { k:'bobler',     name:'Bobler',     words:['Blide','Fine','Middel','Livlige','Kraftige'], only:['Bobler'] },
+  { k:'intensitet', name:'Intensitet', words:['Diskret','Let','Middel','Udtalt','Intens'] },
+  { k:'eftersmag',  name:'Eftersmag',  words:['Kort','Kort til middel','Middel','Lang','Meget lang'] }
+];
+const TASTE_NOTE_MAX = 2000;
+const TASTE_DRAFTS = new Map(); // round id → this phone's draft (survives redraws and "Se resultatet igen")
+
+function tasteDraft(){
+  if(!ACTIVE) return null;
+  let d = TASTE_DRAFTS.get(ACTIVE.id);
+  if(!d){
+    const saved = (ACTIVE.tasting && MY_IDENTITY && ACTIVE.tasting[MY_IDENTITY]) || {};
+    d = { tags: Array.isArray(saved.tags) ? saved.tags.slice() : [], profile: Object.assign({}, saved.profile||{}),
+          note: saved.note || '', base: saved.base || '' };
+    TASTE_DRAFTS.set(ACTIVE.id, d);
+  }
+  return d;
+}
+// Which tag lists apply: the wine's own type; sparkling wine adds the tags of its base colour.
+function tasteKind(r, d){
+  const t = r && r.wineType;
+  if(t==='Rød') return { lists:['Rød'] };
+  if(t==='Rosé') return { lists:['Rosé'] };
+  if(t==='Hvid' || t==='Orange' || t==='Restsød/Sød') return { lists:['Hvid'] };
+  if(t==='Bobler'){ const b = d.base || 'Hvid'; return { lists:['Bobler', b], baseChoice:['Hvid','Rosé','Rød'], base:b }; }
+  // no wine type set by the host: the taster picks it here
+  return { lists: d.base==='Bobler' ? ['Bobler','Hvid'] : d.base ? [d.base] : [], typeChoice:['Rød','Hvid','Rosé','Bobler'], base:d.base };
+}
+function tasteGroups(r, d){
+  const k = tasteKind(r, d), seen = new Set(), groups = {};
+  k.lists.forEach(L=>{ const src = TASTE_TAGS[L]; if(!src) return;
+    Object.keys(src).forEach(g=>src[g].forEach(tag=>{ const key = tag.toLowerCase(); if(seen.has(key)) return; seen.add(key); (groups[g] = groups[g]||[]).push(tag); })); });
+  const own = d.tags.filter(t=>!seen.has(t.toLowerCase()));
+  const out = TASTE_GROUP_ORDER.filter(g=>groups[g]).map(g=>[g, groups[g]]);
+  if(own.length) out.push(['Dine egne', own]);
+  return out;
+}
+function tasteTagsInner(r){
+  const d = tasteDraft(), k = tasteKind(r, d), on = new Set(d.tags.map(t=>t.toLowerCase()));
+  const seg = (lbl, opts, cur) => `<div class="taste-seg"><span class="lbl">${lbl}</span>${opts.map(o=>`<button type="button" class="${o===cur?'on':''}" onclick="setTasteBase('${o}')">${o==='Bobler'?'Mousserende':esc(o)}</button>`).join('')}</div>`;
+  let h = '';
+  if(k.baseChoice) h += seg('Grundfarve:', k.baseChoice, k.base);
+  if(k.typeChoice) h += seg('Hvilken slags vin?', k.typeChoice, k.base);
+  const groups = tasteGroups(r, d);
+  h += groups.map(([g, tags])=>`<div class="taste-grp"><div class="taste-grp-h">${esc(g)}</div><div class="taste-chips">${
+    tags.map(t=>`<button type="button" class="tchip${on.has(t.toLowerCase())?' on':''}" aria-pressed="${on.has(t.toLowerCase())}" data-tag="${esc(t)}" onclick="toggleTasteTag(this)">${esc(t)}</button>`).join('')}</div></div>`).join('');
+  h += `<div class="taste-add"><input id="taste-new" type="text" maxlength="30" placeholder="+ Tilføj dit eget, fx “peberrod”" enterkeyhint="done" onkeydown="if(event.key==='Enter'){event.preventDefault();addTasteTag();}"><button type="button" onclick="addTasteTag()">Tilføj</button></div>`;
+  return h;
+}
+function redrawTasteTags(){ const el = document.getElementById('taste-tags'); if(el && ACTIVE) el.innerHTML = tasteTagsInner(ACTIVE); }
+function setTasteBase(b){ const d = tasteDraft(); if(!d) return; d.base = b; redrawTasteTags(); redrawTasteProfile(); }
+function toggleTasteTag(btn){
+  const d = tasteDraft(); if(!d) return;
+  const t = btn.getAttribute('data-tag'), i = d.tags.findIndex(x=>x.toLowerCase()===t.toLowerCase());
+  if(i>=0) d.tags.splice(i,1); else d.tags.push(t);
+  const on = i<0; btn.classList.toggle('on', on); btn.setAttribute('aria-pressed', on);
+  if(!on && btn.closest('.taste-grp') && btn.closest('.taste-grp').querySelector('.taste-grp-h').textContent==='Dine egne') redrawTasteTags();
+}
+function addTasteTag(){
+  const d = tasteDraft(), inp = document.getElementById('taste-new'); if(!d || !inp) return;
+  let t = inp.value.replace(/\s+/g,' ').trim().slice(0,30); if(!t) return;
+  t = t.charAt(0).toUpperCase() + t.slice(1);
+  if(!d.tags.some(x=>x.toLowerCase()===t.toLowerCase())) d.tags.push(t);
+  redrawTasteTags();
+  const n = document.getElementById('taste-new'); if(n) n.focus();
+}
+function tasteSliders(r, d){
+  const kind = r.wineType || (d.base==='Bobler' ? 'Bobler' : d.base);
+  return TASTE_PROFILE.filter(p=>!p.only || p.only.includes(kind) || (kind==='Bobler' && p.k==='tannin' && d.base==='Rød'));
+}
+function tasteProfileInner(r){
+  const d = tasteDraft();
+  return tasteSliders(r, d).map(p=>{
+    const v = d.profile[p.k];
+    const set = v>=1 && v<=5;
+    const segs = p.words.map((w,i)=>`<span class="tsl-seg${set && i<v?' fill':''}${set && i===v-1?' cur':''}"></span>`).join('');
+    return `<div class="tsl${set?' set':''}" id="tsl-${p.k}">
+      <div class="tsl-top"><span class="tsl-name">${p.name}</span><span><span class="tsl-word" id="tslw-${p.k}">${set ? p.words[v-1] : 'Ikke angivet'}</span><button type="button" class="tsl-clear" onclick="setTasteProfile('${p.k}',null)" aria-label="Nulstil ${p.name}">nulstil</button></span></div>
+      <div class="tsl-track" role="slider" tabindex="0" aria-label="${p.name}" aria-valuemin="1" aria-valuemax="5" aria-valuenow="${set?v:''}" aria-valuetext="${set?p.words[v-1]:'Ikke angivet'}" data-k="${p.k}" onpointerdown="tslDown(event,this)" onkeydown="tslKey(event,this)">${segs}</div>
+      <div class="tsl-ends"><span>${p.words[0]}</span><span>${p.words[4]}</span></div>
+    </div>`;
+  }).join('');
+}
+function redrawTasteProfile(){ const el = document.getElementById('taste-profile'); if(el && ACTIVE) el.innerHTML = tasteProfileInner(ACTIVE); }
+function setTasteProfile(k, v){
+  const d = tasteDraft(); if(!d) return;
+  const p = TASTE_PROFILE.find(x=>x.k===k); if(!p) return;
+  if(v==null) delete d.profile[k]; else d.profile[k] = v;
+  const box = document.getElementById('tsl-'+k); if(!box) return;
+  const set = v!=null;
+  box.classList.toggle('set', set);
+  box.querySelectorAll('.tsl-seg').forEach((s,i)=>{ s.classList.toggle('fill', set && i<v); s.classList.toggle('cur', set && i===v-1); });
+  document.getElementById('tslw-'+k).textContent = set ? p.words[v-1] : 'Ikke angivet';
+  const tr = box.querySelector('.tsl-track'); tr.setAttribute('aria-valuenow', set?v:''); tr.setAttribute('aria-valuetext', set ? p.words[v-1] : 'Ikke angivet');
+}
+// Tap a step, or drag along the track; a slider stays unanswered until it is touched.
+function tslAt(tr, x){ const b = tr.getBoundingClientRect(); return Math.max(1, Math.min(5, Math.floor((x - b.left) / b.width * 5) + 1)); }
+function tslDown(e, tr){
+  e.preventDefault();
+  const k = tr.getAttribute('data-k');
+  setTasteProfile(k, tslAt(tr, e.clientX));
+  try{ tr.setPointerCapture(e.pointerId); }catch(_){}
+  tr.onpointermove = ev => setTasteProfile(k, tslAt(tr, ev.clientX));
+  tr.onpointerup = tr.onpointercancel = () => { tr.onpointermove = null; };
+}
+function tslKey(e, tr){
+  const k = tr.getAttribute('data-k'), d = tasteDraft(), cur = d.profile[k] || 0;
+  if(e.key==='ArrowRight' || e.key==='ArrowUp'){ e.preventDefault(); setTasteProfile(k, cur ? Math.min(5, cur+1) : 3); }
+  else if(e.key==='ArrowLeft' || e.key==='ArrowDown'){ e.preventDefault(); setTasteProfile(k, cur ? Math.max(1, cur-1) : 3); }
+  else if(e.key==='Backspace' || e.key==='Delete'){ e.preventDefault(); setTasteProfile(k, null); }
+}
+function onTasteNote(el){
+  const d = tasteDraft(); if(!d) return;
+  d.note = el.value.slice(0, TASTE_NOTE_MAX);
+  el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px';
+  const c = document.getElementById('taste-count'); if(c) c.textContent = d.note.length > TASTE_NOTE_MAX - 300 ? `${d.note.length} / ${TASTE_NOTE_MAX}` : '';
+}
+function tastingHtml(r){
+  const d = tasteDraft();
+  return `<div class="card taste-card">
+    <div class="taste-head"><div class="eyebrow">Hvad smager og dufter vinen af?</div><span class="taste-opt">Valgfrit</span></div>
+    <div class="taste-sub">Tryk på det, du kan genkende – vælg gerne flere.</div>
+    <div id="taste-tags">${tasteTagsInner(r)}</div>
+  </div>
+  <div class="card taste-card">
+    <div class="taste-head"><div class="eyebrow">Vinens profil</div><span class="taste-opt">Valgfrit</span></div>
+    <div class="taste-sub">Tryk eller træk. Det du ikke rører, gemmes ikke.</div>
+    <div id="taste-profile">${tasteProfileInner(r)}</div>
+  </div>
+  <div class="card taste-card">
+    <div class="taste-head"><div class="eyebrow">Dine egne noter</div><span class="taste-opt">Valgfrit</span></div>
+    <textarea class="taste-note" id="taste-note" rows="3" maxlength="${TASTE_NOTE_MAX}" placeholder="Hvad lagde du mærke til? Hvordan udviklede vinen sig i glasset? Hvad kunne du særligt godt lide?" oninput="onTasteNote(this)">${esc(d.note)}</textarea>
+    <div class="taste-count" id="taste-count"></div>
+  </div>`;
+}
+// What gets saved: only what was actually filled in (sliders not touched are left out).
+function tastingToSave(r){
+  const d = tasteDraft(); if(!d) return null;
+  const allowed = new Set(tasteSliders(r, d).map(p=>p.k));
+  const profile = {};
+  TASTE_PROFILE.forEach(p=>{ const v = d.profile[p.k]; profile[p.k] = allowed.has(p.k) && v>=1 && v<=5 ? v : null; }); // null clears an earlier answer
+  const out = { tags: d.tags.slice(), profile, note: d.note.trim(), base: d.base || '' };
+  const empty = !out.tags.length && !out.note && !Object.values(profile).some(v=>v!=null);
+  const hadSaved = !!(r.tasting && r.tasting[MY_IDENTITY]);
+  return empty && !hadSaved ? null : out;
 }
 
 /* ================= RENDER: GAME ================= */

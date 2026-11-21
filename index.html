@@ -475,6 +475,8 @@ body.psheet-open{overflow:hidden}
 .rate-fine .btn{min-width:64px}
 .rate-others{margin-top:12px;font-size:.95rem;color:var(--text-dim)}
 .taste-card{padding:20px 18px}
+.proeve-bar{margin:0 0 14px;padding:12px 14px;border:1.5px dashed var(--border-strong);border-radius:var(--r-sm,6px);font-size:.88rem;color:var(--text-dim);line-height:1.4}
+.proeve-bar b{color:var(--text)}
 .taste-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:4px}
 .taste-head .eyebrow{margin-bottom:0}
 .taste-opt{font-size:.72rem;color:var(--text-faint);letter-spacing:.04em;text-transform:uppercase}
@@ -1468,6 +1470,7 @@ function setMyRating(v){
 }
 function sendRating(){
   if(!ACTIVE) return;
+  if(PROEVE){ proeveSummary(); return; }
   if(canRate(ACTIVE)){
     const s = document.getElementById('rate-slider');
     const v = myRating() ?? (s ? posToRate(s.value) : 4);
@@ -2464,6 +2467,7 @@ function renderResult(){
   const r = ACTIVE;
   return `
   <div class="fade-in">
+    ${proeveBarHtml()}
     <div class="eyebrow center-text" style="display:block;margin:4px 0 6px;">Resultat · ${wineTag()}</div>
     <div style="display:flex;align-items:center;justify-content:center;gap:18px;margin:4px 0 22px;">
       ${bottleSvg(r.guesserName, r.wineType)}
@@ -2945,7 +2949,40 @@ function render(){
 }
 
 document.getElementById('content').innerHTML = `<div class="empty">Henter Blindervenner…</div>`;
-initBackend();
+/* ================= PRØVETILSTAND ================= */
+// ?proeve (evt. ?proeve=bobler) opens the rating screen with a made-up wine,
+// without connecting to anything — nothing is saved, nothing reaches the other phone.
+const PROEVE = (()=>{ try{ return new URLSearchParams(location.search).has('proeve'); }catch(e){ return false; } })();
+const PROEVE_TYPES = { rod:'Rød', hvid:'Hvid', rose:'Rosé', bobler:'Bobler', orange:'Orange', sod:'Restsød/Sød', ingen:'' };
+function startProeve(type){
+  NEEDS_SETUP = false; INITIAL_LOADED = true; USE_DB = false; DB = null;
+  if(!MY_IDENTITY){ let n = null; try{ n = new URLSearchParams(location.search).get('navn'); }catch(e){}
+    MY_IDENTITY = CONFIG.participants.find(p=>n && p.toLowerCase()===n.toLowerCase()) || CONFIG.participants[0]; }
+  if(type==null){ let q = ''; try{ q = (new URLSearchParams(location.search).get('proeve')||'').toLowerCase(); }catch(e){} type = q in PROEVE_TYPES ? PROEVE_TYPES[q] : 'Rød'; }
+  const other = CONFIG.participants.find(p=>p!==MY_IDENTITY) || 'Tore';
+  ACTIVE = { id:'proeve-'+(type||'ingen')+'-'+Date.now(), phase:'result', ownerName:other, guesserName:MY_IDENTITY, wineType:type,
+    truth:{ land:'Frankrig', region:'Bourgogne', drue:'Pinot Noir', aargang:'2019' },
+    guess:{ land:'Frankrig', region:'Bourgogne', drue:'Pinot Noir', aargang:'2018' },
+    judged:{}, ratings:{ [other]:4.2 } };
+  VIEW = 'game'; render(); window.scrollTo(0,0);
+}
+function proeveBarHtml(){
+  if(!PROEVE) return '';
+  const cur = ACTIVE ? ACTIVE.wineType : '';
+  return `<div class="proeve-bar"><b>Prøvetilstand</b> – intet bliver gemt. Prøv en anden vintype:
+    <div class="taste-seg" style="margin:8px 0 0">${Object.entries(PROEVE_TYPES).map(([k,t])=>`<button type="button" class="${t===cur?'on':''}" onclick="startProeve('${t}')">${t ? (t==='Bobler'?'Mousserende':esc(t)) : 'Ingen'}</button>`).join('')}</div></div>`;
+}
+function proeveSummary(){
+  const t = tastingToSave(ACTIVE), lines = [];
+  lines.push('Score: ' + fmtRate(myRating() ?? 4));
+  if(t && t.tags.length) lines.push('Tags: ' + t.tags.join(', '));
+  if(t){ const pr = TASTE_PROFILE.filter(p=>t.profile[p.k]).map(p=>p.name+': '+p.words[t.profile[p.k]-1]); if(pr.length) lines.push(pr.join(' · ')); }
+  if(t && t.note) lines.push('Noter: ' + t.note);
+  if(lines.length===1) lines.push('(kun scoren – helt fint)');
+  alert('Prøvetilstand – dette ville blive gemt:\n\n' + lines.join('\n'));
+}
+
+if(PROEVE) startProeve(); else initBackend();
 </script>
 
 

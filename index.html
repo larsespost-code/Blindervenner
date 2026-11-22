@@ -1538,7 +1538,7 @@ function ratingCardHtml(r){
   return `<div class="card rate-card">
     <div class="eyebrow">Din score for vinen</div>
     ${dialHtml(mine)}
-    <div class="rate-hint" id="rate-hint">${mine==null ? 'Træk rundt i ringen for at give en score' : 'Tryk “Send din bedømmelse”, når du er klar'}</div>
+    <div class="rate-hint" id="rate-hint">${mine==null ? 'Tryk på ringen, og træk så i knappen for at finjustere' : 'Tryk “Send din bedømmelse”, når du er klar'}</div>
     ${others ? `<div class="rate-others" id="rate-others">${others}</div>` : `<div class="rate-others" id="rate-others"></div>`}
   </div>
   ${tastingHtml(r)}
@@ -1886,15 +1886,25 @@ function haptic(){
 function dialBind(){
   const el = document.getElementById('dial'); if(!el || el._bound) return; el._bound = true;
   DIAL_LAST = myRating();
-  let active = false;
+  let active = false, tap = null;
   const near = d => d > DIAL_R - 62 && d < DIAL_R + 34;
-  const start = (x, y, e) => { const p = dialFromPoint(el, x, y); if(!near(p.dist)) return false; active = true; el.classList.add('drag'); dialApply(p.v); if(e && e.cancelable) e.preventDefault(); return true; };
+  // the knob: where the finger must land to turn the dial (in the svg's own units)
+  const onKnob = (x, y) => { const v = myRating(); if(v == null) return false;
+    const b = el.querySelector('svg').getBoundingClientRect(), k = DIAL_S / b.width, [kx, ky] = dialPt(dialT(v), DIAL_R);
+    return Math.hypot((x - b.left) * k - kx, (y - b.top) * k - ky) < 40; };
+  const end = () => { if(active && !navigator.vibrate) haptic(); active = false; tap = null; el.classList.remove('drag'); };
+  // Touch: grab the knob and turn it; a short tap on the ring jumps there.
+  // A finger that slides across the ring anywhere else is scrolling the page.
+  el.addEventListener('touchstart', e=>{ const t = e.touches[0];
+    if(onKnob(t.clientX, t.clientY)){ active = true; el.classList.add('drag'); if(e.cancelable) e.preventDefault(); return; }
+    const p = dialFromPoint(el, t.clientX, t.clientY); tap = near(p.dist) ? { x:t.clientX, y:t.clientY, v:p.v } : null; }, { passive:false });
+  el.addEventListener('touchmove', e=>{ const t = e.touches[0];
+    if(active){ if(e.cancelable) e.preventDefault(); dialApply(dialFromPoint(el, t.clientX, t.clientY).v); return; }
+    if(tap && Math.hypot(t.clientX - tap.x, t.clientY - tap.y) > 10) tap = null; }, { passive:false });
+  el.addEventListener('touchend', e=>{ if(tap){ const v = tap.v; tap = null; dialApply(v); if(!navigator.vibrate) haptic(); if(e.cancelable) e.preventDefault(); } end(); });
+  el.addEventListener('touchcancel', end);
+  const start = (x, y, e) => { const p = dialFromPoint(el, x, y); if(!near(p.dist) && !onKnob(x, y)) return false; active = true; el.classList.add('drag'); dialApply(p.v); if(e && e.cancelable) e.preventDefault(); return true; };
   const move = (x, y, e) => { if(!active) return; if(e && e.cancelable) e.preventDefault(); dialApply(dialFromPoint(el, x, y).v); };
-  const end = () => { if(active && !navigator.vibrate) haptic(); active = false; el.classList.remove('drag'); };
-  // touch: only a finger that lands on the ring turns it; anywhere else the page scrolls
-  el.addEventListener('touchstart', e=>{ const t = e.touches[0]; start(t.clientX, t.clientY, e); }, { passive:false });
-  el.addEventListener('touchmove', e=>{ const t = e.touches[0]; move(t.clientX, t.clientY, e); }, { passive:false });
-  el.addEventListener('touchend', end); el.addEventListener('touchcancel', end);
   el.addEventListener('mousedown', e=>{ if(start(e.clientX, e.clientY, e)){
     const mm = ev=>move(ev.clientX, ev.clientY, ev), mu = ()=>{ end(); removeEventListener('mousemove', mm); removeEventListener('mouseup', mu); };
     addEventListener('mousemove', mm); addEventListener('mouseup', mu); } });

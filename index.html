@@ -1540,7 +1540,7 @@ function ratingCardHtml(r){
 const TASTE_PROFILE = [
   { k:'syre',       name:'Syre',       words:['Lav','Blød','Frisk','Livlig','Høj'] },
   { k:'fylde',      name:'Fylde',      words:['Let','Let til middel','Middel','Middelfyldig','Fyldig'] },
-  { k:'sodme',      name:'Sødme',      words:['Tør','Næsten tør','Halvtør','Halvsød','Sød'] },
+  { k:'sodme',      name:'Sødme',      words:['Tør','Næsten tør','Halvtør','Halvsød','Sød'], not:['Rød'] },
   { k:'tannin',     name:'Tannin',     words:['Blød','Let','Middel','Fast','Kraftig'], only:['Rød','Orange'] },
   { k:'bobler',     name:'Bobler',     words:['Blide','Fine','Middel','Livlige','Kraftige'], only:['Bobler'] },
   { k:'intensitet', name:'Intensitet', words:['Diskret','Let','Middel','Udtalt','Intens'] },
@@ -1677,8 +1677,9 @@ function addTasteTag(){
   const n = document.getElementById('taste-new'); if(n) n.focus();
 }
 function tasteSliders(r, d){
-  const kind = r.wineType || (d.base==='Bobler' ? 'Bobler' : d.base);
-  return TASTE_PROFILE.filter(p=>!p.only || p.only.includes(kind));
+  // no wine type set: the taster's own choice, else the grape's colour (Poulsard → red)
+  const kind = r.wineType || (d.base==='Bobler' ? 'Bobler' : d.base) || grapeWineType(r);
+  return TASTE_PROFILE.filter(p=>(!p.only || p.only.includes(kind)) && !(p.not && p.not.includes(kind)));
 }
 function tasteProfileInner(r){
   const d = tasteDraft();

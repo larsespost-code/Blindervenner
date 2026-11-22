@@ -1369,12 +1369,12 @@ function goToGuessing(){
     showToast(missing.length ? 'Udfyld først: ' + missing.join(', ') : 'Udfyld alle påkrævede felter først');
     return;
   }
-  if(PROEVE){ proeveFinish(); return; }
   ACTIVE.phase='guessing'; RULES_OPEN=false;
   patchRoundNow({phase:'guessing', truth:ACTIVE.truth, wineNote:ACTIVE.wineNote, guesserName:ACTIVE.guesserName, wineType:ACTIVE.wineType||''});
   render();
 }
 function sendGuess(){
+  if(PROEVE){ proeveFinish(); return; }
   ACTIVE.phase='review'; RULES_OPEN=false;
   patchRoundNow({phase:'review', guess:ACTIVE.guess});
   render();
@@ -3058,21 +3058,26 @@ function proeveOffline(){
   NEEDS_SETUP = false; INITIAL_LOADED = true; USE_DB = false; DB = null;
   patchRoundNow = async()=>{}; pushActiveNow = async()=>{}; flushPendingChanges = async()=>{ pendingPatch = {}; }; queueSave = ()=>{};
 }
-// "Udfyld selv": fill in a wine as the host, then jump straight to the result
-// (the other taster's guess is made up: right country, region and grape, one year off).
+// "Gæt selv": fill in the guess yourself, then jump straight to the result.
+// There is no correct answer: your guess counts as the answer (so the tag
+// suggestions follow what you guessed) and the score is always 12.
 function startProeveSelv(){
   proeveOffline();
   if(!MY_IDENTITY) MY_IDENTITY = CONFIG.participants[0];
-  createRoundLocal();
-  PENDING_NEW_ROUND = null;
-  window.scrollTo(0,0);
+  const other = CONFIG.participants.find(p=>p!==MY_IDENTITY) || 'Tore';
+  const blank = ()=>({land:'',region:'',appellation:'',drue1:'',drue2:'',aargang:'',type:''});
+  ACTIVE = { id:'proeve-selv-'+Date.now(), phase:'guessing', date: todayISO(), createdAt: Date.now(), ownerName:other, guesserName:MY_IDENTITY,
+    wineNote:'', wineType:'', truth:blank(), guess:blank(), judged:{}, proeveKey:'selv' };
+  WAITING_TO_GUESS = false; VIEW = 'game'; RULES_OPEN = false;
+  render(); window.scrollTo(0,0);
 }
 function proeveFinish(){
-  const t = ACTIVE.truth, y = parseInt(t.aargang, 10);
-  ACTIVE.guess = { land:t.land, region:t.region, appellation:'', drue1:t.drue1, drue2:'', aargang: y ? String(y-1) : '', type:'' };
-  ACTIVE.proeveKey = 'selv';
-  finishRound();
-  window.scrollTo(0,0);
+  ACTIVE.truth = Object.assign({}, ACTIVE.guess);
+  ACTIVE.judged = Object.fromEntries(ALL_CATS.map(c=>[c.id, answered(ACTIVE,c.id) ? 'good' : 'bad']));
+  ACTIVE.score = 12;
+  ACTIVE.finishedAt = Date.now();
+  ACTIVE.phase = 'result';
+  render(); window.scrollTo(0,0);
 }
 function startProeve(k){
   proeveOffline();
@@ -3089,8 +3094,11 @@ function startProeve(k){
 function proeveBarHtml(){
   if(!PROEVE) return '';
   const cur = ACTIVE && ACTIVE.proeveKey;
+  if(ACTIVE && ACTIVE.phase==='guessing') return `<div class="proeve-bar"><b>Prøvetilstand</b> – udfyld dit gæt og tryk send. Der er intet facit; du får 12 point uanset hvad. Vintype (styrer druer og smagsforslag):
+    <div class="taste-seg" style="margin:8px 0 0">${WINE_TYPES.map(t=>`<button type="button" class="${ACTIVE.wineType===t?'on':''}" onclick="setWineType('${t}')">${t==='Bobler'?'Mousserende':esc(t)}</button>`).join('')}</div>
+    <button type="button" class="taste-more" onclick="startProeve('pinot')">← Tilbage til eksempelvinene</button></div>`;
   return `<div class="proeve-bar"><b>Prøvetilstand</b> – intet bliver gemt. Prøv en anden vin:
-    <div class="taste-seg" style="margin:8px 0 0"><button type="button" class="${cur==='selv' || (ACTIVE && ACTIVE.phase==='entry') ?'on':''}" onclick="startProeveSelv()">✎ Udfyld selv en vin</button>${PROEVE_WINES.map(w=>`<button type="button" class="${w.k===cur?'on':''}" onclick="startProeve('${w.k}')">${esc(w.lbl)}</button>`).join('')}</div></div>`;
+    <div class="taste-seg" style="margin:8px 0 0"><button type="button" class="${cur==='selv'?'on':''}" onclick="startProeveSelv()">✎ Gæt selv en vin</button>${PROEVE_WINES.map(w=>`<button type="button" class="${w.k===cur?'on':''}" onclick="startProeve('${w.k}')">${esc(w.lbl)}</button>`).join('')}</div></div>`;
 }
 function proeveSummary(){
   const t = tastingToSave(ACTIVE), lines = [];

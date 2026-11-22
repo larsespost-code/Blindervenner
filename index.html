@@ -1369,6 +1369,7 @@ function goToGuessing(){
     showToast(missing.length ? 'Udfyld først: ' + missing.join(', ') : 'Udfyld alle påkrævede felter først');
     return;
   }
+  if(PROEVE){ proeveFinish(); return; }
   ACTIVE.phase='guessing'; RULES_OPEN=false;
   patchRoundNow({phase:'guessing', truth:ACTIVE.truth, wineNote:ACTIVE.wineNote, guesserName:ACTIVE.guesserName, wineType:ACTIVE.wineType||''});
   render();
@@ -2553,7 +2554,6 @@ function renderResult(){
   const r = ACTIVE;
   return `
   <div class="fade-in">
-    ${proeveBarHtml()}
     <div class="eyebrow center-text" style="display:block;margin:4px 0 6px;">Resultat · ${wineTag()}</div>
     <div style="display:flex;align-items:center;justify-content:center;gap:18px;margin:4px 0 22px;">
       ${bottleSvg(r.guesserName, r.wineType)}
@@ -3025,6 +3025,7 @@ function render(){
     : VIEW+'|'+(ACTIVE ? ACTIVE.id+'|'+ACTIVE.phase : 'idle')+'|'+myRole();
   if(screenKey === LAST_SCREEN_KEY) html = html.replace(/\bfade-in\b/g, '');
   LAST_SCREEN_KEY = screenKey;
+  if(PROEVE && VIEW==='game') html = proeveBarHtml() + html;
   c.innerHTML = html;
   if(!needsIdentity && VIEW==='game' && ACTIVE && ACTIVE.phase==='result'){
     // the bottle must be in view when the result appears — wherever this phone was scrolled to
@@ -3052,11 +3053,33 @@ const PROEVE_WINES = [
   { k:'ukendt',   lbl:'Rød, ukendt drue', type:'Rød', t:{ land:'Portugal', region:'Douro', drue1:'Touriga Nacional', aargang:'2019' } },
   { k:'ingen',    lbl:'Ingen vintype', type:'', t:{ land:'Frankrig', aargang:'2020' } }
 ];
-function startProeve(k){
+// Test mode never stores anything: not in the database, not in this browser.
+function proeveOffline(){
   NEEDS_SETUP = false; INITIAL_LOADED = true; USE_DB = false; DB = null;
+  patchRoundNow = async()=>{}; pushActiveNow = async()=>{}; flushPendingChanges = async()=>{ pendingPatch = {}; }; queueSave = ()=>{};
+}
+// "Udfyld selv": fill in a wine as the host, then jump straight to the result
+// (the other taster's guess is made up: right country, region and grape, one year off).
+function startProeveSelv(){
+  proeveOffline();
+  if(!MY_IDENTITY) MY_IDENTITY = CONFIG.participants[0];
+  createRoundLocal();
+  PENDING_NEW_ROUND = null;
+  window.scrollTo(0,0);
+}
+function proeveFinish(){
+  const t = ACTIVE.truth, y = parseInt(t.aargang, 10);
+  ACTIVE.guess = { land:t.land, region:t.region, appellation:'', drue1:t.drue1, drue2:'', aargang: y ? String(y-1) : '', type:'' };
+  ACTIVE.proeveKey = 'selv';
+  finishRound();
+  window.scrollTo(0,0);
+}
+function startProeve(k){
+  proeveOffline();
   if(!MY_IDENTITY){ let n = null; try{ n = new URLSearchParams(location.search).get('navn'); }catch(e){}
     MY_IDENTITY = CONFIG.participants.find(p=>n && p.toLowerCase()===n.toLowerCase()) || CONFIG.participants[0]; }
   if(k==null){ try{ k = (new URLSearchParams(location.search).get('proeve')||'').toLowerCase(); }catch(e){ k = ''; } }
+  if(k==='selv') return startProeveSelv();
   const w = PROEVE_WINES.find(x=>x.k===k) || PROEVE_WINES[0];
   const other = CONFIG.participants.find(p=>p!==MY_IDENTITY) || 'Tore';
   ACTIVE = { id:'proeve-'+w.k+'-'+Date.now(), phase:'result', ownerName:other, guesserName:MY_IDENTITY, wineType:w.type,
@@ -3067,7 +3090,7 @@ function proeveBarHtml(){
   if(!PROEVE) return '';
   const cur = ACTIVE && ACTIVE.proeveKey;
   return `<div class="proeve-bar"><b>Prøvetilstand</b> – intet bliver gemt. Prøv en anden vin:
-    <div class="taste-seg" style="margin:8px 0 0">${PROEVE_WINES.map(w=>`<button type="button" class="${w.k===cur?'on':''}" onclick="startProeve('${w.k}')">${esc(w.lbl)}</button>`).join('')}</div></div>`;
+    <div class="taste-seg" style="margin:8px 0 0"><button type="button" class="${cur==='selv' || (ACTIVE && ACTIVE.phase==='entry') ?'on':''}" onclick="startProeveSelv()">✎ Udfyld selv en vin</button>${PROEVE_WINES.map(w=>`<button type="button" class="${w.k===cur?'on':''}" onclick="startProeve('${w.k}')">${esc(w.lbl)}</button>`).join('')}</div></div>`;
 }
 function proeveSummary(){
   const t = tastingToSave(ACTIVE), lines = [];

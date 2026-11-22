@@ -483,8 +483,10 @@ body.psheet-open{overflow:hidden}
 .dial-tick.major{stroke-width:2.6;stroke:var(--text-dim)}
 .dial-tick.on{stroke:var(--accent-2)}
 .dial-num{font:600 13px var(--fb,system-ui);fill:var(--text-faint);text-anchor:middle}
-.dial-thumb{fill:var(--surface);stroke:var(--text);stroke-width:4;opacity:0;transition:opacity .15s}
-.dial.set .dial-thumb{opacity:1}
+.dial-thumb{fill:var(--surface);stroke:var(--text);stroke-width:4}
+.dial:not(.set) .dial-thumb{stroke:var(--text-faint);stroke-dasharray:4 3;animation:dialWait 1.8s ease-in-out infinite}
+@keyframes dialWait{50%{stroke:var(--text)}}
+@media (prefers-reduced-motion:reduce){.dial:not(.set) .dial-thumb{animation:none}}
 .dial.drag .dial-thumb{stroke:var(--accent-2);stroke-width:6}
 .dial-mid{position:absolute;left:0;right:0;top:50%;transform:translateY(-56%);text-align:center;pointer-events:none}
 .dial-mid .rate-val{font-size:4.2rem;margin:0;line-height:1}
@@ -1538,7 +1540,7 @@ function ratingCardHtml(r){
   return `<div class="card rate-card">
     <div class="eyebrow">Din score for vinen</div>
     ${dialHtml(mine)}
-    <div class="rate-hint" id="rate-hint">${mine==null ? 'Tryk på ringen, og træk så i knappen for at finjustere' : 'Tryk “Send din bedømmelse”, når du er klar'}</div>
+    <div class="rate-hint" id="rate-hint">${mine==null ? 'Træk i knappen, eller tryk et sted på ringen' : 'Tryk “Send din bedømmelse”, når du er klar'}</div>
     ${others ? `<div class="rate-others" id="rate-others">${others}</div>` : `<div class="rate-others" id="rate-others"></div>`}
   </div>
   ${tastingHtml(r)}
@@ -1836,7 +1838,7 @@ function dialHtml(v){
     ticks += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" class="dial-tick${major?' major':''}" data-i="${i}"/>`;
     if(major){ const [lx, ly] = dialPt(t, DIAL_R - 44); ticks += `<text x="${lx.toFixed(1)}" y="${(ly+4).toFixed(1)}" class="dial-num">${DIAL.label(val)}</text>`; }
   }
-  const set = v != null, t = set ? dialT(v) : 0, [tx, ty] = dialPt(t, DIAL_R);
+  const set = v != null, t = set ? dialT(v) : 0, [tx, ty] = dialPt(set ? t : 0.5, DIAL_R);
   return `<div class="dial${set ? ' set' : ''}" id="dial" role="slider" tabindex="0" aria-label="${DIAL.aria}" aria-valuemin="${DIAL.min}" aria-valuemax="${DIAL.max}" aria-valuenow="${set ? v : ''}" aria-valuetext="${set ? fmtRate(v) : 'Ikke givet'}" onkeydown="dialKey(event)">
     <svg viewBox="0 0 ${DIAL_S} ${DIAL_S}" aria-hidden="true">
       <path d="${dialArc(1, DIAL_R)}" class="dial-track"/>
@@ -1889,8 +1891,8 @@ function dialBind(){
   let active = false, tap = null;
   const near = d => d > DIAL_R - 62 && d < DIAL_R + 34;
   // the knob: where the finger must land to turn the dial (in the svg's own units)
-  const onKnob = (x, y) => { const v = myRating(); if(v == null) return false;
-    const b = el.querySelector('svg').getBoundingClientRect(), k = DIAL_S / b.width, [kx, ky] = dialPt(dialT(v), DIAL_R);
+  const onKnob = (x, y) => { const v = myRating();
+    const b = el.querySelector('svg').getBoundingClientRect(), k = DIAL_S / b.width, [kx, ky] = dialPt(v == null ? 0.5 : dialT(v), DIAL_R);
     return Math.hypot((x - b.left) * k - kx, (y - b.top) * k - ky) < 40; };
   const end = () => { if(active && !navigator.vibrate) haptic(); active = false; tap = null; el.classList.remove('drag'); };
   // Touch: grab the knob and turn it; a short tap on the ring jumps there.

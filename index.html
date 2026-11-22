@@ -1897,14 +1897,14 @@ function dialBind(){
   const grab = v => { active = true; tap = null; el.classList.add('drag'); if(v != null) dialApply(v); };
   const end = () => { clearTimeout(hold); if(active && !navigator.vibrate) haptic(); active = false; tap = null; el.classList.remove('drag'); };
   // Touch: the knob turns at once. Anywhere else on the ring: rest the finger a moment
-  // (~0.15 s) and the dial follows it from there; a quick swipe scrolls the page instead,
+  // (~0.09 s) and the dial follows it from there; a quick swipe scrolls the page instead,
   // and a short tap jumps to that spot.
   el.addEventListener('touchstart', e=>{ const t = e.touches[0];
     if(onKnob(t.clientX, t.clientY)){ grab(null); if(e.cancelable) e.preventDefault(); return; }
     const p = dialFromPoint(el, t.clientX, t.clientY);
     if(!near(p.dist)){ tap = null; return; }
     tap = { x:t.clientX, y:t.clientY, v:p.v };
-    clearTimeout(hold); hold = setTimeout(()=>{ if(tap) grab(tap.v); }, 150); }, { passive:false });
+    clearTimeout(hold); hold = setTimeout(()=>{ if(tap) grab(tap.v); }, 90); }, { passive:false });
   el.addEventListener('touchmove', e=>{ const t = e.touches[0];
     if(active){ if(e.cancelable) e.preventDefault(); dialApply(dialFromPoint(el, t.clientX, t.clientY).v); return; }
     if(tap && Math.hypot(t.clientX - tap.x, t.clientY - tap.y) > 8){ tap = null; clearTimeout(hold); } }, { passive:false });

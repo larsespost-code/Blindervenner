@@ -1539,7 +1539,6 @@ function ratingCardHtml(r){
     <div class="eyebrow">Din score for vinen</div>
     ${dialHtml(mine)}
     <div class="rate-hint" id="rate-hint">${mine==null ? 'Træk rundt i ringen for at give en score' : 'Tryk “Send din bedømmelse”, når du er klar'}</div>
-    <div class="rate-fine"><button class="btn btn-secondary btn-sm" onclick="nudgeRate(-0.1)">−0,1</button><button class="btn btn-secondary btn-sm" onclick="nudgeRate(0.1)">+0,1</button></div>
     ${others ? `<div class="rate-others" id="rate-others">${others}</div>` : `<div class="rate-others" id="rate-others"></div>`}
   </div>
   ${tastingHtml(r)}
@@ -1869,7 +1868,7 @@ function dialFromPoint(el, x, y){
 }
 function dialApply(v){
   if(v === DIAL_LAST) return;
-  if(DIAL_LAST != null) haptic();
+  if(DIAL_LAST != null && navigator.vibrate){ try{ navigator.vibrate(6); }catch(e){} }
   DIAL_LAST = v; dialRender(v); setMyRating(v);
 }
 // One small bump per step. Android: the vibration API. iPhone (iOS 18+): toggling a
@@ -1891,7 +1890,7 @@ function dialBind(){
   const near = d => d > DIAL_R - 62 && d < DIAL_R + 34;
   const start = (x, y, e) => { const p = dialFromPoint(el, x, y); if(!near(p.dist)) return false; active = true; el.classList.add('drag'); dialApply(p.v); if(e && e.cancelable) e.preventDefault(); return true; };
   const move = (x, y, e) => { if(!active) return; if(e && e.cancelable) e.preventDefault(); dialApply(dialFromPoint(el, x, y).v); };
-  const end = () => { active = false; el.classList.remove('drag'); };
+  const end = () => { if(active && !navigator.vibrate) haptic(); active = false; el.classList.remove('drag'); };
   // touch: only a finger that lands on the ring turns it; anywhere else the page scrolls
   el.addEventListener('touchstart', e=>{ const t = e.touches[0]; start(t.clientX, t.clientY, e); }, { passive:false });
   el.addEventListener('touchmove', e=>{ const t = e.touches[0]; move(t.clientX, t.clientY, e); }, { passive:false });

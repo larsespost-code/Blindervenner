@@ -479,6 +479,7 @@ body.psheet-open{overflow:hidden}
 .taste-prof b{color:var(--text)}
 .taste-more{display:block;font:inherit;font-size:.88rem;font-weight:700;color:var(--text);background:none;border:0;padding:12px 0 2px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 .vinlex-row{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:12px}
+.vinlex-pick{align-items:flex-start;margin-top:10px}
 .vinlex-row:empty{display:none}
 .vinlex{font-size:.85rem;color:var(--text);text-decoration:underline;text-underline-offset:3px}
 .taste-tog{display:flex;align-items:center;gap:12px;width:100%;text-align:left;font:inherit;color:var(--text);background:var(--surface);border:1.5px dashed var(--border-strong);border-radius:var(--r,10px);padding:14px 16px;margin:0 0 14px;cursor:pointer;-webkit-tap-highlight-color:transparent}
@@ -1540,7 +1541,7 @@ const TASTE_PROFILE = [
   { k:'syre',       name:'Syre',       words:['Lav','Blød','Frisk','Livlig','Høj'] },
   { k:'fylde',      name:'Fylde',      words:['Let','Let til middel','Middel','Middelfyldig','Fyldig'] },
   { k:'sodme',      name:'Sødme',      words:['Tør','Næsten tør','Halvtør','Halvsød','Sød'] },
-  { k:'tannin',     name:'Tannin',     words:['Blød','Let','Middel','Fast','Kraftig'], only:['Rød','Rosé','Orange'] },
+  { k:'tannin',     name:'Tannin',     words:['Blød','Let','Middel','Fast','Kraftig'], only:['Rød','Orange'] },
   { k:'bobler',     name:'Bobler',     words:['Blide','Fine','Middel','Livlige','Kraftige'], only:['Bobler'] },
   { k:'intensitet', name:'Intensitet', words:['Diskret','Let','Middel','Udtalt','Intens'] },
   { k:'eftersmag',  name:'Eftersmag',  words:['Kort','Kort til middel','Middel','Lang','Meget lang'] }
@@ -1677,7 +1678,7 @@ function addTasteTag(){
 }
 function tasteSliders(r, d){
   const kind = r.wineType || (d.base==='Bobler' ? 'Bobler' : d.base);
-  return TASTE_PROFILE.filter(p=>!p.only || p.only.includes(kind) || (kind==='Bobler' && p.k==='tannin' && d.base==='Rød'));
+  return TASTE_PROFILE.filter(p=>!p.only || p.only.includes(kind));
 }
 function tasteProfileInner(r){
   const d = tasteDraft();
@@ -2099,6 +2100,12 @@ function chipBtn(kind, id, v, on, extra){
 const PICK_MORE = {}; // "guess.region" → true when "Flere" has been opened inline
 let PICK_ROUND = null;
 function pickerHtml(kind, id){
+  const html = pickerHtmlBase(kind, id);
+  if(id!=='drue1' && id!=='drue2') return html;
+  const grapes = splitMulti(ansObj(kind)[id] || '').map(g=>GRAPE_BY.get(vkey(g)) ? GRAPE_BY.get(vkey(g))[0] : g).filter(Boolean);
+  return html + (grapes.length ? `<div class="vinlex-row vinlex-pick">${grapes.map(g=>`<a class="vinlex" href="${vinlexUrl(g)}" target="_blank" rel="noopener">Læs om ${esc(g)} på Vinlex ↗</a>`).join('')}</div>` : '');
+}
+function pickerHtmlBase(kind, id){
   if(ACTIVE && PICK_ROUND !== ACTIVE.id){ PICK_ROUND = ACTIVE.id; [PICK_CUSTOM, PICK_OPEN, PICK_MORE].forEach(m=>Object.keys(m).forEach(k=>delete m[k])); }
   const o = ansObj(kind), v = o[id] || '', c = pickChoices(kind, id), key = kind+'.'+id;
   const custom = PICK_CUSTOM[key] || (v && !isKnownValue(id, v));
@@ -2440,8 +2447,12 @@ const WINE_COLORS = {
   'Bobler':      { top:'#F2E3A4', bottom:'#D6BE62', surf:'#FFFBEA', bubbles:true },
   'Restsød/Sød': { top:'#E8B23A', bottom:'#A8700F', surf:'#F7D57A' },
 };
+function grapeWineType(r){
+  const g = r && r.truth && GRAPE_BY.get(vkey(String(r.truth.drue1||'').split(',')[0].trim()));
+  return g ? (g[1]==='rød' ? 'Rød' : g[1]==='hvid' ? 'Hvid' : '') : '';
+}
 function bottleSvg(name, wineType){
-  const col = WINE_COLORS[wineType] || WINE_COLORS.Orange;
+  const col = WINE_COLORS[wineType || grapeWineType(ACTIVE)] || WINE_COLORS.Orange;
   // bubbles rise through the liquid only (clipped to the current fill level)
   const bubbles = col.bubbles ? `<g clip-path="url(#level-clip)">${[[34,2.2,2.4,0],[46,1.6,3.1,1.1],[58,2.6,2.7,0.5],[70,1.8,3.4,1.9],[82,2.3,2.9,0.8],[94,1.7,3.2,2.3],[40,1.9,3.6,2.8],[64,1.5,2.5,1.5],[88,2.1,3.8,0.2],[52,1.8,3.3,2.6]]
       .map(([x,r,d,b],i)=>`<circle cx="${x}" cy="${150 + (i*29)%140}" r="${r}" fill="#FFFFFF" fill-opacity="0.85"><animate attributeName="cy" from="300" to="96" dur="${d}s" begin="-${b}s" repeatCount="indefinite"/></circle>`).join('')}</g>` : '';
@@ -2529,7 +2540,6 @@ function revealBoxHtml(r){
       <div class="reveal-name">${esc(name)}</div>
       ${year ? `<div class="reveal-year">${esc(year)}</div>` : ''}
       ${facts.length ? `<div class="reveal-facts">${facts.map(esc).join('<span>·</span>')}</div>` : ''}
-      ${r.phase==='result' ? `<div class="vinlex-row">${vinlexLinks(r)}</div>` : ''}
     </div>
   </div>`;
 }

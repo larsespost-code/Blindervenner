@@ -478,7 +478,7 @@ body.psheet-open{overflow:hidden}
 .dial{position:relative;width:100%;max-width:360px;margin:4px auto 0;touch-action:pan-y;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;outline:none}
 .dial svg{display:block;width:100%;height:auto;overflow:visible}
 .dial-track{fill:none;stroke:var(--bg-2);stroke-width:14;stroke-linecap:round}
-.dial-fill{fill:none;stroke:var(--accent);stroke-width:14;stroke-linecap:round;transition:opacity .2s}
+.dial-fill{fill:none;stroke-width:14;stroke-linecap:butt}
 .dial-tick{stroke:var(--border-strong);stroke-width:1.4;stroke-linecap:round}
 .dial-tick.major{stroke-width:2.6;stroke:var(--text-dim)}
 .dial-tick.on{stroke:var(--accent-2)}
@@ -1817,6 +1817,16 @@ function dialArc(t1, r){ // from the start of the ring to t1
   const [x0, y0] = dialPt(0, r), [x1, y1] = dialPt(Math.max(0.0001, t1), r);
   return `M${x0.toFixed(2)} ${y0.toFixed(2)} A${r} ${r} 0 ${DIAL_SWEEP * t1 > 180 ? 1 : 0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
 }
+function dialSegs(t){
+  const steps = Math.round((DIAL.max - DIAL.min) / DIAL.step), n = Math.round(t * steps);
+  let h = '';
+  for(let i=0;i<n;i++){
+    const a = Math.max(0, i / steps - 0.002), b = Math.min(1, (i + 1) / steps + 0.002), [x0,y0] = dialPt(a, DIAL_R), [x1,y1] = dialPt(b, DIAL_R);
+    const k = Math.pow((i + 1) / steps, 1.1), c = DIAL.from.map((f, j)=>Math.round(f + (DIAL.to[j] - f) * k));
+    h += `<path d="M${x0.toFixed(2)} ${y0.toFixed(2)} A${DIAL_R} ${DIAL_R} 0 0 1 ${x1.toFixed(2)} ${y1.toFixed(2)}" stroke="rgb(${c.join(',')})"/>`;
+  }
+  return h;
+}
 function dialHtml(v){
   const steps = Math.round((DIAL.max - DIAL.min) / DIAL.step);
   let ticks = '';
@@ -1831,7 +1841,7 @@ function dialHtml(v){
   return `<div class="dial${set ? ' set' : ''}" id="dial" role="slider" tabindex="0" aria-label="${DIAL.aria}" aria-valuemin="${DIAL.min}" aria-valuemax="${DIAL.max}" aria-valuenow="${set ? v : ''}" aria-valuetext="${set ? fmtRate(v) : 'Ikke givet'}" onkeydown="dialKey(event)">
     <svg viewBox="0 0 ${DIAL_S} ${DIAL_S}" aria-hidden="true">
       <path d="${dialArc(1, DIAL_R)}" class="dial-track"/>
-      <path d="${dialArc(t, DIAL_R)}" class="dial-fill" id="dial-fill"${set ? '' : ' style="opacity:0"'}/>
+      <g class="dial-fill" id="dial-fill">${set ? dialSegs(t) : ''}</g>
       ${ticks}
       <circle cx="${tx.toFixed(1)}" cy="${ty.toFixed(1)}" r="15" class="dial-thumb" id="dial-thumb"/>
     </svg>
@@ -1843,7 +1853,7 @@ function dialRender(v){
   const el = document.getElementById('dial'); if(!el) return;
   const t = dialT(v), [tx, ty] = dialPt(t, DIAL_R);
   el.classList.add('set');
-  const f = document.getElementById('dial-fill'); f.setAttribute('d', dialArc(t, DIAL_R)); f.style.opacity = '';
+  document.getElementById('dial-fill').innerHTML = dialSegs(t);
   const th = document.getElementById('dial-thumb'); th.setAttribute('cx', tx.toFixed(1)); th.setAttribute('cy', ty.toFixed(1));
   const steps = Math.round((DIAL.max - DIAL.min) / DIAL.step), cur = Math.round(t * steps);
   el.querySelectorAll('.dial-tick').forEach(l=>l.classList.toggle('on', +l.dataset.i <= cur));
@@ -1896,7 +1906,7 @@ function dialKey(e){
   if(!d) return; e.preventDefault();
   dialApply(+Math.max(DIAL.min, Math.min(DIAL.max, cur + d)).toFixed(4));
 }
-const DIAL = { min:0, max:5, step:0.1, major:1, mid:0.5, start:4, label:v=>String(v), of:'af 5,0', aria:'Score 0 til 5' };
+const DIAL = { from:[233,224,214], to:[30,70,57], min:0, max:5, step:0.1, major:1, mid:0.5, start:4, label:v=>String(v), of:'af 5,0', aria:'Score 0 til 5' };
 
 /* ================= RENDER: GAME ================= */
 function renderGame(){

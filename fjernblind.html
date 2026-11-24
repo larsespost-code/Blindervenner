@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Fjernblind · Blindervenner</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Figtree:wght@400;500;600;700;800&display=swap">
+<style>
+/* Test page: one taster describes a wine, the other guesses it from the description alone. */
+:root{
+  --bg:#F1EBE4; --bg-2:#E9E0D6; --surface:#F8F4EE; --input:#FFFFFF;
+  --text:#1E2D32; --text-dim:#56686A; --text-faint:#6F7C7A;
+  --accent:#4F6563; --gold:#CA9954; --good:#3E6B57; --mid:#8E6628; --bad:#A34A3A;
+  --border:rgba(30,45,50,.14); --border-strong:rgba(30,45,50,.45);
+  --tsl-from:#E9E0D6; --tsl-to:#1E4639;
+  --fd:'Archivo',system-ui,sans-serif; --fb:'Figtree',system-ui,-apple-system,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:16px/1.45 var(--fb);padding:calc(env(safe-area-inset-top,0px) + 14px) max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 40px) max(16px,env(safe-area-inset-left,0px))}
+.wrap{max-width:560px;margin:0 auto}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.brand{font:800 15px var(--fd);font-stretch:112%;letter-spacing:.04em;text-transform:uppercase}
+.brand small{font:600 11px var(--fb);letter-spacing:.12em;color:var(--gold);margin-left:6px}
+.who{font-size:.85rem;color:var(--text-dim)}
+.who b{color:var(--text)}
+h1{font:800 34px/1.02 var(--fd);font-stretch:112%;letter-spacing:-.03em;margin:6px 0 8px;text-wrap:balance}
+.sub{color:var(--text-dim);margin:0 0 18px}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);margin:0 0 8px}
+.card{background:var(--surface);border:1px solid rgba(30,45,50,.16);border-radius:14px;padding:18px;margin-bottom:14px}
+.btn{display:block;width:100%;font:700 16px var(--fb);padding:15px 18px;border-radius:12px;border:1.5px solid var(--text);background:var(--text);color:var(--bg);cursor:pointer;margin-top:10px;text-align:center}
+.btn.ghost{background:transparent;color:var(--text)}
+.btn:disabled{opacity:.45}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{font:inherit;font-size:.92rem;padding:8px 13px;border-radius:999px;background:var(--input);color:var(--text);border:1.5px solid var(--border);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.chip.on{background:var(--text);border-color:var(--text);color:var(--bg);font-weight:700}
+.chip.on::before{content:'✓ '}
+.chip.pick.on::before{content:''}
+.field{margin-bottom:14px}
+.field label,.lbl{display:block;font-size:.85rem;font-weight:700;margin-bottom:6px}
+.lbl small{font-weight:400;color:var(--text-faint)}
+input[type=text],select,textarea{width:100%;font:16px var(--fb);padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);background:var(--input);color:var(--text)}
+textarea{min-height:96px;resize:vertical;line-height:1.45}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--text)}
+.secret{border:1.5px dashed var(--gold);background:rgba(202,153,84,.08)}
+.secret .eyebrow{color:var(--mid)}
+.grp{margin-top:12px}
+.grp-h{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint);margin-bottom:7px}
+.more{font:inherit;font-size:.9rem;font-weight:700;background:none;border:0;padding:12px 0 2px;text-decoration:underline;color:var(--text);cursor:pointer}
+.add{display:flex;gap:8px;margin-top:12px}
+.add input{border-radius:999px;border-style:dashed}
+.add button{font:inherit;padding:8px 14px;border-radius:999px;border:1.5px solid var(--border-strong);background:transparent;cursor:pointer}
+/* profile sliders: rail + ball, as in the app */
+.tsl{padding:10px 0 4px;border-top:1px solid var(--border)}
+.tsl:first-child{border-top:0}
+.tsl-top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.tsl-word{font-size:.9rem;color:var(--text-faint);font-style:italic}
+.tsl.set .tsl-word{color:var(--text);font-style:normal;font-weight:700}
+.tsl-track{position:relative;height:40px;padding:0 15px;touch-action:pan-y;cursor:pointer}
+.tsl-in{position:relative;height:100%}
+.tsl-rail{position:absolute;left:0;right:0;top:50%;height:10px;margin-top:-5px;border-radius:5px;background:var(--bg-2);overflow:hidden}
+.tsl-fill{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,var(--tsl-from),var(--tsl-to))}
+.tsl-ball{position:absolute;top:50%;width:28px;height:28px;margin:-14px 0 0 -14px;border-radius:50%;background:var(--surface);border:3.5px solid var(--text);box-shadow:0 2px 6px rgba(0,0,0,.18);pointer-events:none}
+.tsl:not(.set) .tsl-ball{border-style:dashed;border-color:var(--text-faint);box-shadow:none}
+.tsl-ends{display:flex;justify-content:space-between;font-size:.75rem;color:var(--text-faint)}
+/* the description the guesser reads */
+.desc .type{display:inline-block;font-size:.8rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:4px 10px;border-radius:999px;background:var(--bg-2);margin-bottom:10px}
+.desc .tags span{display:inline-block;font-size:.95rem;padding:6px 12px;border-radius:999px;border:1.5px solid var(--text);margin:0 6px 6px 0}
+.desc blockquote{margin:12px 0 0;padding:10px 14px;border-left:3px solid var(--gold);background:var(--input);border-radius:0 10px 10px 0;white-space:pre-wrap}
+.prof-list{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin-top:6px;font-size:.95rem}
+.prof-list span:nth-child(odd){color:var(--text-dim)}
+.prof-list b{font-weight:700}
+.rd-svg{width:100%;max-width:330px;display:block;margin:4px auto 0;overflow:visible}
+.rd-ring{fill:none;stroke:rgba(30,45,50,.10)}
+.rd-lbl{font:13px var(--fb);fill:var(--text-dim)}
+/* result */
+.res{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px 10px;font-size:.95rem;align-items:baseline}
+.res .h{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint)}
+.res .p{font-weight:800;text-align:right}
+.res .good{color:var(--good)} .res .mid{color:var(--mid)} .res .bad{color:var(--bad)}
+.big{font:900 64px/1 var(--fd);font-stretch:112%;letter-spacing:-.05em}
+.big small{font:600 18px var(--fb);color:var(--text-faint);letter-spacing:0}
+.wait{text-align:center;padding:30px 10px;color:var(--text-dim)}
+.wait .dots::after{content:'';animation:dots 1.4s steps(4) infinite}
+@keyframes dots{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);transform:translateX(-50%);background:var(--text);color:var(--bg);padding:12px 18px;border-radius:12px;font-size:.95rem;z-index:50;max-width:90vw;text-align:center}
+.demo{font-size:.8rem;padding:8px 12px;border:1.5px dashed var(--border-strong);border-radius:10px;margin-bottom:14px;color:var(--text-dim)}
+.demo button{font:inherit;font-weight:700;background:none;border:0;text-decoration:underline;cursor:pointer;color:var(--text)}
+.err{color:var(--bad)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><div class="brand">Blindervenner<small>Fjernblind · test</small></div><div class="who" id="who"></div></div>
+  <div id="app"><div class="wait">Henter<span class="dots"></span></div></div>
+</div>
+<script>
+const D = {"groups":["Frugt","Blomster","Urter og grønt","Krydderier","Krydderier og urter","Mineralitet","Fad, gær og nødder","Udvikling og animalsk","Øvrige aromaer","Øvrige noter","Øvrige"],"colors":{"color_red":[["Solbær",0,1],["Brombær",0,1],["Blomme",0,1],["Kirsebær",0,1],["Lakrids",3,1],["Cedertræ",6,1],["Tobak",7,1],["Sort peber",3,1],["Viol",1,0],["Jord",7,0],["Læder",7,0],["Vanilje",6,0],["Tørret frugt",0,0],["Nellike",3,0],["Kanel",3,0],["Skovbund",7,0],["Svampe",7,0],["Røg",7,0],["Kaffe",6,0],["Chokolade",6,0],["Urter",2,0],["Mynte",2,0]],"color_white":[["Citrus",0,1],["Pære",0,1],["Grønt æble",0,1],["Hvide blomster",1,1],["Fersken",0,1],["Lime",0,1],["Mineralsk",5,1],["Honning",8,1],["Grapefrugt",0,0],["Urter",2,0],["Nødder",6,0],["Appelsinskal",0,0],["Gule æbler",0,0],["Abrikos",0,0],["Ananas",0,0],["Melon",0,0],["Kamille",8,0],["Hyldeblomst",1,0],["Græs",2,0],["Flint",5,0],["Kridt",5,0],["Salt",5,0],["Regnvåd asfalt",5,0]],"color_rose":[["Jordbær",0,1],["Hindbær",0,1],["Kirsebær",0,1],["Citrus",0,1],["Fersken",0,1],["Ribs",0,1],["Vandmelon",0,1],["Roser",1,1],["Grapefrugt",0,0],["Blodappelsin",0,0],["Melon",0,0],["Hvide blomster",1,0],["Granatæble",0,0],["Tranebær",0,0],["Pære",0,0],["Urter",2,0],["Mineralsk",5,0],["Salt",5,0],["Lime",0,0],["Appelsinskal",0,0],["Abrikos",0,0],["Grønt æble",0,0],["Røde bær",0,0],["Lavendel",1,0]],"color_sparkling":[["Citrus",0,1],["Grønt æble",0,1],["Brioche",6,1],["Toast",6,1],["Digestive",6,0],["Gær",6,1],["Pære",0,1],["Kridt",5,1],["Hvide blomster",1,1],["Mandel",6,0],["Hasselnød",6,0],["Grapefrugt",0,0],["Salt",5,0],["Smør",6,0],["Lime",0,0],["Honning",8,0],["Fersken",0,0],["Abrikos",0,0],["Jordbær",0,0],["Hindbær",0,0],["Kirsebær",0,0],["Kvæde",0,0],["Æbleskræl",0,0]],"color_orange":[["Appelsinskal",0,1],["Tørret abrikos",0,1],["Te",8,1],["Æbleskræl",0,1],["Kvæde",0,1],["Tørrede blomster",1,1],["Honning",8,1],["Urter",2,1],["Nødder",6,0],["Bitter appelsin",0,0],["Kamille",8,0],["Citronskal",0,0],["Ingefær",3,0],["Mandel",6,0],["Bivoks",8,0],["Gær",6,0],["Salt",5,0],["Fersken",0,0],["Abrikos",0,0],["Pære",0,0],["Tørret frugt",0,0],["Røg",7,0]],"color_sweet":[["Honning",8,1],["Abrikos",0,1],["Tørret abrikos",0,1],["Appelsinmarmelade",0,1],["Fersken",0,1],["Kvæde",0,1],["Bivoks",8,1],["Ingefær",3,1],["Kandiseret citrus",0,0],["Safran",3,0],["Rosiner",0,0],["Ananas",0,0],["Mango",0,0],["Litchi",0,0],["Appelsinblomst",1,0],["Roser",1,0],["Citrus",0,0],["Lime",0,0],["Grapefrugt",0,0],["Vanilje",6,0],["Karamel",6,0],["Nødder",6,0]]},"natur":[["Reduktion / tændstik","Reduktiv"],["Gummi","Reduktiv"],["Kål","Reduktiv"],["Nedfaldsæble","Oxidation / udvikling"],["Sherry","Oxidation / udvikling"],["Eddike","Flygtig syre"],["Neglelak","Flygtig syre"],["Stald","Brettanomyces"],["Læder / animalsk","Brettanomyces / udvikling"],["Musetone","Musetone"],["Gær","Gærkontakt"],["Kombucha","Fermentativ"]],"lande":["Australien","Danmark","Frankrig","Italien","New Zealand","Portugal","Spanien","Sydafrika","Tyskland","USA","Østrig"],"druer":[["Aglianico","rød",[],1],["Airén","hvid",[],0],["Albariño","hvid",["Alvarinho"],1],["Alicante Bouschet","rød",[],0],["Aligoté","hvid",[],1],["Altesse","hvid",[],0],["Antão Vaz","hvid",[],0],["Arinto","hvid",[],0],["Baga","rød",[],0],["Barbera","rød",[],1],["Blaufränkisch","rød",["Lemberger"],1],["Bourboulenc","hvid",[],0],["Bual","hvid",["Boal"],0],["Cabernet Franc","rød",[],1],["Cabernet Sauvignon","rød",[],1],["Carignan","rød",["Cariñena","Mazuelo"],1],["Carricante","hvid",[],0],["Castelão","rød",[],0],["Chardonnay","hvid",[],1],["Chenin Blanc","hvid",[],1],["Cinsault","rød",[],1],["Clairette","hvid",[],0],["Colombard","hvid",[],0],["Corvina","rød",[],1],["Dolcetto","rød",[],1],["Elbling","hvid",[],0],["Encruzado","hvid",[],0],["Fernão Pires","hvid",["Maria Gomes"],0],["Fiano","hvid",[],1],["Friulano","hvid",[],0],["Frühburgunder","rød",[],0],["Gamay","rød",[],1],["Garganega","hvid",[],1],["Gewürztraminer","hvid",[],1],["Glera","hvid",[],1],["Godello","hvid",[],1],["Graciano","rød",[],0],["Grechetto","hvid",[],0],["Greco","hvid",[],0],["Grenache","rød",["Cannonau","Garnacha"],1],["Grenache Blanc","hvid",["Garnacha Blanca","Garnatxa Blanca"],1],["Grenache Gris","hvid",["Garnacha Gris","Garnatxa Gris"],0],["Grillo","hvid",[],0],["Grüner Veltliner","hvid",[],1],["Jacquère","hvid",[],0],["Lagrein","rød",[],0],["Lambrusco","rød",[],1],["Loureiro","hvid",[],0],["Macabeo","hvid",["Macabeu","Viura"],1],["Malbec","rød",["Côt"],1],["Malvasia","hvid",[],0],["Marsanne","hvid",[],1],["Melon de Bourgogne","hvid",["Muscadet"],1],["Mencía","rød",[],1],["Merlot","rød",[],1],["Meunier","rød",[],1],["Mondeuse","rød",[],0],["Montepulciano","rød",[],1],["Moscatel de Setúbal","hvid",[],0],["Mourvèdre","rød",["Monastrell","Mataró"],1],["Müller-Thurgau","hvid",[],1],["Muscat","hvid",["Moscatel","Moscato Bianco","Muskateller"],1],["Nebbiolo","rød",[],1],["Negra Mole","rød",[],0],["Negroamaro","rød",[],1],["Nerello Mascalese","rød",[],1],["Nero d’Avola","rød",[],1],["Niellucciu","rød",[],0],["Ortega","hvid",[],0],["Palomino","hvid",[],1],["Parellada","hvid",[],0],["Pedro Ximénez","hvid",[],1],["Picpoul","hvid",["Piquepoul"],1],["Pigato","hvid",[],0],["Pinot Blanc","hvid",["Weißburgunder"],1],["Pinot Gris","hvid",["Grauburgunder","Pinot Grigio","Ruländer"],1],["Pinot Noir","rød",["Spätburgunder","Pinot Nero","Blauburgunder"],1],["Pinotage","rød",[],1],["Poulsard","rød",[],1],["Regent","rød",[],0],["Riesling","hvid",[],1],["Rondinella","rød",[],0],["Rondo","rød",[],1],["Rotgipfler","hvid",[],0],["Roussanne","hvid",[],1],["Sagrantino","rød",[],0],["Sangiovese","rød",[],1],["Sauvignon Blanc","hvid",[],1],["Savagnin","hvid",[],1],["Sciaccarellu","rød",[],0],["Sémillon","hvid",["Semillon"],1],["Sercial","hvid",[],0],["Silvaner","hvid",[],1],["Solaris","hvid",[],1],["Syrah","rød",["Shiraz"],1],["Tannat","rød",[],1],["Tempranillo","rød",["Aragonez","Tinta Roriz"],1],["Teroldego","rød",[],1],["Tinta Negra","rød",[],0],["Touriga Franca","rød",[],0],["Touriga Nacional","rød",[],1],["Trebbiano","hvid",["Ugni Blanc"],1],["Trincadeira","rød",[],0],["Trollinger","rød",[],0],["Trousseau","rød",[],1],["Verdejo","hvid",[],1],["Verdelho","hvid",[],0],["Verdicchio","hvid",[],1],["Vermentino","hvid",["Rolle"],1],["Viognier","hvid",[],1],["Welschriesling","hvid",[],1],["Xarel·lo","hvid",["Xarello"],1],["Zierfandler","hvid",[],0],["Zinfandel","rød",["Primitivo"],1],["Zweigelt","rød",[],1]]};
+const PARTICIPANTS = ['Lars','Tore'];
+const DEMO = new URLSearchParams(location.search).has('demo');
+const FIREBASE_CONFIG = { apiKey:"AIzaSyACQ-1kJPSI8914_SEyx4UsUjdx0BZaSxg", authDomain:"vinholdet.firebaseapp.com", projectId:"vinholdet",
+  storageBucket:"vinholdet.firebasestorage.app", messagingSenderId:"792574288389", appId:"1:792574288389:web:1f28a36cb9a3b30ed1726c" };
+const OK_BACKEND_URL = /^https:\/\/script\.google(usercontent)?\.com\//;
+const TYPES = ['Rød','Hvid','Rosé','Orange','Bobler','Restsød/Sød'];
+const TYPE_PROFILE = { 'Rød':'color_red', 'Hvid':'color_white', 'Rosé':'color_rose', 'Orange':'color_orange', 'Bobler':'color_sparkling', 'Restsød/Sød':'color_sweet' };
+const NATUR_ONLY = { 'Nedfaldsæble':['Hvid','Orange','Bobler'], 'Sherry':['Hvid','Orange'] };
+const AXES = [
+  { k:'syre', l:'Syre', w:['Lav','Blød','Frisk','Livlig','Høj'] },
+  { k:'fylde', l:'Fylde', w:['Let','Let til middel','Middel','Middelfyldig','Fyldig'] },
+  { k:'sodme', l:'Sødme', w:['Tør','Næsten tør','Halvtør','Halvsød','Sød'], not:['Rød'] },
+  { k:'tannin', l:'Tannin', w:['Blød','Let','Middel','Fast','Kraftig'], only:['Rød','Orange'] },
+  { k:'bobler', l:'Bobler', w:['Blide','Fine','Middel','Livlige','Kraftige'], only:['Bobler'] },
+  { k:'intensitet', l:'Intensitet', w:['Diskret','Let','Middel','Udtalt','Intens'] },
+  { k:'eftersmag', l:'Eftersmag', w:['Kort','Kort til middel','Middel','Lang','Meget lang'] },
+];
+const POINTS = { drue:4, land:2, region:3, aargang:2 };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const key = s => String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\b(aoc|aop|doc|docg|do|ava|igp)\b/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+
+/* ---------- who am I, and where is the shared state ---------- */
+function backendCfg(){
+  try{ const h = new URLSearchParams(location.hash.slice(1));
+    if(h.get('s') && h.get('k') && OK_BACKEND_URL.test(h.get('s'))){ const c = { url:h.get('s'), key:h.get('k') }; localStorage.setItem('vino_backend', JSON.stringify(c)); return c; } }catch(e){}
+  try{ const c = JSON.parse(localStorage.getItem('vino_backend')||'null'); if(c && c.key && OK_BACKEND_URL.test(c.url)) return c; }catch(e){}
+  return null;
+}
+let ME = null;
+try{ ME = new URLSearchParams(location.search).get('navn') || localStorage.getItem('vino_identity'); }catch(e){}
+ME = PARTICIPANTS.find(p=>ME && p.toLowerCase()===String(ME).toLowerCase()) || null;
+function setMe(n){ ME = n; try{ localStorage.setItem('vino_identity', n); }catch(e){} render(); }
+
+let STATE = null;          // the shared round
+let SAVE = null;           // writes the round (Firestore, or memory in demo)
+let DRAFT = null;          // what this phone is typing (writer's description / guesser's guess)
+let UI = { more:false };
+
+async function connect(){
+  if(DEMO){ SAVE = async r => { STATE = JSON.parse(JSON.stringify(r)); render(); }; render(); return; }
+  const c = backendCfg();
+  if(!c){ document.getElementById('app').innerHTML = `<div class="card"><p class="err">Denne side mangler forbindelsen til jeres spil.</p><p>Åbn den fra en telefon, hvor Blindervenner er åbnet via dit personlige link, eller prøv <a href="?demo">demoen</a>, hvor du selv spiller begge roller.</p></div>`; return; }
+  try{
+    const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
+    const [A, FS] = await Promise.all([import(SDK+'firebase-app.js'), import(SDK+'firebase-firestore.js')]);
+    const app = A.initializeApp(FIREBASE_CONFIG);
+    const db = FS.initializeFirestore(app, { ignoreUndefinedProperties:true, experimentalAutoDetectLongPolling:true });
+    const ref = FS.doc(db, 'v', c.key, 'fjernblind', 'aktiv');
+    SAVE = async r => { r.updatedAt = Date.now(); STATE = JSON.parse(JSON.stringify(r)); render(); await FS.setDoc(ref, r); };
+    FS.onSnapshot(ref, s=>{ const d = s.exists() ? s.data() : null; const changed = JSON.stringify(d) !== JSON.stringify(STATE); STATE = d; if(changed) render(); }, ()=>toast('Forbindelsen drillede – prøv at genindlæse'));
+  }catch(e){ document.getElementById('app').innerHTML = `<div class="card"><p class="err">Kunne ikke forbinde.</p><button class="btn" onclick="location.reload()">Prøv igen</button></div>`; }
+}
+function toast(t){ const el = document.createElement('div'); el.className = 'toast'; el.textContent = t; document.body.appendChild(el); setTimeout(()=>el.remove(), 2600); }
+
+/* ---------- screens ---------- */
+function render(){
+  const app = document.getElementById('app');
+  document.getElementById('who').innerHTML = ME ? `Du er <b>${esc(ME)}</b>` : '';
+  const demoBar = DEMO && ME ? `<div class="demo">Demo – intet gemmes. Du spiller begge roller: <button onclick="setMe('${ME==='Lars'?'Tore':'Lars'}')">Skift til ${ME==='Lars'?'Tore':'Lars'}</button></div>` : '';
+  if(!ME) return app.innerHTML = `<h1>Hvem er du?</h1><div class="row">${PARTICIPANTS.map(p=>`<button class="btn ghost" style="flex:1" onclick="setMe('${p}')">${p}</button>`).join('')}</div>`;
+  const r = STATE;
+  let h;
+  if(!r || r.phase==='facit' && UI.newRound) h = startScreen(r);
+  else if(r.phase==='skriv') h = r.writer===ME ? writeScreen(r) : waitScreen(`${esc(r.writer)} smager og skriver sine noter`);
+  else if(r.phase==='gaet') h = r.writer===ME ? waitScreen(`${esc(other(r.writer))} læser dine noter og gætter`) : guessScreen(r);
+  else if(r.phase==='facit') h = resultScreen(r);
+  else h = startScreen(r);
+  app.innerHTML = demoBar + h;
+  bindSliders();
+}
+const gen = n => /[sxz]$/i.test(n) ? n + '’' : n + 's'; // Lars’ noter, Tores noter
+const other = n => PARTICIPANTS.find(p=>p!==n) || 'den anden';
+function startScreen(){
+  return `<h1>Fjernblind</h1><p class="sub">Den ene smager en vin og beskriver den med smagsnoter, profil og egne ord. Den anden ser kun beskrivelsen og skal gætte, hvad det er.</p>
+    <button class="btn" onclick="newRound()">🍷 Jeg beskriver en vin</button>
+    <p class="sub" style="margin-top:14px;font-size:.9rem">${esc(other(ME))} får besked på sin skærm, når dine noter er klar til at blive gættet.</p>`;
+}
+function waitScreen(t){ return `<div class="card wait"><div style="font-size:2rem">🍷</div><p>${t}<span class="dots"></span></p><p style="font-size:.85rem">Skærmen skifter selv.</p></div>
+  <button class="btn ghost" onclick="cancelRound()">Afbryd runden</button>`; }
+
+function newRound(){
+  UI = { more:false };
+  DRAFT = { wineType:'', showType:true, tags:[], profile:{}, note:'', truth:{ navn:'', drue:'', land:'', region:'', aargang:'' } };
+  SAVE({ id:'r'+Date.now(), phase:'skriv', writer:ME, createdAt:Date.now() });
+}
+function cancelRound(){ if(STATE) SAVE({ ...STATE, phase:'facit', cancelled:true }).then(()=>{ UI.newRound = true; render(); }); }
+
+/* writer */
+function tagLists(type){
+  const P = D.colors[TYPE_PROFILE[type]] || [];
+  const first = P.filter(x=>x[2]).map(x=>x[0]).slice(0,8), rest = {};
+  P.filter(x=>!first.includes(x[0])).forEach(([t,g])=>{ (rest[g] = rest[g] || []).push(t); });
+  const groups = D.groups.map((g,i)=>[g, rest[i]||[]]).filter(x=>x[1].length);
+  const seen = new Set(P.map(x=>x[0].toLowerCase()));
+  groups.push(['Naturvin og særlige noter', D.natur.map(x=>x[0]).filter(t=>!seen.has(t.toLowerCase()) && (!NATUR_ONLY[t] || NATUR_ONLY[t].includes(type)))]);
+  return { first, groups };
+}
+function writeScreen(r){
+  if(!DRAFT) DRAFT = { wineType:'', showType:true, tags:[], profile:{}, note:'', truth:{ navn:'', drue:'', land:'', region:'', aargang:'' } };
+  const d = DRAFT, t = d.truth, on = new Set(d.tags.map(x=>x.toLowerCase()));
+  const chip = (x, cls='') => `<button type="button" class="chip ${cls}${on.has(x.toLowerCase())?' on':''}" data-tag="${esc(x)}" onclick="toggleTag(this)">${esc(x)}</button>`;
+  let tags = '';
+  if(d.wineType){ const L = tagLists(d.wineType), all = new Set([...L.first, ...L.groups.flatMap(g=>g[1])].map(x=>x.toLowerCase()));
+    tags = `<div class="chips">${L.first.map(x=>chip(x)).join('')}</div>
+      <button class="more" onclick="UI.more=!UI.more;render()">${UI.more?'Vis færre ▴':'Vis flere ▾'}</button>
+      ${UI.more ? L.groups.map(([g,xs])=>`<div class="grp"><div class="grp-h">${esc(g)}</div><div class="chips">${xs.map(x=>chip(x)).join('')}</div></div>`).join('') : ''}
+      ${d.tags.filter(x=>!all.has(x.toLowerCase())).length ? `<div class="grp"><div class="grp-h">Dine egne</div><div class="chips">${d.tags.filter(x=>!all.has(x.toLowerCase())).map(x=>chip(x)).join('')}</div></div>` : ''}
+      <div class="add"><input type="text" id="newtag" maxlength="30" placeholder="+ Tilføj dit eget, fx “grafit”" onkeydown="if(event.key==='Enter'){event.preventDefault();addTag()}"><button type="button" onclick="addTag()">Tilføj</button></div>`; }
+  else tags = `<p class="sub" style="margin:0">Vælg vintype først, så kommer der forslag.</p>`;
+  const years = ['', 'NV', ...Array.from({length:40}, (_,i)=>String(new Date().getFullYear()-i))];
+  return `<h1>Beskriv vinen</h1><p class="sub">${esc(other(ME))} ser kun dine noter – ikke facit.</p>
+  <div class="card secret"><div class="eyebrow">Hemmeligt facit · kun for dig</div>
+    <div class="field"><label for="t-navn">Vinens navn</label><input type="text" id="t-navn" value="${esc(t.navn)}" oninput="DRAFT.truth.navn=this.value" placeholder="fx Domaine X, Cuvée Y"></div>
+    ${answerFields('t', t)}
+  </div>
+  <div class="card"><div class="eyebrow">Vintype</div>
+    <div class="chips">${TYPES.map(x=>`<button type="button" class="chip pick${d.wineType===x?' on':''}" onclick="setType('${x}')">${x==='Bobler'?'Mousserende':x}</button>`).join('')}</div>
+    <label style="display:flex;gap:8px;align-items:center;margin-top:12px;font-size:.9rem"><input type="checkbox" ${d.showType?'checked':''} onchange="DRAFT.showType=this.checked"> Vis vintypen for gætteren</label>
+  </div>
+  <div class="card"><div class="eyebrow">Hvad smager og dufter vinen af?</div>${tags}</div>
+  <div class="card"><div class="eyebrow">Vinens profil</div>${d.wineType ? sliders(d) : '<p class="sub" style="margin:0">Vælg vintype først.</p>'}</div>
+  <div class="card"><div class="eyebrow">Dine egne noter</div><textarea id="note" placeholder="Hvad lagde du mærke til? Hvordan udviklede vinen sig i glasset?" oninput="DRAFT.note=this.value">${esc(d.note)}</textarea></div>
+  <button class="btn" onclick="sendDescription()">Send noterne til ${esc(other(ME))} →</button>
+  <button class="btn ghost" onclick="cancelRound()">Afbryd runden</button>`;
+}
+function answerFields(prefix, a){
+  const years = ['', 'NV', ...Array.from({length:40}, (_,i)=>String(new Date().getFullYear()-i))];
+  const obj = prefix==='t' ? 'DRAFT.truth' : 'DRAFT';
+  return `<div class="field"><label for="${prefix}-drue">Druesort</label><input type="text" id="${prefix}-drue" list="druer" value="${esc(a.drue)}" oninput="${obj}.drue=this.value" placeholder="fx Pinot Noir" autocomplete="off"></div>
+    <div class="field"><span class="lbl">Land</span><div class="chips">${D.lande.map(x=>`<button type="button" class="chip pick${a.land===x?' on':''}" onclick="${obj}.land=${obj}.land==='${x}'?'':'${x}';render()">${x}</button>`).join('')}</div>
+      <input type="text" style="margin-top:8px" value="${D.lande.includes(a.land)?'':esc(a.land)}" placeholder="Andet land" oninput="${obj}.land=this.value"></div>
+    <div class="field"><label for="${prefix}-region">Region <small style="font-weight:400;color:var(--text-faint)">(fx Bourgogne, Mosel, Rioja)</small></label><input type="text" id="${prefix}-region" value="${esc(a.region)}" oninput="${obj}.region=this.value"></div>
+    <div class="field"><label for="${prefix}-aar">Årgang</label><select id="${prefix}-aar" onchange="${obj}.aargang=this.value">${years.map(y=>`<option value="${y}"${a.aargang===y?' selected':''}>${y||'Vælg'}</option>`).join('')}</select></div>`;
+}
+function setType(x){ DRAFT.wineType = DRAFT.wineType===x ? '' : x; render(); }
+function toggleTag(b){ const t = b.dataset.tag, i = DRAFT.tags.findIndex(x=>x.toLowerCase()===t.toLowerCase()); if(i>=0) DRAFT.tags.splice(i,1); else DRAFT.tags.push(t); b.classList.toggle('on', i<0); }
+function addTag(){ const el = document.getElementById('newtag'); let t = el.value.replace(/\s+/g,' ').trim().slice(0,30); if(!t) return; t = t[0].toUpperCase()+t.slice(1);
+  if(!DRAFT.tags.some(x=>x.toLowerCase()===t.toLowerCase())) DRAFT.tags.push(t); render(); const n = document.getElementById('newtag'); if(n) n.focus(); }
+function axesFor(type){ return AXES.filter(a=>(!a.only || a.only.includes(type)) && !(a.not && a.not.includes(type))); }
+function sliders(d){
+  return axesFor(d.wineType).map(a=>{ const v = d.profile[a.k], set = v>=1, f = set ? (v-1)/4 : .5;
+    return `<div class="tsl${set?' set':''}" id="tsl-${a.k}"><div class="tsl-top"><span>${a.l}</span><span class="tsl-word" id="tslw-${a.k}">${set ? a.w[v-1] : 'Ikke angivet'}</span></div>
+      <div class="tsl-track" data-k="${a.k}"><div class="tsl-in"><div class="tsl-rail"><div class="tsl-fill" style="${set ? fillStyle(f) : ''}"></div></div><span class="tsl-ball" style="left:${f*100}%"></span></div></div>
+      <div class="tsl-ends"><span>${a.w[0]}</span><span>${a.w[4]}</span></div></div>`; }).join('');
+}
+function fillStyle(f){ return f>0 ? `width:${f*100}%;background-size:${100/f}% 100%` : 'width:0'; }
+function bindSliders(){
+  document.querySelectorAll('.tsl-track').forEach(tr=>{
+    const k = tr.dataset.k, a = AXES.find(x=>x.k===k), box = tr.closest('.tsl');
+    const frac = x => { const b = tr.querySelector('.tsl-in').getBoundingClientRect(); return Math.max(0, Math.min(1, (x-b.left)/b.width)); };
+    const show = f => { const v = Math.round(f*4)+1; box.classList.add('set'); tr.querySelector('.tsl-fill').setAttribute('style', fillStyle(f)); tr.querySelector('.tsl-ball').style.left = f*100+'%'; box.querySelector('.tsl-word').textContent = a.w[v-1]; return v; };
+    const settle = x => { const v = Math.round(frac(x)*4)+1; DRAFT.profile[k] = v; show((v-1)/4); };
+    tr.onpointerdown = e => {
+      const x0 = e.clientX, y0 = e.clientY, ball = tr.querySelector('.tsl-ball').getBoundingClientRect();
+      let drag = e.pointerType==='mouse' || Math.abs(x0-(ball.left+ball.width/2)) < 26, moved = false;
+      if(drag){ try{ tr.setPointerCapture(e.pointerId); }catch(_){} show(frac(x0)); }
+      tr.onpointermove = ev => { const dx = ev.clientX-x0, dy = ev.clientY-y0;
+        if(!drag){ if(Math.abs(dy)>8 && Math.abs(dy)>=Math.abs(dx)){ moved = true; return; } if(Math.abs(dx)>8){ drag = true; try{ tr.setPointerCapture(ev.pointerId); }catch(_){} } else return; }
+        show(frac(ev.clientX)); };
+      tr.onpointerup = ev => { if(drag || (!moved && Math.abs(ev.clientX-x0)<10)) settle(ev.clientX); tr.onpointermove = tr.onpointerup = null; };
+      tr.onpointercancel = () => { tr.onpointermove = tr.onpointerup = null; if(drag){ const v = DRAFT.profile[k]; if(v) show((v-1)/4); } };
+    };
+  });
+}
+function sendDescription(){
+  const d = DRAFT;
+  if(!d.truth.drue.trim() && !d.truth.land) return toast('Udfyld mindst druesort eller land i det hemmelige facit');
+  if(!d.wineType) return toast('Vælg vintype');
+  if(!d.tags.length && !d.note.trim() && !Object.keys(d.profile).length) return toast('Giv mindst én smagsnote, en profil eller et par ord');
+  const profile = {}; axesFor(d.wineType).forEach(a=>{ if(d.profile[a.k]) profile[a.k] = d.profile[a.k]; });
+  SAVE({ ...STATE, phase:'gaet', wineType:d.wineType, showType:d.showType, tags:d.tags.slice(), profile, note:d.note.trim(), truth:{ ...d.truth } });
+  DRAFT = null;
+}
+
+/* guesser */
+function describeCard(r){
+  const axes = AXES.filter(a=>r.profile && r.profile[a.k]);
+  return `<div class="card desc"><div class="eyebrow">${esc(gen(r.writer))} noter</div>
+    ${r.showType ? `<span class="type">${r.wineType==='Bobler'?'Mousserende':esc(r.wineType)}</span>` : ''}
+    ${(r.tags||[]).length ? `<div class="tags">${r.tags.map(t=>`<span>${esc(t)}</span>`).join('')}</div>` : ''}
+    ${axes.length >= 3 ? radar(axes, r.profile) : ''}
+    ${axes.length ? `<div class="prof-list">${axes.map(a=>`<span>${a.l}</span><b>${a.w[r.profile[a.k]-1]}</b>`).join('')}</div>` : ''}
+    ${r.note ? `<blockquote>${esc(r.note)}</blockquote>` : ''}
+  </div>`;
+}
+function radar(axes, prof){
+  const S = 300, c = S/2, R = 100, n = axes.length, ang = i => -Math.PI/2 + i*2*Math.PI/n, pt = (i,v) => [c+Math.cos(ang(i))*R*v/5, c+Math.sin(ang(i))*R*v/5];
+  const xy = q => q.map(x=>x.toFixed(1)).join(',');
+  const rings = [1,2,3,4,5].map(v=>`<polygon class="rd-ring" points="${axes.map((a,i)=>xy(pt(i,v))).join(' ')}"/>`).join('');
+  const lbl = axes.map((a,i)=>{ const [x,y] = pt(i,6.3), co = Math.cos(ang(i)); return `<text class="rd-lbl" x="${x.toFixed(1)}" y="${(y+4).toFixed(1)}" text-anchor="${Math.abs(co)<.3?'middle':co>0?'start':'end'}">${a.l}</text>`; }).join('');
+  const poly = `<polygon points="${axes.map((a,i)=>xy(pt(i,prof[a.k]))).join(' ')}" fill="#1E4639" fill-opacity=".16" stroke="#1E4639" stroke-width="2" stroke-linejoin="round"/>`;
+  const dots = axes.map((a,i)=>{ const [x,y] = pt(i,prof[a.k]); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4.5" fill="#1E4639" stroke="#F8F4EE" stroke-width="2"/>`; }).join('');
+  return `<svg class="rd-svg" viewBox="-50 -10 ${S+100} ${S+20}" role="img" aria-label="Vinens profil">${rings}${poly}${dots}${lbl}</svg>`;
+}
+function guessScreen(r){
+  if(!DRAFT || DRAFT.round !== r.id) DRAFT = { round:r.id, drue:'', land:'', region:'', aargang:'' };
+  return `<h1>Hvad er det?</h1><p class="sub">Gæt vinen ud fra ${esc(gen(r.writer))} beskrivelse.</p>
+    ${describeCard(r)}
+    <div class="card"><div class="eyebrow">Dit gæt</div>${answerFields('g', DRAFT)}</div>
+    <button class="btn" onclick="sendGuess()">Send dit gæt →</button>`;
+}
+function sendGuess(){
+  const g = DRAFT; if(!g.drue.trim() && !g.land) return toast('Gæt mindst druesort eller land');
+  const guess = { drue:g.drue.trim(), land:g.land, region:g.region.trim(), aargang:g.aargang };
+  SAVE({ ...STATE, phase:'facit', guess, guesser:ME, judged:judge(STATE.truth, guess) });
+  DRAFT = null;
+}
+// Auto-marking: grape names count with their synonyms; region matches when one name contains the other.
+function grapeKey(n){ const k = key(n); const row = D.druer.find(d=>key(d[0])===k || d[2].some(s=>key(s)===k)); return row ? key(row[0]) : k; }
+function judge(t, g){
+  const out = {};
+  out.drue = t.drue && g.drue ? (grapeKey(t.drue)===grapeKey(g.drue) ? 'good' : 'bad') : t.drue ? 'bad' : 'na';
+  out.land = t.land ? (key(t.land)===key(g.land) ? 'good' : 'bad') : 'na';
+  const tr = key(t.region), gr = key(g.region);
+  out.region = tr ? (gr && (tr===gr || tr.includes(gr) || gr.includes(tr)) ? 'good' : 'bad') : 'na';
+  const ty = parseInt(t.aargang,10), gy = parseInt(g.aargang,10);
+  out.aargang = !t.aargang ? 'na' : t.aargang===g.aargang ? 'good' : (ty && gy && Math.abs(ty-gy)===1) ? 'mid' : 'bad';
+  return out;
+}
+function pts(j){ return Object.entries(POINTS).reduce((s,[k,p])=>s + (j[k]==='good' ? p : j[k]==='mid' ? Math.floor(p/2) : 0), 0); }
+function maxPts(j){ return Object.entries(POINTS).reduce((s,[k,p])=>s + (j[k]==='na' ? 0 : p), 0); }
+function resultScreen(r){
+  if(r.cancelled) return startScreen();
+  const j = r.judged || {}, t = r.truth || {}, g = r.guess || {};
+  const rows = [['drue','Druesort'],['land','Land'],['region','Region'],['aargang','Årgang']].filter(([k])=>j[k]!=='na');
+  const mark = k => j[k]==='good' ? `<span class="good">+${POINTS[k]}</span>` : j[k]==='mid' ? `<span class="mid">+${Math.floor(POINTS[k]/2)}</span>` : '<span class="bad">0</span>';
+  return `<div class="eyebrow">Facit</div><h1>${esc(t.navn || t.drue || 'Vinen')}</h1>
+    <div class="card" style="display:flex;align-items:flex-end;justify-content:space-between;gap:10px">
+      <div><div class="big">${pts(j)}<small> af ${maxPts(j)} point</small></div><div class="sub" style="margin:6px 0 0">${esc(r.guesser)} gættede ud fra ${esc(gen(r.writer))} noter</div></div><div style="font-size:2.4rem">${pts(j) >= maxPts(j)*.75 ? '🏆' : pts(j) >= maxPts(j)*.4 ? '👏' : '🙈'}</div></div>
+    <div class="card"><div class="res"><span class="h"></span><span class="h">Facit</span><span class="h">Gæt</span><span class="h" style="text-align:right">Point</span>
+      ${rows.map(([k,l])=>`<span>${l}</span><span>${esc(t[k]||'–')}</span><span>${esc(g[k]||'–')}</span><span class="p">${mark(k)}</span>`).join('')}</div></div>
+    ${describeCard(r)}
+    <button class="btn" onclick="UI.newRound=true;render()">Ny runde</button>`;
+}
+
+/* grapes for the type-ahead */
+document.body.insertAdjacentHTML('beforeend', `<datalist id="druer">${D.druer.map(d=>`<option value="${esc(d[0])}">`).join('')}</datalist>`);
+connect();
+</script>
+</body>
+</html>
